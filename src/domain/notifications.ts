@@ -1,7 +1,8 @@
 import { addDays, parseISODate, toISODate } from './dates'
 import { packingFor } from './packing'
+import { occursOn } from './reminders'
 import { lessonsOn } from './schedule'
-import type { Lesson, Settings, Subject } from './types'
+import type { Lesson, Reminder, Settings, Subject } from './types'
 
 export interface PlannedNotification {
   /** Stabilt id så att samma notis inte dubbleras vid omplanering. */
@@ -26,6 +27,7 @@ export function planNotifications(
   lessons: Lesson[],
   subjects: Subject[],
   days = 14,
+  reminders: Reminder[] = [],
 ): PlannedNotification[] {
   const out: PlannedNotification[] = []
   const today = toISODate(now)
@@ -33,6 +35,13 @@ export function planNotifications(
 
   for (let i = 0; i <= days; i++) {
     const date = addDays(today, i)
+    for (const r of reminders) {
+      const fireAt = at(date, r.time)
+      if (occursOn(r, date) && fireAt > now) {
+        out.push({ id: `reminder:${r.id}:${date}`, fireAt, title: r.title, body: `Påminnelse kl ${r.time}` })
+      }
+    }
+
     const day = lessonsOn(date, lessons, s)
     if (day.length === 0) continue
 

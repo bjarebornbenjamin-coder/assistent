@@ -57,6 +57,8 @@ Kräver att synken (Supabase) är påslagen. Appen räknar ut vilka notiser du s
 4. Något måste anropa `/api/push-dispatch` varje minut. Enklast: kör `supabase/cron.sql` (pg_cron + pg_net) efter att du bytt ut adressen och hemligheten. Vercels gratisnivå tillåter bara ett schemalagt jobb per dygn, så det duger inte.
 5. Appen → Inställningar → Notiser → **Slå på notiser på den här enheten** → **Skicka testnotis**.
 
+Fristående påminnelser (Hem → Alla påminnelser) skickas på samma sätt, med valfri tid och upprepning (en gång, varje dag, valda veckodagar). De räknas in i samma 14-dagarsplan.
+
 Begränsningar: iPhone kräver att appen är installerad på hemskärmen (iOS 16.4+). Notiserna planeras 14 dagar framåt, så appen behöver öppnas minst varannan vecka. Ändrar du schema eller packlistor på en enhet uppdateras planen när appen är öppen där.
 
 ## Importera schema från bild

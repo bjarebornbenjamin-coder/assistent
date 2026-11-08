@@ -1,6 +1,6 @@
 import { DEFAULT_NOTIFY } from './repo'
 import { isColor } from '../domain/colors'
-import type { Backup, CalendarEvent, Contact, Lesson, Task, Settings, Subject } from '../domain/types'
+import type { Backup, CalendarEvent, Contact, Lesson, Reminder, Task, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
   throw new Error(`Ogiltig säkerhetskopia: ${msg}`)
@@ -94,20 +94,33 @@ function parseTask(v: unknown): Task {
   }
 }
 
+function parseReminder(v: unknown): Reminder {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.title) || !v.title.trim() || !isTime(v.time) || !isObj(v.repeat)) return fail('påminnelse')
+  const rep = v.repeat
+  let repeat: Reminder['repeat']
+  if (rep.kind === 'daily') repeat = { kind: 'daily' }
+  else if (rep.kind === 'once' && isDate(rep.date)) repeat = { kind: 'once', date: rep.date as string }
+  else if (rep.kind === 'weekdays' && Array.isArray(rep.days) && rep.days.length > 0 && rep.days.every((d) => Number.isInteger(d) && d >= 1 && d <= 7))
+    repeat = { kind: 'weekdays', days: [...new Set(rep.days as number[])].sort() }
+  else return fail('påminnelsens upprepning')
+  return { id: v.id, title: v.title, time: v.time as string, repeat, enabled: v.enabled !== false, updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString() }
+}
+
 export function parseBackup(json: unknown): Backup {
   if (!isObj(json) || json.app !== 'studieassistent') return fail('filen kommer inte från appen')
-  if (![1, 2, 3, 4].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
+  if (![1, 2, 3, 4, 5].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
   if (!Array.isArray(json.subjects) || !Array.isArray(json.lessons)) return fail('data saknas')
   const subjects = json.subjects.map(parseSubject)
   const lessons = json.lessons.map(parseLesson)
   const events = Array.isArray(json.events) ? json.events.map(parseEvent) : [] // version 1 saknar händelser
+  const reminders = Array.isArray(json.reminders) ? json.reminders.map(parseReminder) : []
   const tasks = Array.isArray(json.tasks) ? json.tasks.map(parseTask) : []
   const contacts = Array.isArray(json.contacts) ? json.contacts.map(parseContact) : []
   const ids = new Set(subjects.map((s) => s.id))
   if (lessons.some((l) => !ids.has(l.subjectId))) fail('lektion pekar på ett ämne som inte finns')
   return {
     app: 'studieassistent',
-    version: 4,
+    version: 5,
     exportedAt: isStr(json.exportedAt) ? json.exportedAt : new Date().toISOString(),
     settings: json.settings == null ? null : parseSettings(json.settings),
     subjects,
@@ -115,5 +128,6 @@ export function parseBackup(json: unknown): Backup {
     events,
     contacts,
     tasks,
+    reminders,
   }
 }

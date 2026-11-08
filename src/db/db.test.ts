@@ -8,7 +8,7 @@ const lesson = (subjectId: string, weeks: number[] | null) => ({
 })
 
 beforeEach(async () => {
-  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear()])
+  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear()])
 })
 
 describe('repo', () => {
@@ -39,7 +39,7 @@ describe('repo', () => {
     await saveLesson(lesson(s.id, [0]))
     await saveSettings({ cycleLength: 2, theme: 'dark' })
     const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear()])
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear()])
     await importAll(backup)
     expect((await getSettings()).theme).toBe('dark')
     expect(await db.subjects.count()).toBe(1)
@@ -50,7 +50,7 @@ describe('repo', () => {
 describe('parseBackup', () => {
   it('avvisar fel filer', () => {
     expect(() => parseBackup({})).toThrow(/inte från appen/)
-    expect(() => parseBackup({ app: 'studieassistent', version: 5 })).toThrow(/version/)
+    expect(() => parseBackup({ app: 'studieassistent', version: 6 })).toThrow(/version/)
     expect(() =>
       parseBackup({ app: 'studieassistent', version: 1, settings: null, subjects: [], lessons: [{ id: 'x', subjectId: 'y', weekday: 1, start: '08:00', end: '09:00', room: '', teacher: '', weeks: null }] }),
     ).toThrow(/ämne som inte finns/)
@@ -135,5 +135,20 @@ describe('importLessons', () => {
     const lessons = await db.lessons.toArray()
     expect(lessons.filter((l) => l.subjectId === matte.id)).toHaveLength(1)
     expect(lessons[0].room).toBe('A1')
+  })
+})
+
+describe('påminnelser i export', () => {
+  it('följer med export/import, och ogiltiga avvisas', async () => {
+    await db.reminders.put({ id: 'r1', title: 'Ta medicin', time: '07:30', repeat: { kind: 'weekdays', days: [1, 3, 5] }, enabled: true, updatedAt: '' })
+    const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
+    expect(backup.reminders).toHaveLength(1)
+    await db.reminders.clear()
+    await importAll(backup)
+    expect((await db.reminders.get('r1'))?.repeat).toEqual({ kind: 'weekdays', days: [1, 3, 5] })
+    const base = { app: 'studieassistent', version: 5, subjects: [], lessons: [] }
+    expect(() => parseBackup({ ...base, reminders: [{ id: 'x', title: 't', time: '25:00', repeat: { kind: 'daily' } }] })).toThrow(/påminnelse/)
+    expect(() => parseBackup({ ...base, reminders: [{ id: 'x', title: 't', time: '07:00', repeat: { kind: 'weekdays', days: [] } }] })).toThrow(/upprepning/)
+    expect(parseBackup({ ...base, version: 4 }).reminders).toEqual([])
   })
 })

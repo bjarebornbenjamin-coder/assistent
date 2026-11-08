@@ -59,6 +59,21 @@ export interface CalendarEvent {
   updatedAt: string
 }
 
+export type ReminderRepeat =
+  | { kind: 'once'; date: ISODate }
+  | { kind: 'daily' }
+  /** Valda veckodagar, 1 = måndag … 7 = söndag. En enda dag = varje vecka. */
+  | { kind: 'weekdays'; days: number[] }
+
+export interface Reminder {
+  id: string
+  title: string
+  time: HHmm
+  repeat: ReminderRepeat
+  enabled: boolean
+  updatedAt: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -111,7 +126,7 @@ export interface ChatMessage {
 
 export interface Backup {
   app: 'studieassistent'
-  version: 4
+  version: 5
   exportedAt: string
   settings: Settings | null
   subjects: Subject[]
@@ -119,4 +134,5 @@ export interface Backup {
   events: CalendarEvent[]
   contacts: Contact[]
   tasks: Task[]
+  reminders: Reminder[]
 }

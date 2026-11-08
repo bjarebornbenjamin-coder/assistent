@@ -1,7 +1,7 @@
 import { DEFAULT_MODEL } from '../ai/models'
 import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
-import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, NotifySettings, Settings, Subject, Task } from '../domain/types'
+import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, NotifySettings, Reminder, Settings, Subject, Task } from '../domain/types'
 import { db } from './db'
 
 export const newId = () => crypto.randomUUID()
@@ -186,10 +186,22 @@ export async function importLessons(drafts: LessonDraft[]): Promise<{ lessons: n
   })
 }
 
+export async function saveReminder(reminder: Reminder): Promise<void> {
+  await db.reminders.put({ ...reminder, updatedAt: new Date().toISOString() })
+}
+
+export async function setReminderEnabled(id: string, enabled: boolean): Promise<void> {
+  await db.reminders.update(id, { enabled, updatedAt: new Date().toISOString() })
+}
+
+export async function deleteReminder(id: string): Promise<void> {
+  await db.reminders.delete(id)
+}
+
 export async function exportAll(): Promise<Backup> {
   return {
     app: 'studieassistent',
-    version: 4,
+    version: 5,
     exportedAt: new Date().toISOString(),
     settings: (await db.settings.get('main')) ?? null,
     subjects: await db.subjects.toArray(),
@@ -197,18 +209,20 @@ export async function exportAll(): Promise<Backup> {
     events: await db.events.toArray(),
     contacts: await db.contacts.toArray(),
     tasks: await db.tasks.toArray(),
+    reminders: await db.reminders.toArray(),
   }
 }
 
 /** Ersätter all data med innehållet i säkerhetskopian. */
 export async function importAll(backup: Backup): Promise<void> {
-  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks], async () => {
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear()])
+  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders], async () => {
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear()])
     if (backup.settings) await db.settings.put(backup.settings)
     await db.subjects.bulkPut(backup.subjects)
     await db.lessons.bulkPut(backup.lessons)
     await db.events.bulkPut(backup.events)
     await db.contacts.bulkPut(backup.contacts)
     await db.tasks.bulkPut(backup.tasks)
+    await db.reminders.bulkPut(backup.reminders)
   })
 }

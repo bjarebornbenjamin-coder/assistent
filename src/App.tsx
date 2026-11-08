@@ -7,6 +7,7 @@ import { CalendarPage } from './pages/Calendar'
 import { ChatPage } from './pages/Chat'
 import { ImportSchedulePage } from './pages/ImportSchedule'
 import { Home } from './pages/Home'
+import { RemindersPage } from './pages/Reminders'
 import { SchedulePage } from './pages/Schedule'
 import { SettingsPage } from './pages/Settings'
 import { SubjectsPage } from './pages/Subjects'
@@ -14,7 +15,7 @@ import { TasksPage } from './pages/Tasks'
 
 /** Undersidor som hör till en flik markerar den fliken i menyn. */
 const TABS = [
-  { to: '/', label: 'Hem', also: ['/uppgifter'] as string[] },
+  { to: '/', label: 'Hem', also: ['/uppgifter', '/paminnelser'] as string[] },
   { to: '/schema', label: 'Schema', also: ['/amnen'] },
   { to: '/kalender', label: 'Kalender', also: [] },
   { to: '/chatt', label: 'Chatt', also: [] },
@@ -61,6 +62,7 @@ export function App() {
             <Route path="/chatt" element={<ChatPage />} />
             <Route path="/amnen" element={<SubjectsPage />} />
             <Route path="/uppgifter" element={<TasksPage />} />
+            <Route path="/paminnelser" element={<RemindersPage />} />
             <Route path="/installningar" element={<SettingsPage />} />
           </Routes>
         )}

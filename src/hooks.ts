@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import { db } from './db/db'
 import { getAiConfig, withDefaults } from './db/repo'
-import type { AiConfig, CalendarEvent, ChatMessage, Contact, Task, Lesson, Settings, Subject } from './domain/types'
+import type { AiConfig, CalendarEvent, ChatMessage, Contact, Reminder, Task, Lesson, Settings, Subject } from './domain/types'
 
 /** undefined medan data läses från IndexedDB. */
 export function useSettings(): Settings | undefined {
@@ -21,6 +21,9 @@ export function useEvents(): CalendarEvent[] | undefined {
 
 export function useTasks(): Task[] | undefined {
   return useLiveQuery(() => db.tasks.orderBy('deadline').toArray(), [])
+}
+export function useReminders(): Reminder[] | undefined {
+  return useLiveQuery(() => db.reminders.toArray(), [])
 }
 export function useContacts(): Contact[] | undefined {
   return useLiveQuery(() => db.contacts.orderBy('name').toArray(), [])
