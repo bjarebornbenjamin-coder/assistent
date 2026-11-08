@@ -154,3 +154,6 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 
 /* så att senaste meddelandet och knapparna hamnar ovanför inmatningsfältet och menyn */
 .chat-end { scroll-margin-bottom: 140px; height: 1px; }
+
+.back { display: inline-block; padding: 8px 0; min-height: 44px; line-height: 28px; color: var(--primary); text-decoration: none; }
+.back + h1 { margin-top: 0; }

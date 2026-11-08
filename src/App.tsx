@@ -1,12 +1,37 @@
 import { useEffect } from 'react'
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom'
 import { useSettings } from './hooks'
-import { ChatPage } from './pages/Chat'
 import { CalendarPage } from './pages/Calendar'
+import { ChatPage } from './pages/Chat'
 import { Home } from './pages/Home'
 import { SchedulePage } from './pages/Schedule'
 import { SettingsPage } from './pages/Settings'
 import { SubjectsPage } from './pages/Subjects'
+
+/** Undersidor som hör till en flik markerar den fliken i menyn. */
+const TABS = [
+  { to: '/', label: 'Hem', also: [] as string[] },
+  { to: '/schema', label: 'Schema', also: ['/amnen'] },
+  { to: '/kalender', label: 'Kalender', also: [] },
+  { to: '/chatt', label: 'Chatt', also: [] },
+  { to: '/installningar', label: 'Inställningar', also: [] },
+]
+
+function Nav() {
+  const { pathname } = useLocation()
+  return (
+    <nav className="nav" aria-label="Huvudmeny">
+      {TABS.map((t) => {
+        const active = t.to === '/' ? pathname === '/' : [t.to, ...t.also].some((p) => pathname === p || pathname.startsWith(p + '/'))
+        return (
+          <Link key={t.to} to={t.to} aria-current={active ? 'page' : undefined}>
+            {t.label}
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
 
 export function App() {
   const settings = useSettings()
@@ -32,13 +57,7 @@ export function App() {
           </Routes>
         )}
       </main>
-      <nav className="nav" aria-label="Huvudmeny">
-        <NavLink to="/" end>Hem</NavLink>
-        <NavLink to="/schema">Schema</NavLink>
-        <NavLink to="/kalender">Kalender</NavLink>
-        <NavLink to="/chatt">Chatt</NavLink>
-        <NavLink to="/installningar">Inställningar</NavLink>
-      </nav>
+      <Nav />
     </BrowserRouter>
   )
 }

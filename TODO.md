@@ -9,7 +9,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 1.3 Visa lektioner i månadsvyn
 - [x] 1.4 Rendera markdown i chatten
 - [x] 1.5 Autoscroll i chatten
-- [ ] 1.6 Navigering på /amnen
+- [x] 1.6 Navigering på /amnen
 - [ ] 1.7 Rensa gamla felmeddelanden
 - [ ] 1.8 Tydligare bekräftelse vid borttagning av ämne
 - [ ] 1.9 Veckovyn på söndagar
