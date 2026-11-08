@@ -11,7 +11,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 1.5 Autoscroll i chatten
 - [x] 1.6 Navigering på /amnen
 - [x] 1.7 Rensa gamla felmeddelanden
-- [ ] 1.8 Tydligare bekräftelse vid borttagning av ämne
+- [x] 1.8 Tydligare bekräftelse vid borttagning av ämne
 - [ ] 1.9 Veckovyn på söndagar
 
 ## Fas 2 – Förbättringar

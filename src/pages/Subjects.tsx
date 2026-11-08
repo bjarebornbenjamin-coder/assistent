@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { addSubject, changePackItems, deleteSubject, newId, updateSubject } from '../db/repo'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { itemKey } from '../domain/packing'
 import type { Subject } from '../domain/types'
 import { useLessons, useSubjects } from '../hooks'
@@ -30,6 +31,7 @@ function CommitInput({ value, label, onCommit }: { value: string; label: string;
 function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: number }) {
   const [newItem, setNewItem] = useState('')
   const [dupError, setDupError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   async function add(e: FormEvent) {
     e.preventDefault()
@@ -40,11 +42,6 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
     }
     setNewItem('')
     await changePackItems(subject.id, (items) => [...items, { id: newId(), text }])
-  }
-
-  async function remove() {
-    const extra = lessonCount > 0 ? ` Det tar också bort ${lessonCount} lektion${lessonCount > 1 ? 'er' : ''} i schemat.` : ''
-    if (confirm(`Ta bort ${subject.name}?${extra}`)) await deleteSubject(subject.id)
   }
 
   return (
@@ -95,8 +92,21 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
       {dupError && <p className="error" role="alert">{dupError}</p>}
 
       <div className="actions">
-        <button type="button" className="btn danger" onClick={remove}>Ta bort ämne</button>
+        <button type="button" className="btn danger" onClick={() => setConfirmDelete(true)}>Ta bort ämne</button>
       </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Ta bort ${subject.name}?`}
+          message={
+            lessonCount > 0
+              ? `${lessonCount} lektion${lessonCount > 1 ? 'er' : ''} i schemat tas också bort.`
+              : 'Ämnet och dess packlista tas bort.'
+          }
+          confirmLabel="Ta bort"
+          onConfirm={() => deleteSubject(subject.id)}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </details>
   )
 }
