@@ -112,7 +112,11 @@ export async function deleteContact(id: string): Promise<void> {
 
 export async function addChatMessage(m: Omit<ChatMessage, 'id' | 'createdAt'>): Promise<string> {
   const id = newId()
-  await db.chat.add({ ...m, id, createdAt: new Date().toISOString() })
+  // Strikt stigande tidsstämplar, så att meddelanden som skapas på samma millisekund behåller sin ordning.
+  const last = await db.chat.orderBy('createdAt').last()
+  let at = Date.now()
+  if (last && at <= new Date(last.createdAt).getTime()) at = new Date(last.createdAt).getTime() + 1
+  await db.chat.add({ ...m, id, createdAt: new Date(at).toISOString() })
   return id
 }
 

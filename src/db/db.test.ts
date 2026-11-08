@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addChatMessage, addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
@@ -150,5 +150,19 @@ describe('påminnelser i export', () => {
     expect(() => parseBackup({ ...base, reminders: [{ id: 'x', title: 't', time: '25:00', repeat: { kind: 'daily' } }] })).toThrow(/påminnelse/)
     expect(() => parseBackup({ ...base, reminders: [{ id: 'x', title: 't', time: '07:00', repeat: { kind: 'weekdays', days: [] } }] })).toThrow(/upprepning/)
     expect(parseBackup({ ...base, version: 4 }).reminders).toEqual([])
+  })
+})
+
+describe('chattordning', () => {
+  it('behåller ordningen även när meddelanden skapas samtidigt', async () => {
+    await db.chat.clear()
+    const orig = Date.now
+    Date.now = () => 1_800_000_000_000 // fryst klocka
+    try {
+      for (const t of ['1', '2', '3', '4']) await addChatMessage({ role: 'user', content: t })
+    } finally {
+      Date.now = orig
+    }
+    expect((await db.chat.orderBy('createdAt').toArray()).map((m) => m.content)).toEqual(['1', '2', '3', '4'])
   })
 })
