@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
+import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
 import { parseBackup } from '../db/backup'
-import { DEFAULT_MODEL, deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
+import { deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
 import { toISODate } from '../domain/dates'
 import type { Theme } from '../domain/types'
 import { anchorFor, cycleLabel, weekIndex } from '../domain/weekCycle'
@@ -15,7 +16,8 @@ const THEMES: { value: Theme; label: string }[] = [
 function AiSection() {
   const config = useAiConfig()
   const [key, setKey] = useState('')
-  const [model, setModel] = useState<string | null>(null)
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [modelsMsg, setModelsMsg] = useState('')
   if (!config) return null
   return (
     <>
@@ -35,14 +37,36 @@ function AiSection() {
       )}
       <label className="field">
         <span>Modell</span>
-        <input
-          type="text"
-          value={model ?? config.model}
-          placeholder={DEFAULT_MODEL}
-          onChange={(e) => setModel(e.target.value)}
-          onBlur={() => { if (model !== null) { void saveAiConfig({ model: model.trim() || DEFAULT_MODEL }); setModel(null) } }}
-        />
+        <select value={config.model} onChange={(e) => saveAiConfig({ model: e.target.value })}>
+          {[...new Set([config.model, ...(config.models ?? FALLBACK_MODELS)])].map((m) => (
+            <option key={m} value={m}>{m}{m === DEFAULT_MODEL ? ' (standard)' : ''}</option>
+          ))}
+        </select>
       </label>
+      <div className="actions" style={{ marginTop: 0 }}>
+        <button
+          type="button"
+          className="btn"
+          disabled={!config.apiKey || loadingModels}
+          onClick={async () => {
+            setLoadingModels(true)
+            setModelsMsg('')
+            try {
+              const models = await fetchModels(config.apiKey)
+              await saveAiConfig({ models })
+              setModelsMsg(`Hämtade ${models.length} modeller.`)
+            } catch (e) {
+              setModelsMsg(e instanceof Error ? e.message : 'Kunde inte hämta listan.')
+            } finally {
+              setLoadingModels(false)
+            }
+          }}
+        >
+          Hämta aktuell lista från OpenAI
+        </button>
+      </div>
+      {modelsMsg && <p className="muted" role="status">{modelsMsg}</p>}
+      <p className="muted">Listan nedan är en förvald lista tills du hämtar en färsk. Fungerar inte modellen används {DEFAULT_MODEL}.</p>
     </>
   )
 }

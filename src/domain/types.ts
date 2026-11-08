@@ -75,6 +75,8 @@ export interface AiConfig {
   id: 'main'
   apiKey: string
   model: string
+  /** Senast hämtade modelllista från OpenAI. */
+  models?: string[]
 }
 
 export type ChatCard =

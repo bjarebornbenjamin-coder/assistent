@@ -79,7 +79,7 @@ export function ChatPage() {
     const history = messages ?? []
     await addChatMessage({ role: 'user', content: userText })
     try {
-      const { reply, cards } = await runChat({
+      const { reply, cards, notice } = await runChat({
         apiKey: config.apiKey,
         model: config.model,
         history,
@@ -87,7 +87,7 @@ export function ChatPage() {
         now: new Date(),
         loadContext: loadToolContext,
       })
-      await addChatMessage({ role: 'assistant', content: reply })
+      await addChatMessage({ role: 'assistant', content: notice ? `${reply}\n\n*${notice}*` : reply })
       for (const card of cards) await addChatMessage({ role: 'assistant', content: '', card, cardStatus: 'pending' })
     } catch (err) {
       setError(err instanceof ChatError ? err.message : 'Något gick fel. Försök igen.')

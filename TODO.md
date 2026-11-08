@@ -21,7 +21,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 2.4 Läxor/uppgifter
 - [x] 2.5 Fler AI-åtgärder
 - [x] 2.6 Snabbfrågor i chatten
-- [ ] 2.7 Modellval
+- [x] 2.7 Modellval
 
 ## Fas 3 – Större ändringar (fråga först)
 - [ ] 3.1 Flytta OpenAI-anropet till servern

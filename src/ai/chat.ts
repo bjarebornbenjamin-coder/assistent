@@ -1,6 +1,7 @@
 import { WEEKDAYS_LONG, toHHmm, toISODate, weekdayOf } from '../domain/dates'
 import type { ChatCard, ChatMessage } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
+import { DEFAULT_MODEL } from './models'
 import { TOOL_DEFINITIONS, runTool, type ToolContext } from './tools'
 
 const API_URL = 'https://api.openai.com/v1/chat/completions'
@@ -48,6 +49,8 @@ interface RunOptions {
 export interface ChatResult {
   reply: string
   cards: ChatCard[]
+  /** Satt om vi föll tillbaka på standardmodellen. */
+  notice?: string
 }
 
 async function describeError(res: Response): Promise<string> {
@@ -72,6 +75,8 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
     { role: 'user', content: o.userText },
   ]
   const cards: ChatCard[] = []
+  let model = o.model
+  let notice: string | undefined
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     let res: Response
@@ -79,10 +84,16 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
       res = await fetchFn(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${o.apiKey}` },
-        body: JSON.stringify({ model: o.model, messages, tools: TOOL_DEFINITIONS }),
+        body: JSON.stringify({ model, messages, tools: TOOL_DEFINITIONS }),
       })
     } catch {
       throw new ChatError('Kunde inte nå OpenAI. Kontrollera internetanslutningen.')
+    }
+    if (res.status === 404 && model !== DEFAULT_MODEL) {
+      notice = `Modellen ${model} hittades inte, så jag använde ${DEFAULT_MODEL}. Byt modell i Inställningar.`
+      model = DEFAULT_MODEL
+      round--
+      continue
     }
     if (!res.ok) throw new ChatError(await describeError(res))
 
@@ -92,7 +103,7 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
     const msg = data.choices?.[0]?.message
     if (!msg) throw new ChatError('Oväntat svar från OpenAI.')
 
-    if (!msg.tool_calls?.length) return { reply: (msg.content ?? '').trim() || '(Tomt svar)', cards }
+    if (!msg.tool_calls?.length) return { reply: (msg.content ?? '').trim() || '(Tomt svar)', cards, notice }
 
     messages.push({ role: 'assistant', content: msg.content ?? null, tool_calls: msg.tool_calls })
     for (const call of msg.tool_calls) {

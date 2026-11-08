@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL } from '../ai/models'
 import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
 import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, Settings, Subject, Task } from '../domain/types'
@@ -74,8 +75,6 @@ export async function saveEvent(event: CalendarEvent): Promise<void> {
 export async function deleteEvent(id: string): Promise<void> {
   await db.events.delete(id)
 }
-
-export const DEFAULT_MODEL = 'gpt-4o-mini'
 
 export async function getAiConfig(): Promise<AiConfig> {
   return (await db.aiConfig.get('main')) ?? { id: 'main', apiKey: '', model: DEFAULT_MODEL }
