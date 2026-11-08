@@ -167,3 +167,8 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid; margin-right: 8px; }
 
 .next-note { font-size: 14px; font-weight: 500; color: var(--primary); margin: 4px 0 0; }
+
+.checklist { list-style: none; padding-left: 0 !important; }
+.checklist label { display: flex; gap: 12px; align-items: center; min-height: 40px; cursor: pointer; }
+.checklist input { width: 20px; height: 20px; accent-color: var(--primary); }
+.checklist .done { color: var(--muted); text-decoration: line-through; }

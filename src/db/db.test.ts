@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, newId, saveEvent, saveLesson, saveSettings, updateSubject } from './repo'
+import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, newId, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
 })
 
 beforeEach(async () => {
-  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear()])
+  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear()])
 })
 
 describe('repo', () => {
@@ -39,7 +39,7 @@ describe('repo', () => {
     await saveLesson(lesson(s.id, [0]))
     await saveSettings({ cycleLength: 2, theme: 'dark' })
     const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear()])
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear()])
     await importAll(backup)
     expect((await getSettings()).theme).toBe('dark')
     expect(await db.subjects.count()).toBe(1)
@@ -99,5 +99,17 @@ describe('ämnesfärg', () => {
     const base = { app: 'studieassistent', version: 3, lessons: [] }
     expect(() => parseBackup({ ...base, subjects: [{ id: '1', name: 'x', color: 'red', packItems: [] }] })).toThrow(/ämnesfärg/)
     expect(parseBackup({ ...base, subjects: [{ id: '1', name: 'x', packItems: [] }] }).subjects[0].color).toBeUndefined()
+  })
+})
+
+describe('avbockad packlista', () => {
+  it('sparas per datum, kan avbockas igen och gamla dagar städas bort', async () => {
+    await setPackChecked('2026-11-08', 'bok', true, '2026-11-08')
+    await setPackChecked('2026-11-09', 'dator', true, '2026-11-08')
+    await setPackChecked('2026-11-09', 'bok', true, '2026-11-08')
+    expect((await db.packChecks.get('2026-11-09'))!.checked.sort()).toEqual(['bok', 'dator'])
+    await setPackChecked('2026-11-09', 'bok', false, '2026-11-09') // nästa dag: gårdagens rad rensas
+    expect((await db.packChecks.get('2026-11-09'))!.checked).toEqual(['dator'])
+    expect(await db.packChecks.get('2026-11-08')).toBeUndefined()
   })
 })

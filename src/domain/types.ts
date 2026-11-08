@@ -49,6 +49,12 @@ export interface CalendarEvent {
   updatedAt: string
 }
 
+/** Avbockade packsaker för en viss dag (nycklar enligt itemKey). Sparas inte i export. */
+export interface PackChecks {
+  date: ISODate
+  checked: string[]
+}
+
 export interface Contact {
   id: string
   name: string

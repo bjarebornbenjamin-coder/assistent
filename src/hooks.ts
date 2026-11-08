@@ -46,3 +46,8 @@ export function useFieldError() {
   const touch = useCallback((field: string) => setState((e) => (e && e.field === field ? null : e)), [])
   return { error: state?.message ?? '', fail, touch }
 }
+
+/** Avbockade packsaker (nycklar) för ett datum. */
+export function usePackChecks(date: string | undefined): Set<string> | undefined {
+  return useLiveQuery(async () => new Set((date ? await db.packChecks.get(date) : undefined)?.checked ?? []), [date])
+}

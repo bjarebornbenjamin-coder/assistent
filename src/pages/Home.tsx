@@ -3,9 +3,10 @@ import { EventCard } from '../components/EventCard'
 import { LessonCard } from '../components/LessonCard'
 import { upcomingEvents } from '../domain/calendar'
 import { WEEKDAYS_LONG, addDays, toISODate, weekdayOf } from '../domain/dates'
-import { packingTarget } from '../domain/packing'
+import { setPackChecked } from '../db/repo'
+import { itemKey, packingTarget } from '../domain/packing'
 import { describeNext, lessonsOn, nextLesson } from '../domain/schedule'
-import { useEvents, useLessons, useNow, useSettings, useSubjects } from '../hooks'
+import { useEvents, useLessons, usePackChecks, useNow, useSettings, useSubjects } from '../hooks'
 
 function dayName(date: string, today: string): string {
   if (date === today) return 'idag'
@@ -19,6 +20,8 @@ export function Home() {
   const subjects = useSubjects()
   const events = useEvents()
   const now = useNow()
+  const packing0 = settings && lessons && subjects ? packingTarget(now, lessons, subjects, settings) : null
+  const checks = usePackChecks(packing0?.date)
   if (!settings || !lessons || !subjects || !events) return null
 
   const today = toISODate(now)
@@ -73,7 +76,20 @@ export function Home() {
           {packing.groups.map((g) => (
             <div key={g.subject.id}>
               <h3>{g.subject.name}</h3>
-              <ul>{g.items.map((i) => <li key={i.id}>{i.text}</li>)}</ul>
+              <ul className="checklist">
+                {g.items.map((i) => {
+                  const key = itemKey(i.text)
+                  const done = checks?.has(key) ?? false
+                  return (
+                    <li key={i.id}>
+                      <label className={done ? 'done' : ''}>
+                        <input type="checkbox" checked={done} onChange={(e) => setPackChecked(packing.date, key, e.target.checked)} />
+                        {i.text}
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
           ))}
         </div>

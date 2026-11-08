@@ -107,6 +107,16 @@ export async function clearChat(): Promise<void> {
   await db.chat.clear()
 }
 
+/** Bockar av/ur en packsak för ett datum och rensar rader för dagar som passerat. */
+export async function setPackChecked(date: string, key: string, checked: boolean, today = toISODate(new Date())): Promise<void> {
+  await db.transaction('rw', db.packChecks, async () => {
+    await db.packChecks.where('date').below(today).delete()
+    const row = (await db.packChecks.get(date)) ?? { date, checked: [] }
+    const rest = row.checked.filter((k) => k !== key)
+    await db.packChecks.put({ date, checked: checked ? [...rest, key] : rest })
+  })
+}
+
 export async function exportAll(): Promise<Backup> {
   return {
     app: 'studieassistent',
