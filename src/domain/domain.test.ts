@@ -68,6 +68,15 @@ describe('packlista', () => {
     expect(groups.map((g) => g.subject.id)).toEqual(['ma'])
     expect(groups[0].items.map((i) => i.text)).toEqual(['miniräknare', 'mattebok'])
   })
+  it('samma sak i två ämnen visas en gång (skiftlägesokänsligt)', () => {
+    const subs: Subject[] = [
+      { id: 'a', name: 'A', packItems: [{ id: '1', text: 'Dator' }, { id: '2', text: 'Penna' }] },
+      { id: 'b', name: 'B', packItems: [{ id: '3', text: ' dator ' }] },
+      { id: 'c', name: 'C', packItems: [{ id: '4', text: 'Bok' }, { id: '5', text: 'bok' }] },
+    ]
+    const groups = packingFor([mk('1', 'a', 1, '08:00', '09:00'), mk('2', 'b', 1, '09:00', '10:00'), mk('3', 'c', 1, '10:00', '11:00')], subs)
+    expect(groups.map((g) => [g.subject.id, g.items.map((i) => i.text)])).toEqual([['a', ['Dator', 'Penna']], ['c', ['Bok']]])
+  })
   it('målet är idag före sista lektionen, annars nästa lektionsdag', () => {
     const s = { cycleLength: 1, cycleAnchor: '2026-11-02' }
     const lessons = [mk('1', 'ma', 1, '08:00', '09:00'), mk('2', 'en', 3, '08:00', '09:00')]

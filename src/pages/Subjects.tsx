@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { addSubject, changePackItems, deleteSubject, newId, updateSubject } from '../db/repo'
+import { itemKey } from '../domain/packing'
 import type { Subject } from '../domain/types'
 import { useLessons, useSubjects } from '../hooks'
 
 /** Textfält som sparas när man lämnar det. */
-function CommitInput({ value, label, onCommit }: { value: string; label: string; onCommit: (v: string) => void }) {
+function CommitInput({ value, label, onCommit }: { value: string; label: string; onCommit: (v: string) => void | false }) {
   const [draft, setDraft] = useState(value)
   const [prev, setPrev] = useState(value)
   if (value !== prev) {
@@ -17,7 +18,9 @@ function CommitInput({ value, label, onCommit }: { value: string; label: string;
       aria-label={label}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => draft.trim() !== value && onCommit(draft.trim())}
+      onBlur={() => {
+        if (draft.trim() !== value && onCommit(draft.trim()) === false) setDraft(value)
+      }}
       onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
     />
   )
@@ -25,11 +28,15 @@ function CommitInput({ value, label, onCommit }: { value: string; label: string;
 
 function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: number }) {
   const [newItem, setNewItem] = useState('')
+  const [dupError, setDupError] = useState('')
 
   async function add(e: FormEvent) {
     e.preventDefault()
     if (!newItem.trim()) return
     const text = newItem.trim()
+    if (subject.packItems.some((p) => itemKey(p.text) === itemKey(text))) {
+      return setDupError(`"${text}" finns redan i ${subject.name}.`)
+    }
     setNewItem('')
     await changePackItems(subject.id, (items) => [...items, { id: newId(), text }])
   }
@@ -51,7 +58,9 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
         <CommitInput
           label="Namn"
           value={subject.name}
-          onCommit={(name) => name && updateSubject({ ...subject, name })}
+          onCommit={(name) => {
+            if (name) void updateSubject({ ...subject, name })
+          }}
         />
       </label>
 
@@ -61,10 +70,16 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
           <CommitInput
             label={`Sak: ${item.text}`}
             value={item.text}
-            onCommit={(text) =>
-              changePackItems(subject.id, (items) =>
+            onCommit={(text) => {
+              if (text && subject.packItems.some((p) => p.id !== item.id && itemKey(p.text) === itemKey(text))) {
+                setDupError(`"${text}" finns redan i ${subject.name}.`)
+                return false
+              }
+              setDupError('')
+              void changePackItems(subject.id, (items) =>
                 text ? items.map((p) => (p.id === item.id ? { ...p, text } : p)) : items.filter((p) => p.id !== item.id),
               )
+            }
             }
           />
           <button type="button" className="btn danger" aria-label={`Ta bort ${item.text}`} onClick={() => changePackItems(subject.id, (items) => items.filter((p) => p.id !== item.id))}>
@@ -73,9 +88,10 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
         </div>
       ))}
       <form className="item" onSubmit={add}>
-        <input type="text" aria-label="Ny sak att ta med" placeholder="t.ex. miniräknare" value={newItem} onChange={(e) => setNewItem(e.target.value)} />
+        <input type="text" aria-label="Ny sak att ta med" placeholder="t.ex. miniräknare" value={newItem} onChange={(e) => { setNewItem(e.target.value); setDupError('') }} />
         <button type="submit" className="btn">Lägg till</button>
       </form>
+      {dupError && <p className="error" role="alert">{dupError}</p>}
 
       <div className="actions">
         <button type="button" className="btn danger" onClick={remove}>Ta bort ämne</button>
