@@ -34,7 +34,6 @@ describe('/api/chat', () => {
     expect((await handleChat(req({ headers: { 'x-app-password': 'fel' } }), env, upstream(calls))).status).toBe(401)
     expect((await handleChat(req({ headers: {} }), env, upstream(calls))).status).toBe(401)
     expect((await handleChat(req(), { ...env, OPENAI_API_KEY: undefined }, upstream(calls))).status).toBe(500)
-    expect((await handleChat(req(), { OPENAI_API_KEY: 'k' }, upstream(calls))).status).toBe(500)
     expect((await handleChat(req({ method: 'GET' }), env, upstream(calls))).status).toBe(405)
     expect(calls).toHaveLength(0) // ingenting nådde OpenAI
   })
@@ -57,6 +56,32 @@ describe('/api/chat', () => {
     expect(sanitizeChatBody({ model: 'gpt-4o', messages: [] }).ok).toBe(false)
     expect(sanitizeChatBody({ model: 'gpt-4o', messages: [{ role: 'user', content: 'x'.repeat(4_100_000) }] }).ok).toBe(false)
     expect(sanitizeChatBody({ model: 'gpt-4o', messages: [{}], tools: [], response_format: { type: 'json_object' } })).toMatchObject({ ok: true })
+  })
+})
+
+describe('öppen åtkomst (inget APP_PASSWORD)', () => {
+  const open: Env = { OPENAI_API_KEY: 'sk-server' }
+  it('släpper in utan lösenord, men med strängare gräns per besökare', async () => {
+    const calls: { url: string; init: RequestInit }[] = []
+    const r = (ip: string) => req({ headers: { 'x-forwarded-for': ip }, ip })
+    for (let i = 0; i < 10; i++) expect((await handleChat(r('9.9.9.9'), open, upstream(calls))).status).toBe(200)
+    expect((await handleChat(r('9.9.9.9'), open, upstream(calls))).status).toBe(429) // max 10/min i öppet läge
+    expect((await handleChat(r('8.8.8.8'), open, upstream(calls))).status).toBe(200) // annan besökare påverkas inte
+  })
+  it('dagstak per besökare', async () => {
+    const calls: { url: string; init: RequestInit }[] = []
+    const e = { ...open, OPEN_DAILY_LIMIT: '2', RATE_LIMIT_PER_MIN: '100' }
+    const r = req({ headers: { 'x-forwarded-for': '7.7.7.7' } })
+    expect((await handleChat(r, e, upstream(calls))).status).toBe(200)
+    expect((await handleChat(r, e, upstream(calls))).status).toBe(200)
+    const third = await handleChat(r, e, upstream(calls))
+    expect(third.status).toBe(429)
+    expect(JSON.stringify(third.body)).toContain('Dagens gräns')
+  })
+  it('lösenord eller inloggning på servern stänger det öppna läget igen', async () => {
+    const calls: { url: string; init: RequestInit }[] = []
+    expect((await handleChat(req({ headers: {} }), { ...open, APP_PASSWORD: 'hemligt' }, upstream(calls))).status).toBe(401)
+    expect((await handleChat(req({ headers: {} }), { ...open, SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'a' }, upstream(calls))).status).toBe(401)
   })
 })
 

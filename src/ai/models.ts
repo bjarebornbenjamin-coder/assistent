@@ -12,7 +12,7 @@ export function filterChatModels(ids: string[]): string[] {
   return [...new Set([DEFAULT_MODEL, ...kept])].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
 }
 
-export async function fetchModels(headers: Record<string, string>, fetchFn: typeof fetch = fetch): Promise<string[]> {
+export async function fetchModels(headers: Record<string, string> = {}, fetchFn: typeof fetch = fetch): Promise<string[]> {
   let res: Response
   try {
     res = await fetchFn('/api/models', { headers })

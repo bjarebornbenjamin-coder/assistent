@@ -8,9 +8,13 @@ const fakeFetch = (status: number, body: unknown = {}) => (async () => new Respo
 describe('/api/health', () => {
   it('visar vad som är satt utan att avslöja värden', async () => {
     const r = await handleHealth(req(), { OPENAI_API_KEY: 'sk-hemlig', APP_PASSWORD: 'lösen' }, fakeFetch(200))
-    expect(r.body).toEqual({ openaiKeyConfigured: true, appPasswordConfigured: true, supabaseConfigured: false, openai: { ok: true, status: 200, code: undefined } })
+    expect(r.body).toEqual({ openaiKeyConfigured: true, appPasswordConfigured: true, supabaseConfigured: false, openAccess: false, openai: { ok: true, status: 200, code: undefined } })
     expect(JSON.stringify(r.body)).not.toContain('sk-hemlig')
     expect(JSON.stringify(r.body)).not.toContain('lösen"')
+  })
+  it('markerar öppen åtkomst när varken lösenord eller inloggning är satt', async () => {
+    expect((await handleHealth(req(), { OPENAI_API_KEY: 'x' }, fakeFetch(200))).body).toMatchObject({ openAccess: true })
+    expect((await handleHealth(req(), { OPENAI_API_KEY: 'x', APP_PASSWORD: 'p' }, fakeFetch(200))).body).toMatchObject({ openAccess: false })
   })
   it('saknad nyckel anropar inte OpenAI', async () => {
     let called = false

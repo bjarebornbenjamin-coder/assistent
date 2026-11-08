@@ -4,6 +4,8 @@ export interface Health {
   openaiKeyConfigured: boolean
   appPasswordConfigured: boolean
   supabaseConfigured: boolean
+  /** Inget lösenord eller inloggning krävs: alla med adressen kan använda nyckeln. */
+  openAccess: boolean
   /** Resultat av ett riktigt anrop till OpenAI med serverns nyckel (null om nyckel saknas). */
   openai: { ok: boolean; status: number; code?: string } | null
 }
@@ -15,6 +17,7 @@ export async function handleHealth(req: ApiRequest, env: Env, fetchFn: FetchFn =
     openaiKeyConfigured: Boolean(env.OPENAI_API_KEY),
     appPasswordConfigured: Boolean(env.APP_PASSWORD),
     supabaseConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_ANON_KEY),
+    openAccess: !env.APP_PASSWORD && !env.SUPABASE_URL,
     openai: null,
   }
   if (env.OPENAI_API_KEY) {

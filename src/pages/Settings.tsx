@@ -33,9 +33,10 @@ function AiSection() {
     <>
       <h2>AI-assistent</h2>
       <p className="muted">
-        OpenAI-nyckeln finns på servern (miljövariabeln OPENAI_API_KEY) och lämnar aldrig servern. Här anger du bara lösenordet som
-        skyddar servern (APP_PASSWORD). Lösenordet sparas på den här enheten och ingår inte i exporten. När du frågar om schema eller
-        händelser skickas just den informationen via servern till OpenAI.
+        OpenAI-nyckeln finns på servern (miljövariabeln OPENAI_API_KEY) och lämnar aldrig servern. Ett lösenord är valfritt: sätter du
+        APP_PASSWORD i Vercel måste du skriva samma lösenord här, annars kan alla som har webbadressen använda din nyckel. Lösenordet
+        sparas på den här enheten och ingår inte i exporten. När du frågar om schema eller händelser skickas just den informationen via
+        servern till OpenAI.
       </p>
       {config.password && looksLikeOpenAiKey(config.password) && (
         <p className="error" role="alert">Det sparade lösenordet ser ut som en OpenAI-nyckel. Ta bort det, lägg nyckeln i Vercel och skriv ditt APP_PASSWORD här.</p>
@@ -100,14 +101,12 @@ function AiSection() {
         <button
           type="button"
           className="btn"
-          disabled={!config.password || loadingModels}
+          disabled={loadingModels}
           onClick={async () => {
             setLoadingModels(true)
             setModelsMsg('')
             try {
-              const headers = await authHeaders()
-              if (!headers) throw new Error('Ange lösenordet först.')
-              const models = await fetchModels(headers)
+              const models = await fetchModels(await authHeaders())
               await saveAiConfig({ models })
               setModelsMsg(`Hämtade ${models.length} modeller.`)
             } catch (e) {

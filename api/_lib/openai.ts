@@ -27,7 +27,12 @@ async function guard(req: ApiRequest, env: Env, fetchFn: FetchFn, method: string
   const auth = await authorize(req, env, fetchFn)
   if (!auth.ok) return errorBody(auth.status, auth.message)
   const limit = Number(env.RATE_LIMIT_PER_MIN) || 20
-  const rl = rateLimit(auth.id, limit)
+  if (auth.open) {
+    // Öppen åtkomst: strängare gräns per besökare, och ett dagstak per serverinstans.
+    const day = rateLimit(`open-day:${auth.id}`, Number(env.OPEN_DAILY_LIMIT) || 100, Date.now(), 86_400_000)
+    if (!day.ok) return errorBody(429, 'Dagens gräns för öppen åtkomst är nådd. Sätt APP_PASSWORD eller försök i morgon.')
+  }
+  const rl = rateLimit(auth.id, auth.open ? Math.min(limit, 10) : limit)
   if (!rl.ok) return json(429, { error: { message: `För många anrop. Vänta ${rl.retryAfter} sekunder.` } }, { 'Retry-After': String(rl.retryAfter) })
   return { id: auth.id }
 }

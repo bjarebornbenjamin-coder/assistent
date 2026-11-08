@@ -10,11 +10,12 @@ interface HealthBody {
   openaiKeyConfigured: boolean
   appPasswordConfigured: boolean
   supabaseConfigured: boolean
+  openAccess?: boolean
   openai: { ok: boolean; status: number; code?: string } | null
 }
 
 /** Testar steg för steg: når vi servern, finns nyckeln, godtar OpenAI den, stämmer lösenordet. */
-export async function diagnose(headers: Record<string, string> | null, fetchFn: typeof fetch = fetch): Promise<Diagnosis> {
+export async function diagnose(headers: Record<string, string> = {}, fetchFn: typeof fetch = fetch): Promise<Diagnosis> {
   let health: HealthBody
   try {
     const res = await fetchWithTimeout('/api/health', {}, fetchFn)
@@ -36,12 +37,17 @@ export async function diagnose(headers: Record<string, string> | null, fetchFn: 
     if (code === 'unreachable') return { ok: false, message: 'Servern kunde inte nå OpenAI just nu. Försök igen om en stund.' }
     return { ok: false, message: `OpenAI svarade med fel ${status}${code ? ` (${code})` : ''}.` }
   }
-  if (!health.appPasswordConfigured && !health.supabaseConfigured)
-    return { ok: false, message: 'Nyckeln fungerar, men servern saknar APP_PASSWORD. Lägg in det i Vercel och gör Redeploy.' }
+  if (health.openAccess)
+    return {
+      ok: true,
+      message:
+        'Allt fungerar. Obs: åtkomsten är öppen, så alla som har webbadressen kan använda din OpenAI-nyckel (med en gräns per besökare). Sätt en utgiftsgräns hos OpenAI, eller lägg in APP_PASSWORD i Vercel om du vill skydda den.',
+    }
 
-  if (headers?.['x-app-password'] && /^sk-[A-Za-z0-9_-]{16,}/.test(headers['x-app-password']))
+  if (headers['x-app-password'] && /^sk-[A-Za-z0-9_-]{16,}/.test(headers['x-app-password']))
     return { ok: false, message: 'Lösenordet du sparat här ser ut som en OpenAI-nyckel. Ta bort det, lägg nyckeln i Vercel som OPENAI_API_KEY och skriv ditt eget APP_PASSWORD här.' }
-  if (!headers) return { ok: false, message: 'Servern och nyckeln fungerar. Ange nu lösenordet (APP_PASSWORD) här i Inställningar, eller logga in.' }
+  if (Object.keys(headers).length === 0)
+    return { ok: false, message: 'Servern och nyckeln fungerar, men servern kräver ett lösenord (APP_PASSWORD är satt i Vercel). Skriv det här i Inställningar, eller ta bort APP_PASSWORD i Vercel om du inte vill ha något lösenord.' }
   try {
     const res = await fetchWithTimeout('/api/models', { headers }, fetchFn)
     if (res.status === 401) return { ok: false, message: 'Servern och nyckeln fungerar, men lösenordet du skrivit in här stämmer inte med APP_PASSWORD i Vercel.' }

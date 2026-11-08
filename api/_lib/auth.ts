@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { header, type ApiRequest, type Env, type FetchFn } from './types.js'
 
-export type AuthResult = { ok: true; id: string; email?: string } | { ok: false; status: number; message: string }
+export type AuthResult = { ok: true; id: string; email?: string; open?: boolean } | { ok: false; status: number; message: string }
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a)
@@ -35,7 +35,11 @@ export async function authorize(req: ApiRequest, env: Env, fetchFn: FetchFn): Pr
   const bearer = /^Bearer\s+(.+)$/i.exec(header(req, 'authorization'))?.[1]
   if (bearer) return verifySupabaseUser(bearer, env, fetchFn)
 
-  if (!env.APP_PASSWORD && !env.SUPABASE_URL) return { ok: false, status: 500, message: 'Servern är inte konfigurerad (APP_PASSWORD saknas).' }
+  // Varken lösenord eller inloggning konfigurerat: öppen åtkomst, begränsad per besökare i openai.ts.
+  if (!env.APP_PASSWORD && !env.SUPABASE_URL) {
+    const forwarded = header(req, 'x-forwarded-for').split(',')[0].trim()
+    return { ok: true, id: `open:${forwarded || req.ip || 'okänd'}`, open: true }
+  }
   const pw = header(req, 'x-app-password')
   if (env.APP_PASSWORD && pw && safeEqual(pw, env.APP_PASSWORD)) return { ok: true, id: 'password' }
   return { ok: false, status: 401, message: 'Fel eller saknat lösenord.' }

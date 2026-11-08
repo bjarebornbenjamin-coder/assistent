@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChatError } from '../ai/chat'
 import { analyzeRows, parseImportResponse, readScheduleImage, type ImportRow } from '../ai/scheduleImport'
 import { importLessons } from '../db/repo'
 import { WEEKDAYS_LONG } from '../domain/dates'
@@ -35,7 +34,6 @@ export function ImportSchedulePage() {
     setBusy(true)
     try {
       const headers = await authHeaders()
-      if (!headers) throw new ChatError('Logga in eller ange serverns lösenord under Inställningar först.')
       const dataUrl = await imageToDataUrl(file)
       setPreview(dataUrl)
       const text = await readScheduleImage(dataUrl, config!.model, headers)
