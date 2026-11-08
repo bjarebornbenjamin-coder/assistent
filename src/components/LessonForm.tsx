@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { addSubject, deleteLesson, newId, saveLesson } from '../db/repo'
 import { WEEKDAYS_LONG } from '../domain/dates'
+import { findConflicts } from '../domain/schedule'
 import type { Lesson, Subject } from '../domain/types'
 import { cycleLabel } from '../domain/weekCycle'
 
@@ -10,11 +11,12 @@ interface Props {
   lesson: Lesson | null
   defaultWeekday: number
   subjects: Subject[]
+  lessons: Lesson[]
   cycleLength: number
   onClose: () => void
 }
 
-export function LessonForm({ lesson, defaultWeekday, subjects, cycleLength, onClose }: Props) {
+export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLength, onClose }: Props) {
   const [subjectId, setSubjectId] = useState(lesson?.subjectId ?? subjects[0]?.id ?? NEW)
   const [newName, setNewName] = useState('')
   const [weekday, setWeekday] = useState(lesson?.weekday ?? defaultWeekday)
@@ -26,12 +28,19 @@ export function LessonForm({ lesson, defaultWeekday, subjects, cycleLength, onCl
     lesson?.weeks ?? Array.from({ length: cycleLength }, (_, i) => i),
   )
   const [error, setError] = useState('')
+  const [warned, setWarned] = useState(false)
 
+  const conflicts =
+    start && end && end > start && weeks.length > 0
+      ? findConflicts({ id: lesson?.id ?? '', weekday, start, end, weeks: weeks.length === cycleLength ? null : weeks }, lessons, cycleLength)
+      : []
+  const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name ?? 'Okänt ämne'
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!start || !end || end <= start) return setError('Sluttiden måste vara efter starttiden.')
     if (subjectId === NEW && !newName.trim()) return setError('Skriv namnet på ämnet.')
     if (weeks.length === 0) return setError('Välj minst en vecka.')
+    if (conflicts.length > 0 && !warned) return setWarned(true)
     const id = subjectId === NEW ? (await addSubject(newName)).id : subjectId
     await saveLesson({
       id: lesson?.id ?? newId(),
@@ -73,14 +82,14 @@ export function LessonForm({ lesson, defaultWeekday, subjects, cycleLength, onCl
 
         <label className="field">
           <span>Dag</span>
-          <select value={weekday} onChange={(e) => setWeekday(Number(e.target.value))}>
+          <select value={weekday} onChange={(e) => { setWeekday(Number(e.target.value)); setWarned(false) }}>
             {WEEKDAYS_LONG.map((d, i) => <option key={d} value={i + 1}>{d[0].toUpperCase() + d.slice(1)}</option>)}
           </select>
         </label>
 
         <div className="two">
-          <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
-          <label className="field"><span>Slut</span><input type="time" value={end} onChange={(e) => setEnd(e.target.value)} required /></label>
+          <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => { setStart(e.target.value); setWarned(false) }} required /></label>
+          <label className="field"><span>Slut</span><input type="time" value={end} onChange={(e) => { setEnd(e.target.value); setWarned(false) }} required /></label>
         </div>
         <div className="two">
           <label className="field"><span>Sal</span><input type="text" value={room} onChange={(e) => setRoom(e.target.value)} /></label>
@@ -96,7 +105,7 @@ export function LessonForm({ lesson, defaultWeekday, subjects, cycleLength, onCl
                   <input
                     type="checkbox"
                     checked={weeks.includes(i)}
-                    onChange={(e) => setWeeks(e.target.checked ? [...weeks, i] : weeks.filter((w) => w !== i))}
+                    onChange={(e) => { setWeeks(e.target.checked ? [...weeks, i] : weeks.filter((w) => w !== i)); setWarned(false) }}
                   />
                   Vecka {cycleLabel(i)}
                 </label>
@@ -105,9 +114,17 @@ export function LessonForm({ lesson, defaultWeekday, subjects, cycleLength, onCl
           </fieldset>
         )}
 
+        {warned && conflicts.length > 0 && (
+          <div className="warning" role="alert">
+            {conflicts.map((c) => (
+              <p key={c.id}>Krockar med {subjectName(c.subjectId)} {c.start}–{c.end}</p>
+            ))}
+            <p>Spara ändå, eller ändra tid eller dag.</p>
+          </div>
+        )}
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions">
-          <button type="submit" className="btn primary">Spara</button>
+          <button type="submit" className="btn primary">{warned && conflicts.length > 0 ? 'Spara ändå' : 'Spara'}</button>
           <button type="button" className="btn" onClick={onClose}>Avbryt</button>
           <span className="spacer" />
           {lesson && <button type="button" className="btn danger" onClick={remove}>Ta bort</button>}

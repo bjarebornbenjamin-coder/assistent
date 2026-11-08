@@ -76,6 +76,7 @@ export function SchedulePage() {
           lesson={editing === 'new' ? null : editing}
           defaultWeekday={day}
           subjects={subjects}
+          lessons={lessons}
           cycleLength={cycleLength}
           onClose={() => setEditing(null)}
         />

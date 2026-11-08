@@ -141,3 +141,6 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 }
 .composer textarea { flex: 1; min-height: 44px; max-height: 140px; }
 .contact-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+
+.warning { background: var(--primary-container); color: var(--on-primary-container); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.warning p { margin: 2px 0; }

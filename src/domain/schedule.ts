@@ -41,3 +41,22 @@ export function nextLesson(now: Date, lessons: Lesson[], s: CycleSettings): Next
   }
   return null
 }
+
+/** Vilka veckor i cykeln en lektion gäller (null = alla). */
+function weekSet(weeks: number[] | null, cycleLength: number): Set<number> {
+  return new Set(weeks ?? Array.from({ length: Math.max(cycleLength, 1) }, (_, i) => i))
+}
+
+/** Lektioner som överlappar `candidate` samma veckodag och i någon gemensam vecka. */
+export function findConflicts(
+  candidate: Pick<Lesson, 'id' | 'weekday' | 'start' | 'end' | 'weeks'>,
+  lessons: Lesson[],
+  cycleLength: number,
+): Lesson[] {
+  const mine = weekSet(candidate.weeks, cycleLength)
+  return lessons
+    .filter((l) => l.id !== candidate.id && l.weekday === candidate.weekday)
+    .filter((l) => candidate.start < l.end && l.start < candidate.end)
+    .filter((l) => [...weekSet(l.weeks, cycleLength)].some((w) => mine.has(w)))
+    .sort((a, b) => a.start.localeCompare(b.start))
+}

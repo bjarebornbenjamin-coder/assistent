@@ -120,3 +120,23 @@ describe('kalender', () => {
     expect(list.map((e) => e.id)).toEqual(['heldag', 'pågår', 'imorgon', 'dag7'])
   })
 })
+
+import { findConflicts } from './schedule'
+
+describe('krockar', () => {
+  const spanish = mk('es', 'sp', 1, '08:20', '09:40')
+  const cand = (start: string, end: string, weeks: number[] | null = null, weekday = 1, id = 'new') => ({ id, weekday, start, end, weeks })
+  it('hittar överlapp men inte lektioner som bara tangerar', () => {
+    expect(findConflicts(cand('09:00', '10:00'), [spanish], 1).map((l) => l.id)).toEqual(['es'])
+    expect(findConflicts(cand('09:40', '10:30'), [spanish], 1)).toEqual([])
+    expect(findConflicts(cand('07:00', '08:20'), [spanish], 1)).toEqual([])
+    expect(findConflicts(cand('09:00', '10:00', null, 2), [spanish], 1)).toEqual([])
+  })
+  it('tar hänsyn till A/B-veckor och ignorerar sig själv', () => {
+    const onlyA = mk('a', 'sp', 1, '08:00', '09:00', [0])
+    expect(findConflicts(cand('08:30', '09:30', [1]), [onlyA], 2)).toEqual([])
+    expect(findConflicts(cand('08:30', '09:30', [0, 1]), [onlyA], 2)).toHaveLength(1)
+    expect(findConflicts(cand('08:30', '09:30', null), [onlyA], 2)).toHaveLength(1)
+    expect(findConflicts(cand('08:30', '09:30', null, 1, 'a'), [onlyA], 2)).toEqual([])
+  })
+})

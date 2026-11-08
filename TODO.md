@@ -4,7 +4,7 @@ Arbetsordning: en uppgift i taget. Efter varje uppgift: build + tester, kontroll
 Fas 3 görs inte utan att fråga först.
 
 ## Fas 1 – Buggar
-- [ ] 1.1 Varna för krockande lektioner
+- [x] 1.1 Varna för krockande lektioner
 - [ ] 1.2 Stoppa dubbletter i packlistan (även på Hem)
 - [ ] 1.3 Visa lektioner i månadsvyn
 - [ ] 1.4 Rendera markdown i chatten
