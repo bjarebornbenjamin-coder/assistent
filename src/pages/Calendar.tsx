@@ -76,6 +76,7 @@ export function CalendarPage() {
               <div className="month-row" role="row" key={w[0]}>
                 {w.map((date) => {
                   const n = eventsOn(date, events).length
+                  const hasLessons = lessonsOn(date, lessons, settings).length > 0
                   const other = parseISODate(date).getMonth() !== f.getMonth()
                   return (
                     <button
@@ -84,11 +85,12 @@ export function CalendarPage() {
                       role="gridcell"
                       className={`day${other ? ' other' : ''}${date === today ? ' today' : ''}`}
                       aria-pressed={date === focus}
-                      aria-label={`${dayLabel(date)}${n ? `, ${n} händelse${n > 1 ? 'r' : ''}` : ''}`}
+                      aria-label={`${dayLabel(date)}${hasLessons ? ', lektioner' : ''}${n ? `, ${n} händelse${n > 1 ? 'r' : ''}` : ''}`}
                       onClick={() => setFocus(date)}
                     >
                       <span className="num">{parseISODate(date).getDate()}</span>
                       <span className="dots" aria-hidden="true">
+                        {hasLessons && <i className="lesson" />}
                         {Array.from({ length: Math.min(n, 3) }, (_, i) => <i key={i} />)}
                       </span>
                     </button>

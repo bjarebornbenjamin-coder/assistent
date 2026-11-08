@@ -144,3 +144,4 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 
 .warning { background: var(--primary-container); color: var(--on-primary-container); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
 .warning p { margin: 2px 0; }
+.dots i.lesson { background: var(--muted); }
