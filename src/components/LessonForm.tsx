@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useFieldError } from '../hooks'
 import { addSubject, deleteLesson, newId, saveLesson } from '../db/repo'
 import { WEEKDAYS_LONG } from '../domain/dates'
 import { findConflicts } from '../domain/schedule'
@@ -27,7 +28,7 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
   const [weeks, setWeeks] = useState<number[]>(
     lesson?.weeks ?? Array.from({ length: cycleLength }, (_, i) => i),
   )
-  const [error, setError] = useState('')
+  const { error, fail, touch } = useFieldError()
   const [warned, setWarned] = useState(false)
 
   const conflicts =
@@ -37,9 +38,9 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
   const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name ?? 'Okänt ämne'
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!start || !end || end <= start) return setError('Sluttiden måste vara efter starttiden.')
-    if (subjectId === NEW && !newName.trim()) return setError('Skriv namnet på ämnet.')
-    if (weeks.length === 0) return setError('Välj minst en vecka.')
+    if (!start || !end || end <= start) return fail('time', 'Sluttiden måste vara efter starttiden.')
+    if (subjectId === NEW && !newName.trim()) return fail('subject', 'Skriv namnet på ämnet.')
+    if (weeks.length === 0) return fail('weeks', 'Välj minst en vecka.')
     if (conflicts.length > 0 && !warned) return setWarned(true)
     const id = subjectId === NEW ? (await addSubject(newName)).id : subjectId
     await saveLesson({
@@ -68,7 +69,7 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
 
         <label className="field">
           <span>Ämne</span>
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+          <select value={subjectId} onChange={(e) => { setSubjectId(e.target.value); touch('subject') }}>
             {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             <option value={NEW}>Nytt ämne…</option>
           </select>
@@ -76,7 +77,7 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
         {subjectId === NEW && (
           <label className="field">
             <span>Namn på nytt ämne</span>
-            <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} autoFocus />
+            <input type="text" value={newName} onChange={(e) => { setNewName(e.target.value); touch('subject') }} autoFocus />
           </label>
         )}
 
@@ -88,8 +89,8 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
         </label>
 
         <div className="two">
-          <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => { setStart(e.target.value); setWarned(false) }} required /></label>
-          <label className="field"><span>Slut</span><input type="time" value={end} onChange={(e) => { setEnd(e.target.value); setWarned(false) }} required /></label>
+          <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => { setStart(e.target.value); setWarned(false); touch('time') }} required /></label>
+          <label className="field"><span>Slut</span><input type="time" value={end} onChange={(e) => { setEnd(e.target.value); setWarned(false); touch('time') }} required /></label>
         </div>
         <div className="two">
           <label className="field"><span>Sal</span><input type="text" value={room} onChange={(e) => setRoom(e.target.value)} /></label>
@@ -105,7 +106,7 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
                   <input
                     type="checkbox"
                     checked={weeks.includes(i)}
-                    onChange={(e) => { setWeeks(e.target.checked ? [...weeks, i] : weeks.filter((w) => w !== i)); setWarned(false) }}
+                    onChange={(e) => { setWeeks(e.target.checked ? [...weeks, i] : weeks.filter((w) => w !== i)); setWarned(false); touch('weeks') }}
                   />
                   Vecka {cycleLabel(i)}
                 </label>

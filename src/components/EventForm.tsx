@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useFieldError } from '../hooks'
 import { deleteEvent, newId, saveEvent } from '../db/repo'
 import type { CalendarEvent, ISODate } from '../domain/types'
 
@@ -15,13 +16,13 @@ export function EventForm({ event, defaultDate, onClose }: Props) {
   const [start, setStart] = useState(event?.start ?? '08:00')
   const [end, setEnd] = useState(event?.end ?? '')
   const [note, setNote] = useState(event?.note ?? '')
-  const [error, setError] = useState('')
+  const { error, fail, touch } = useFieldError()
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!title.trim()) return setError('Skriv en titel.')
-    if (!date) return setError('Välj ett datum.')
-    if (!allDay && end && end <= start) return setError('Sluttiden måste vara efter starttiden.')
+    if (!title.trim()) return fail('title', 'Skriv en titel.')
+    if (!date) return fail('date', 'Välj ett datum.')
+    if (!allDay && end && end <= start) return fail('time', 'Sluttiden måste vara efter starttiden.')
     await saveEvent({
       id: event?.id ?? newId(),
       title: title.trim(),
@@ -45,19 +46,19 @@ export function EventForm({ event, defaultDate, onClose }: Props) {
         <h1>{event ? 'Ändra händelse' : 'Ny händelse'}</h1>
         <label className="field">
           <span>Titel</span>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus />
         </label>
         <label className="field">
           <span>Datum</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); touch('date') }} required />
         </label>
         <div className="checks">
-          <label><input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Heldag</label>
+          <label><input type="checkbox" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); touch('time') }} /> Heldag</label>
         </div>
         {!allDay && (
           <div className="two">
-            <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
-            <label className="field"><span>Slut (valfritt)</span><input type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
+            <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => { setStart(e.target.value); touch('time') }} required /></label>
+            <label className="field"><span>Slut (valfritt)</span><input type="time" value={end} onChange={(e) => { setEnd(e.target.value); touch('time') }} /></label>
           </div>
         )}
         <label className="field">

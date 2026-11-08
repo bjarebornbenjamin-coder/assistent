@@ -4,7 +4,7 @@ import { DEFAULT_MODEL, deleteContact, exportAll, importAll, newId, saveAiConfig
 import { toISODate } from '../domain/dates'
 import type { Theme } from '../domain/types'
 import { anchorFor, cycleLabel, weekIndex } from '../domain/weekCycle'
-import { useAiConfig, useContacts, useSettings } from '../hooks'
+import { useAiConfig, useContacts, useFieldError, useSettings } from '../hooks'
 
 const THEMES: { value: Theme; label: string }[] = [
   { value: 'system', label: 'Som enheten' },
@@ -51,16 +51,15 @@ function ContactsSection() {
   const contacts = useContacts()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [error, setError] = useState('')
+  const { error, fail, touch } = useFieldError()
   if (!contacts) return null
 
   async function add(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Ange namn och en giltig e-postadress.')
+    if (!name.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) return fail('contact', 'Ange namn och en giltig e-postadress.')
     await saveContact({ id: newId(), name: name.trim(), email: email.trim() })
     setName('')
     setEmail('')
-    setError('')
   }
 
   return (
@@ -76,8 +75,8 @@ function ContactsSection() {
       ))}
       <form onSubmit={add}>
         <div className="two">
-          <input type="text" aria-label="Kontaktens namn" placeholder="Namn" value={name} onChange={(e) => setName(e.target.value)} />
-          <input type="text" inputMode="email" aria-label="Kontaktens e-post" placeholder="E-post" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="text" aria-label="Kontaktens namn" placeholder="Namn" value={name} onChange={(e) => { setName(e.target.value); touch('contact') }} />
+          <input type="text" inputMode="email" aria-label="Kontaktens e-post" placeholder="E-post" value={email} onChange={(e) => { setEmail(e.target.value); touch('contact') }} />
         </div>
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions"><button type="submit" className="btn">Lägg till kontakt</button></div>

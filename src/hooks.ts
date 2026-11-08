@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { db } from './db/db'
 import { defaultSettings, getAiConfig } from './db/repo'
 import type { AiConfig, CalendarEvent, ChatMessage, Contact, Lesson, Settings, Subject } from './domain/types'
@@ -37,4 +37,12 @@ export function useNow(): Date {
     return () => clearInterval(id)
   }, [])
   return now
+}
+
+/** Ett felmeddelande kopplat till ett fält; försvinner när det fältet ändras. */
+export function useFieldError() {
+  const [state, setState] = useState<{ field: string; message: string } | null>(null)
+  const fail = useCallback((field: string, message: string) => setState({ field, message }), [])
+  const touch = useCallback((field: string) => setState((e) => (e && e.field === field ? null : e)), [])
+  return { error: state?.message ?? '', fail, touch }
 }
