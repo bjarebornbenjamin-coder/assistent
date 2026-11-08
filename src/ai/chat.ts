@@ -65,7 +65,7 @@ export async function describeError(res: Response): Promise<string> {
   if (res.status === 403) return detail || 'Du har inte åtkomst.'
   if (res.status === 429) return detail || 'För många anrop eller slut på tegoder hos OpenAI.'
   if (res.status === 404) return `Modellen hittades inte. Kontrollera modellnamnet i Inställningar.${detail ? ` ${detail}` : ''}`
-  return `Servern svarade med fel ${res.status}.${detail ? ` ${detail}` : ''}`
+  return detail ? `Servern svarade med fel ${res.status}: ${detail}` : `Servern svarade med fel ${res.status} utan förklaring. Kontrollera Vercel → Logs och att miljövariablerna är satta.`
 }
 
 export async function runChat(o: RunOptions): Promise<ChatResult> {

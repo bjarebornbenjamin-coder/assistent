@@ -1,4 +1,4 @@
-import { handleModels } from './_lib/openai'
-import { adapt } from './_lib/vercel'
+import { handleModels } from './_lib/openai.js'
+import { adapt } from './_lib/vercel.js'
 
 export default adapt((req, env) => handleModels(req, env))

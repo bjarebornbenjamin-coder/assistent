@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { resetRateLimit } from './_lib/rateLimit'
-import { dispatchDue, handleDispatch, handleTest, supabaseStore, type DueNotification, type PushStore, type Sender, type Sub } from './_lib/push'
-import type { ApiRequest, Env } from './_lib/types'
+import { resetRateLimit } from './_lib/rateLimit.js'
+import { dispatchDue, handleDispatch, handleTest, supabaseStore, type DueNotification, type PushStore, type Sender, type Sub } from './_lib/push.js'
+import type { ApiRequest, Env } from './_lib/types.js'
 
 const NOW = new Date('2026-11-08T20:00:30Z')
 const sub = (user: string, n: number): Sub => ({ user_id: user, endpoint: `https://push.example/${user}/${n}`, p256dh: 'k', auth: 'a' })

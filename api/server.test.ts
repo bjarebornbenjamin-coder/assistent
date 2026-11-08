@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { handleChat, handleModels, sanitizeChatBody } from './_lib/openai'
-import { resetRateLimit } from './_lib/rateLimit'
-import type { ApiRequest, Env } from './_lib/types'
+import { handleChat, handleModels, sanitizeChatBody } from './_lib/openai.js'
+import { resetRateLimit } from './_lib/rateLimit.js'
+import type { ApiRequest, Env } from './_lib/types.js'
 
 const env: Env = { OPENAI_API_KEY: 'sk-server', APP_PASSWORD: 'hemligt', ALLOWED_EMAILS: 'Me@Example.com', SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon' }
 const req = (over: Partial<ApiRequest> = {}): ApiRequest => ({

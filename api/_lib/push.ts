@@ -1,8 +1,8 @@
 import { timingSafeEqual } from 'node:crypto'
-import webpush from 'web-push'
-import { verifySupabaseUser } from './auth'
-import { rateLimit } from './rateLimit'
-import { errorBody, header, json, type ApiRequest, type ApiResponse, type Env, type FetchFn } from './types'
+import * as webpush from 'web-push'
+import { verifySupabaseUser } from './auth.js'
+import { rateLimit } from './rateLimit.js'
+import { errorBody, header, json, type ApiRequest, type ApiResponse, type Env, type FetchFn } from './types.js'
 
 export interface Sub {
   user_id: string

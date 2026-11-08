@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto'
-import { header, type ApiRequest, type Env, type FetchFn } from './types'
+import { header, type ApiRequest, type Env, type FetchFn } from './types.js'
 
 export type AuthResult = { ok: true; id: string; email?: string } | { ok: false; status: number; message: string }
 

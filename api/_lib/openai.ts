@@ -1,6 +1,6 @@
-import { authorize } from './auth'
-import { rateLimit } from './rateLimit'
-import { errorBody, json, type ApiRequest, type ApiResponse, type Env, type FetchFn } from './types'
+import { authorize } from './auth.js'
+import { rateLimit } from './rateLimit.js'
+import { errorBody, json, type ApiRequest, type ApiResponse, type Env, type FetchFn } from './types.js'
 
 const OPENAI = 'https://api.openai.com/v1'
 const MAX_BODY_BYTES = 4_000_000 // Vercel tillåter 4,5 MB
