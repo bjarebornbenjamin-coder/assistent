@@ -133,7 +133,11 @@ export function ChatPage() {
           ),
         )}
         {busy && <div className="bubble assistant muted">Tänker…</div>}
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link>
+          </p>
+        )}
         <div ref={endRef} className="chat-end" />
       </div>
 

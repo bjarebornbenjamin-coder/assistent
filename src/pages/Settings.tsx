@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
 import { NotifySection } from '../push/NotifySection'
 import { SyncSection } from '../sync/SyncSection'
+import { diagnose, type Diagnosis } from '../ai/diagnose'
 import { authHeaders } from '../lib/auth'
 import { parseBackup } from '../db/backup'
 import { deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
@@ -21,6 +22,8 @@ function AiSection() {
   const [password, setPassword] = useState('')
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelsMsg, setModelsMsg] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null)
   if (!config) return null
   return (
     <>
@@ -40,6 +43,23 @@ function AiSection() {
           <button type="submit" className="btn primary">Spara</button>
         </form>
       )}
+      <div className="actions" style={{ marginTop: 0 }}>
+        <button
+          type="button"
+          className="btn"
+          disabled={testing}
+          onClick={async () => {
+            setTesting(true)
+            setDiagnosis(null)
+            setDiagnosis(await diagnose(await authHeaders()))
+            setTesting(false)
+          }}
+        >
+          {testing ? 'Testar…' : 'Testa anslutningen'}
+        </button>
+      </div>
+      {diagnosis && <p className={diagnosis.ok ? '' : 'error'} role="status">{diagnosis.message}</p>}
+
       <label className="field">
         <span>Modell</span>
         <select value={config.model} onChange={(e) => saveAiConfig({ model: e.target.value })}>
