@@ -4,7 +4,7 @@ import { LessonCard } from '../components/LessonCard'
 import { upcomingEvents } from '../domain/calendar'
 import { WEEKDAYS_LONG, addDays, toISODate, weekdayOf } from '../domain/dates'
 import { packingTarget } from '../domain/packing'
-import { lessonsOn, nextLesson } from '../domain/schedule'
+import { describeNext, lessonsOn, nextLesson } from '../domain/schedule'
 import { useEvents, useLessons, useNow, useSettings, useSubjects } from '../hooks'
 
 function dayName(date: string, today: string): string {
@@ -48,9 +48,7 @@ export function Home() {
       {next ? (
         <>
           <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} />
-          <p className="sub">
-            {next.ongoing ? 'Pågår nu' : next.date === today ? 'Senare idag' : `På ${dayName(next.date, today)}`}
-          </p>
+          <p className="next-note">{describeNext(now, next)}</p>
         </>
       ) : (
         <p className="empty">Inga kommande lektioner de närmaste två veckorna.</p>

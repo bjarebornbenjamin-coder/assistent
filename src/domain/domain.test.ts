@@ -149,3 +149,23 @@ describe('krockar', () => {
     expect(findConflicts(cand('08:30', '09:30', null, 1, 'a'), [onlyA], 2)).toEqual([])
   })
 })
+
+import { describeNext, formatDuration } from './schedule'
+
+describe('nedräkning', () => {
+  it('formaterar tid', () => {
+    expect(formatDuration(0)).toBe('0 min')
+    expect(formatDuration(45)).toBe('45 min')
+    expect(formatDuration(60)).toBe('1 h')
+    expect(formatDuration(80)).toBe('1 h 20 min')
+  })
+  it('beskriver pågående, senare idag och andra dagar', () => {
+    const lesson = mk('l', 'ma', 1, '09:40', '10:30')
+    const at = (iso: string, date: string, ongoing = false) => describeNext(new Date(iso), { lesson, date, ongoing })
+    expect(at('2026-11-09T10:00:00', '2026-11-09', true)).toBe('Pågår nu – slutar 10:30')
+    expect(at('2026-11-09T08:20:00', '2026-11-09')).toBe('Nästa lektion om 1 h 20 min')
+    expect(at('2026-11-09T09:35:00', '2026-11-09')).toBe('Nästa lektion om 5 min')
+    expect(at('2026-11-09T18:00:00', '2026-11-10')).toBe('Nästa lektion imorgon kl 09:40')
+    expect(at('2026-11-09T18:00:00', '2026-11-12')).toBe('Nästa lektion på torsdag kl 09:40')
+  })
+})

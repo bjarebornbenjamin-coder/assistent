@@ -1,4 +1,4 @@
-import { addDays, toHHmm, toISODate, weekdayOf } from './dates'
+import { WEEKDAYS_LONG, addDays, toHHmm, toISODate, weekdayOf } from './dates'
 import type { ISODate, Lesson, Settings } from './types'
 import { weekIndex } from './weekCycle'
 
@@ -59,4 +59,25 @@ export function findConflicts(
     .filter((l) => candidate.start < l.end && l.start < candidate.end)
     .filter((l) => [...weekSet(l.weeks, cycleLength)].some((w) => mine.has(w)))
     .sort((a, b) => a.start.localeCompare(b.start))
+}
+
+const minutesOf = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+
+export function formatDuration(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes))
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  return m % 60 === 0 ? `${h} h` : `${h} h ${m % 60} min`
+}
+
+/** Text under "Nästa lektion": pågår, nedräkning idag, eller dag och tid. */
+export function describeNext(now: Date, next: NextLesson): string {
+  if (next.ongoing) return `Pågår nu – slutar ${next.lesson.end}`
+  const today = toISODate(now)
+  if (next.date === today) {
+    const nowMin = now.getHours() * 60 + now.getMinutes()
+    return `Nästa lektion om ${formatDuration(minutesOf(next.lesson.start) - nowMin)}`
+  }
+  const day = next.date === addDays(today, 1) ? 'imorgon' : `på ${WEEKDAYS_LONG[weekdayOf(next.date) - 1]}`
+  return `Nästa lektion ${day} kl ${next.lesson.start}`
 }

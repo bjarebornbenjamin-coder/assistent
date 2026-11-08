@@ -165,3 +165,5 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 .swatch-none { padding: 0 12px; min-height: 32px; font-size: 13px; }
 .swatch-none[aria-checked='true'] { outline: 2px solid var(--text); outline-offset: 2px; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid; margin-right: 8px; }
+
+.next-note { font-size: 14px; font-weight: 500; color: var(--primary); margin: 4px 0 0; }
