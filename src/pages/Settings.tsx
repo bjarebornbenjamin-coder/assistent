@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
+import { SyncSection } from '../sync/SyncSection'
 import { authHeaders } from '../lib/auth'
 import { parseBackup } from '../db/backup'
 import { deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
@@ -182,6 +183,7 @@ export function SettingsPage() {
         ))}
       </div>
 
+      <SyncSection />
       <AiSection />
       <ContactsSection />
 

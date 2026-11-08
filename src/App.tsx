@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom'
 import { useSettings } from './hooks'
+import { useSyncRunner } from './sync/useSyncRunner'
 import { CalendarPage } from './pages/Calendar'
 import { ChatPage } from './pages/Chat'
 import { Home } from './pages/Home'
@@ -35,6 +36,7 @@ function Nav() {
 }
 
 export function App() {
+  useSyncRunner()
   const settings = useSettings()
   const theme = settings?.theme
 

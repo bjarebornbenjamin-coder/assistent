@@ -8,6 +8,7 @@ import { addChatMessage, clearChat, setCardStatus } from '../db/repo'
 import { Markdown } from '../components/Markdown'
 import type { ChatMessage, Subject } from '../domain/types'
 import { useAiConfig, useChat, useSubjects } from '../hooks'
+import { useSession } from '../sync/supabase'
 
 const QUICK_QUESTIONS = ['Vad har jag imorgon?', 'Vad ska jag packa?', 'Vad händer denna vecka?']
 
@@ -53,6 +54,7 @@ function Card({ m, subjects }: { m: ChatMessage; subjects: Subject[] }) {
 
 export function ChatPage() {
   const config = useAiConfig()
+  const session = useSession()
   const messages = useChat()
   const subjects = useSubjects()
   const [text, setText] = useState('')
@@ -64,7 +66,7 @@ export function ChatPage() {
     endRef.current?.scrollIntoView({ block: 'end' })
   }, [messages?.length, busy, error])
 
-  if (!config || !messages || !subjects) return null
+  if (!config || !messages || !subjects || session === undefined) return null
 
   async function send(e: FormEvent) {
     e.preventDefault()
@@ -81,7 +83,7 @@ export function ChatPage() {
     await addChatMessage({ role: 'user', content: userText })
     try {
       const headers = await authHeaders()
-      if (!headers) throw new ChatError('Ange lösenordet till servern under Inställningar.')
+      if (!headers) throw new ChatError('Logga in eller ange lösenordet till servern under Inställningar.')
       const { reply, cards, notice } = await runChat({
         headers,
         model: config.model,
@@ -99,12 +101,12 @@ export function ChatPage() {
     }
   }
 
-  if (!config.password) {
+  if (!config.password && !session) {
     return (
       <>
         <h1>Chatt</h1>
         <p className="empty">
-          Ange lösenordet till appens server under <Link to="/installningar">Inställningar</Link> för att använda assistenten.
+          Logga in eller ange lösenordet till appens server under <Link to="/installningar">Inställningar</Link> för att använda assistenten.
         </p>
       </>
     )

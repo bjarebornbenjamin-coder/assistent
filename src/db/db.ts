@@ -11,6 +11,9 @@ export class AppDB extends Dexie {
   chat!: Table<ChatMessage, string>
   packChecks!: Table<PackChecks, string>
   tasks!: Table<Task, string>
+  /** Synk: innehållets hash vid senaste synk, per post. */
+  syncState!: Table<{ key: string; hash: string }, string>
+  syncMeta!: Table<{ key: 'main'; userId: string; cursor: string | null }, string>
 
   constructor(name = 'studieassistent') {
     super(name)
@@ -23,6 +26,7 @@ export class AppDB extends Dexie {
     this.version(3).stores({ contacts: 'id, name', aiConfig: 'id', chat: 'id, createdAt' })
     this.version(4).stores({ packChecks: 'date' })
     this.version(5).stores({ tasks: 'id, deadline' })
+    this.version(6).stores({ syncState: 'key', syncMeta: 'key' })
   }
 }
 
