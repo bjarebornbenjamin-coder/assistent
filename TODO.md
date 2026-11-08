@@ -19,7 +19,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 2.2 "Pågår nu" och nedräkning på Hem
 - [x] 2.3 Bocka av packlistan
 - [x] 2.4 Läxor/uppgifter
-- [ ] 2.5 Fler AI-åtgärder
+- [x] 2.5 Fler AI-åtgärder
 - [ ] 2.6 Snabbfrågor i chatten
 - [ ] 2.7 Modellval
 

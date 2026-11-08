@@ -1,5 +1,5 @@
-import { eventsOn } from '../domain/calendar'
-import { addDays, daysBetween } from '../domain/dates'
+import { dayLabel, eventTime, eventsOn } from '../domain/calendar'
+import { WEEKDAYS_LONG, addDays, daysBetween } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
 import type { CalendarEvent, ChatCard, Contact, Lesson, Settings, Subject, Task } from '../domain/types'
@@ -84,6 +84,43 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'propose_update_event',
+    description:
+      'Föreslå ändring av en befintlig händelse (id från list_events). Ange bara fält som ska ändras. start="" gör den till heldag. Ändras INTE förrän användaren bekräftat.',
+    parameters: {
+      type: 'object',
+      properties: { id: { type: 'string' }, title: { type: 'string' }, date, start: { type: 'string' }, end: { type: 'string' }, note: { type: 'string' } },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'propose_delete_event',
+    description: 'Föreslå borttagning av en händelse (id från list_events). Tas INTE bort förrän användaren bekräftat.',
+    parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+  },
+  {
+    name: 'propose_update_lesson',
+    description:
+      'Föreslå ändring av en lektion i schemat (id från get_schedule). Ange bara fält som ska ändras. weekday är 1=måndag … 7=söndag. Ändras INTE förrän användaren bekräftat.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        weekday: { type: 'integer' },
+        start: { type: 'string', description: 'HH:mm' },
+        end: { type: 'string', description: 'HH:mm' },
+        room: { type: 'string' },
+        teacher: { type: 'string' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'propose_delete_lesson',
+    description: 'Föreslå borttagning av en lektion ur schemat (id från get_schedule). Tas INTE bort förrän användaren bekräftat.',
+    parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+  },
+  {
     name: 'draft_email',
     description:
       'Skriv ett mejlutkast. Mejlet SKICKAS INTE av dig; användaren granskar utkastet och öppnar det i sitt mejlprogram. "to" är en kontakts namn eller en e-postadress.',
@@ -101,6 +138,7 @@ const err = (message: string): ToolOutcome => ({ result: { error: message } })
 
 function lessonView(l: Lesson, subjects: Subject[]) {
   return {
+    id: l.id,
     subject: subjects.find((s) => s.id === l.subjectId)?.name ?? 'Okänt ämne',
     start: l.start,
     end: l.end,
@@ -113,6 +151,14 @@ export function findContacts(name: string, contacts: Contact[]): Contact[] {
   const q = name.toLowerCase()
   const exact = contacts.filter((c) => c.name.toLowerCase() === q)
   return exact.length > 0 ? exact : contacts.filter((c) => c.name.toLowerCase().includes(q))
+}
+
+const describeEvent = (e: Pick<CalendarEvent, 'title' | 'date' | 'start' | 'end'>) =>
+  `${e.title}, ${dayLabel(e.date)}, ${eventTime(e).toLowerCase()}`
+
+function describeLesson(l: Pick<Lesson, 'weekday' | 'start' | 'end' | 'room' | 'teacher'> & { subjectId?: string }, subjects: Subject[]) {
+  const name = subjects.find((s) => s.id === l.subjectId)?.name
+  return [name, `${WEEKDAYS_LONG[l.weekday - 1]} ${l.start}–${l.end}`, l.room && `sal ${l.room}`, l.teacher].filter(Boolean).join(', ')
 }
 
 export function findSubject(name: string, subjects: Subject[]): Subject | undefined {
@@ -140,7 +186,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const span = daysBetween(from, to)
       if (span < 0 || span > 62) return err('Intervallet måste vara 0–62 dagar.')
       const events = Array.from({ length: span + 1 }, (_, i) => eventsOn(addDays(from, i), ctx.events)).flat()
-      return { result: { events: events.map((e) => ({ title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined })) } }
+      return { result: { events: events.map((e) => ({ id: e.id, title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined })) } }
     }
     case 'list_tasks': {
       const from = str(args.from)
@@ -177,6 +223,71 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           ...(subjectName && !subject ? { note: `Ämnet "${subjectName}" finns inte; uppgiften föreslås utan ämne.` } : {}),
         },
         card: { type: 'task', task: { title, deadline, ...(subject ? { subjectId: subject.id } : {}) } },
+      }
+    }
+    case 'propose_update_event': {
+      const old = ctx.events.find((e) => e.id === str(args.id))
+      if (!old) return err('Hittar ingen händelse med det id:t. Hämta id med list_events.')
+      const date = 'date' in args ? str(args.date) : old.date
+      const title = 'title' in args ? str(args.title) : old.title
+      const note = 'note' in args ? str(args.note) : old.note
+      let start: string | undefined = old.start
+      let end: string | undefined = old.end
+      if ('start' in args) {
+        start = str(args.start) || undefined
+        if (!start) end = undefined
+      }
+      if ('end' in args && start) end = str(args.end) || undefined
+      if (!title) return err('Titel får inte vara tom.')
+      if (!DATE.test(date)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      if (start && !TIME.test(start)) return err('Ogiltig starttid, använd HH:mm.')
+      if (end && (!start || !TIME.test(end) || end <= start)) return err('Ogiltig sluttid.')
+      const after = { title, date, ...(start ? { start } : {}), ...(end ? { end } : {}), note }
+      if (JSON.stringify(after) === JSON.stringify({ title: old.title, date: old.date, ...(old.start ? { start: old.start } : {}), ...(old.end ? { end: old.end } : {}), note: old.note }))
+        return err('Inga ändringar jämfört med nuvarande händelse.')
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Ändringen visas för användaren. Den är inte genomförd än.' },
+        card: { type: 'event_update', id: old.id, before: describeEvent(old), afterText: describeEvent(after), after },
+      }
+    }
+    case 'propose_delete_event': {
+      const old = ctx.events.find((e) => e.id === str(args.id))
+      if (!old) return err('Hittar ingen händelse med det id:t. Hämta id med list_events.')
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Borttagningen visas för användaren. Inget är borttaget än.' },
+        card: { type: 'event_delete', id: old.id, summary: describeEvent(old) },
+      }
+    }
+    case 'propose_update_lesson': {
+      const old = ctx.lessons.find((l) => l.id === str(args.id))
+      if (!old) return err('Hittar ingen lektion med det id:t. Hämta id med get_schedule.')
+      const weekday = 'weekday' in args ? Number(args.weekday) : old.weekday
+      const start = 'start' in args ? str(args.start) : old.start
+      const end = 'end' in args ? str(args.end) : old.end
+      const room = 'room' in args ? str(args.room) : old.room
+      const teacher = 'teacher' in args ? str(args.teacher) : old.teacher
+      if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) return err('Ogiltig veckodag, använd 1–7.')
+      if (!TIME.test(start) || !TIME.test(end) || end <= start) return err('Ogiltig tid, använd HH:mm och sluttid efter starttid.')
+      const after = { weekday, start, end, room, teacher }
+      if (JSON.stringify(after) === JSON.stringify({ weekday: old.weekday, start: old.start, end: old.end, room: old.room, teacher: old.teacher }))
+        return err('Inga ändringar jämfört med nuvarande lektion.')
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Ändringen visas för användaren. Den är inte genomförd än.' },
+        card: {
+          type: 'lesson_update',
+          id: old.id,
+          before: describeLesson(old, ctx.subjects),
+          afterText: describeLesson({ ...after, subjectId: old.subjectId }, ctx.subjects),
+          after,
+        },
+      }
+    }
+    case 'propose_delete_lesson': {
+      const old = ctx.lessons.find((l) => l.id === str(args.id))
+      if (!old) return err('Hittar ingen lektion med det id:t. Hämta id med get_schedule.')
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Borttagningen visas för användaren. Inget är borttaget än.' },
+        card: { type: 'lesson_delete', id: old.id, summary: describeLesson(old, ctx.subjects) },
       }
     }
     case 'find_contact': {

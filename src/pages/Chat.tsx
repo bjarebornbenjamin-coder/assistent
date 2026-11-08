@@ -36,7 +36,7 @@ function Card({ m, subjects }: { m: ChatMessage; subjects: Subject[] }) {
       {card.type === 'email' && <p className="note" style={{ marginTop: 8 }}>{card.body}</p>}
       {status === 'pending' ? (
         <div className="actions" style={{ marginTop: 8 }}>
-          <button type="button" className="btn primary" onClick={confirm}>{view.confirmLabel}</button>
+          <button type="button" className={`btn ${view.danger ? 'danger' : 'primary'}`} onClick={confirm}>{view.confirmLabel}</button>
           <button type="button" className="btn" onClick={() => setCardStatus(m.id, 'dismissed')}>Avvisa</button>
         </div>
       ) : (

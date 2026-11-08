@@ -89,3 +89,30 @@ describe('runChat', () => {
     await expect(runChat({ ...base, userText: 'hej', fetchFn: fakeApi(Array(10).fill(loop)).fetchFn })).rejects.toThrow(/loop/)
   })
 })
+
+describe('ändra och ta bort', () => {
+  it('uppdatering: bara angivna fält ändras, ogiltigt och oförändrat avvisas', () => {
+    const r = runTool('propose_update_event', { id: 'e', date: '2026-11-12' }, ctx)
+    expect(r.card).toMatchObject({ type: 'event_update', id: 'e', after: { title: 'Prov', date: '2026-11-12', start: '09:00' } })
+    expect(runTool('propose_update_event', { id: 'e', start: '' }, ctx).card).toMatchObject({ after: { title: 'Prov', date: '2026-11-10' } })
+    expect((runTool('propose_update_event', { id: 'e', start: '' }, ctx).card as { after: Record<string, unknown> }).after).not.toHaveProperty('start')
+    expect(runTool('propose_update_event', { id: 'e', title: 'Prov' }, ctx).result).toHaveProperty('error') // ingen ändring
+    expect(runTool('propose_update_event', { id: 'e', end: '08:00' }, ctx).result).toHaveProperty('error')
+    expect(runTool('propose_update_event', { id: 'finns-inte', date: '2026-11-12' }, ctx).result).toHaveProperty('error')
+    expect(runTool('propose_update_lesson', { id: 'l', start: '10:00', end: '11:00', room: 'C3' }, ctx).card).toMatchObject({
+      type: 'lesson_update',
+      after: { weekday: 1, start: '10:00', end: '11:00', room: 'C3', teacher: 'Lena' },
+    })
+    expect(runTool('propose_update_lesson', { id: 'l', start: '10:00' }, ctx).result).toHaveProperty('error') // start efter slut
+    expect(runTool('propose_update_lesson', { id: 'l', weekday: 9 }, ctx).result).toHaveProperty('error')
+  })
+  it('borttagning kräver giltigt id och ger bara ett kort', () => {
+    expect(runTool('propose_delete_event', { id: 'e' }, ctx).card).toMatchObject({ type: 'event_delete', id: 'e' })
+    expect(runTool('propose_delete_lesson', { id: 'l' }, ctx).card).toMatchObject({ type: 'lesson_delete', id: 'l' })
+    expect(runTool('propose_delete_lesson', { id: 'x' }, ctx).result).toHaveProperty('error')
+  })
+  it('id följer med i schema- och händelselistor så att modellen kan peka ut dem', () => {
+    expect(runTool('get_schedule', { date: '2026-11-09' }, ctx).result).toMatchObject({ lessons: [{ id: 'l' }] })
+    expect(runTool('list_events', { from: '2026-11-10', to: '2026-11-10' }, ctx).result).toMatchObject({ events: [{ id: 'e' }] })
+  })
+})

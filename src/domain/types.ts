@@ -80,6 +80,10 @@ export interface AiConfig {
 export type ChatCard =
   | { type: 'event'; event: Omit<CalendarEvent, 'id' | 'updatedAt'> }
   | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline'> }
+  | { type: 'event_update'; id: string; before: string; afterText: string; after: Omit<CalendarEvent, 'id' | 'updatedAt'> }
+  | { type: 'event_delete'; id: string; summary: string }
+  | { type: 'lesson_update'; id: string; before: string; afterText: string; after: Pick<Lesson, 'weekday' | 'start' | 'end' | 'room' | 'teacher'> }
+  | { type: 'lesson_delete'; id: string; summary: string }
   | { type: 'email'; to: string; toName?: string; subject: string; body: string }
 
 export interface ChatMessage {

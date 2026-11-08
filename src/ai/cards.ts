@@ -1,4 +1,5 @@
-import { newId, saveEvent, saveTask } from '../db/repo'
+import { db } from '../db/db'
+import { deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
 import type { ChatCard, Subject } from '../domain/types'
 
@@ -8,6 +9,7 @@ export interface CardView {
   lines: string[]
   confirmLabel: string
   doneText: string
+  danger?: boolean
 }
 
 export function cardView(card: ChatCard, subjects: Subject[]): CardView {
@@ -30,6 +32,14 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
         doneText: 'Inlagd bland uppgifterna.',
       }
     }
+    case 'event_update':
+      return { kicker: 'Förslag: ändra händelse', title: card.before, lines: [`Blir: ${card.afterText}`], confirmLabel: 'Ändra', doneText: 'Händelsen är ändrad.' }
+    case 'event_delete':
+      return { kicker: 'Förslag: ta bort händelse', title: card.summary, lines: [], confirmLabel: 'Ta bort', doneText: 'Händelsen är borttagen.', danger: true }
+    case 'lesson_update':
+      return { kicker: 'Förslag: ändra lektion', title: card.before, lines: [`Blir: ${card.afterText}`], confirmLabel: 'Ändra', doneText: 'Lektionen är ändrad.' }
+    case 'lesson_delete':
+      return { kicker: 'Förslag: ta bort lektion', title: card.summary, lines: [], confirmLabel: 'Ta bort', doneText: 'Lektionen är borttagen.', danger: true }
     case 'email':
       return {
         kicker: 'Utkast, inte skickat',
@@ -49,6 +59,29 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
       return 'done'
     case 'task':
       await saveTask({ ...card.task, id: newId(), done: false, updatedAt: '' })
+      return 'done'
+    case 'event_update': {
+      const old = await db.events.get(card.id)
+      if (!old) return 'missing'
+      const { start: _s, end: _e, ...rest } = old
+      void _s
+      void _e
+      await saveEvent({ ...rest, ...card.after })
+      return 'done'
+    }
+    case 'event_delete':
+      if (!(await db.events.get(card.id))) return 'missing'
+      await deleteEvent(card.id)
+      return 'done'
+    case 'lesson_update': {
+      const old = await db.lessons.get(card.id)
+      if (!old) return 'missing'
+      await saveLesson({ ...old, ...card.after })
+      return 'done'
+    }
+    case 'lesson_delete':
+      if (!(await db.lessons.get(card.id))) return 'missing'
+      await deleteLesson(card.id)
       return 'done'
     case 'email':
       return 'done'
