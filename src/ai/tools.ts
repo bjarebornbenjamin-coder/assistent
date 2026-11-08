@@ -2,7 +2,7 @@ import { eventsOn } from '../domain/calendar'
 import { addDays, daysBetween } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
-import type { CalendarEvent, ChatCard, Contact, Lesson, Settings, Subject } from '../domain/types'
+import type { CalendarEvent, ChatCard, Contact, Lesson, Settings, Subject, Task } from '../domain/types'
 
 export interface ToolContext {
   settings: Settings
@@ -10,6 +10,7 @@ export interface ToolContext {
   subjects: Subject[]
   events: CalendarEvent[]
   contacts: Contact[]
+  tasks: Task[]
 }
 
 export interface ToolOutcome {
@@ -39,6 +40,20 @@ export const TOOL_DEFINITIONS = [
     parameters: { type: 'object', properties: { from: date, to: date }, required: ['from', 'to'] },
   },
   {
+    name: 'list_tasks',
+    description: 'Lista läxor/uppgifter med deadline från och med ett datum till och med ett annat (och försenade ej klara om include_overdue är true).',
+    parameters: {
+      type: 'object',
+      properties: {
+        from: date,
+        to: date,
+        include_done: { type: 'boolean', description: 'Ta med redan klara uppgifter (standard false)' },
+        include_overdue: { type: 'boolean', description: 'Ta med försenade ej klara uppgifter före from (standard true)' },
+      },
+      required: ['from', 'to'],
+    },
+  },
+  {
     name: 'find_contact',
     description: 'Slå upp kontakter på namn (delsträng räcker). Returnerar namn och e-postadress.',
     parameters: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] },
@@ -57,6 +72,15 @@ export const TOOL_DEFINITIONS = [
         note: { type: 'string' },
       },
       required: ['title', 'date'],
+    },
+  },
+  {
+    name: 'propose_task',
+    description: 'Föreslå en ny läxa/uppgift med deadline. Den läggs INTE in förrän användaren bekräftat i appen. "subject" är ämnets namn (valfritt).',
+    parameters: {
+      type: 'object',
+      properties: { title: { type: 'string' }, deadline: date, subject: { type: 'string' } },
+      required: ['title', 'deadline'],
     },
   },
   {
@@ -91,6 +115,11 @@ export function findContacts(name: string, contacts: Contact[]): Contact[] {
   return exact.length > 0 ? exact : contacts.filter((c) => c.name.toLowerCase().includes(q))
 }
 
+export function findSubject(name: string, subjects: Subject[]): Subject | undefined {
+  const q = name.trim().toLowerCase()
+  return subjects.find((s) => s.name.toLowerCase() === q) ?? subjects.find((s) => s.name.toLowerCase().includes(q))
+}
+
 export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome {
   switch (name) {
     case 'get_schedule': {
@@ -112,6 +141,43 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       if (span < 0 || span > 62) return err('Intervallet måste vara 0–62 dagar.')
       const events = Array.from({ length: span + 1 }, (_, i) => eventsOn(addDays(from, i), ctx.events)).flat()
       return { result: { events: events.map((e) => ({ title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined })) } }
+    }
+    case 'list_tasks': {
+      const from = str(args.from)
+      const to = str(args.to)
+      if (!DATE.test(from) || !DATE.test(to) || to < from) return err('Ogiltigt datumintervall, använd YYYY-MM-DD.')
+      const includeDone = args.include_done === true
+      const includeOverdue = args.include_overdue !== false
+      const list = ctx.tasks
+        .filter((t) => (includeDone || !t.done) && t.deadline <= to && (t.deadline >= from || (includeOverdue && !t.done)))
+        .sort((a, b) => a.deadline.localeCompare(b.deadline))
+      return {
+        result: {
+          tasks: list.map((t) => ({
+            title: t.title,
+            deadline: t.deadline,
+            subject: ctx.subjects.find((s) => s.id === t.subjectId)?.name,
+            done: t.done,
+            overdue: !t.done && t.deadline < from ? true : undefined,
+          })),
+        },
+      }
+    }
+    case 'propose_task': {
+      const title = str(args.title)
+      const deadline = str(args.deadline)
+      const subjectName = str(args.subject)
+      if (!title) return err('Titel saknas.')
+      if (!DATE.test(deadline)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const subject = subjectName ? findSubject(subjectName, ctx.subjects) : undefined
+      return {
+        result: {
+          status: 'awaiting_user_confirmation',
+          message: 'Förslaget visas för användaren. Det är inte inlagt än.',
+          ...(subjectName && !subject ? { note: `Ämnet "${subjectName}" finns inte; uppgiften föreslås utan ämne.` } : {}),
+        },
+        card: { type: 'task', task: { title, deadline, ...(subject ? { subjectId: subject.id } : {}) } },
+      }
     }
     case 'find_contact': {
       const found = findContacts(str(args.name), ctx.contacts)

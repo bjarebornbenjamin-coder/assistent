@@ -1,12 +1,17 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EventCard } from '../components/EventCard'
+import { TaskForm } from '../components/TaskForm'
+import { TaskRow } from '../components/TaskRow'
 import { LessonCard } from '../components/LessonCard'
 import { upcomingEvents } from '../domain/calendar'
+import { upcomingTasks } from '../domain/tasks'
+import type { Task } from '../domain/types'
 import { WEEKDAYS_LONG, addDays, toISODate, weekdayOf } from '../domain/dates'
 import { setPackChecked } from '../db/repo'
 import { itemKey, packingTarget } from '../domain/packing'
 import { describeNext, lessonsOn, nextLesson } from '../domain/schedule'
-import { useEvents, useLessons, usePackChecks, useNow, useSettings, useSubjects } from '../hooks'
+import { useEvents, useLessons, usePackChecks, useTasks, useNow, useSettings, useSubjects } from '../hooks'
 
 function dayName(date: string, today: string): string {
   if (date === today) return 'idag'
@@ -19,10 +24,12 @@ export function Home() {
   const lessons = useLessons()
   const subjects = useSubjects()
   const events = useEvents()
+  const tasks = useTasks()
+  const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
   const now = useNow()
   const packing0 = settings && lessons && subjects ? packingTarget(now, lessons, subjects, settings) : null
   const checks = usePackChecks(packing0?.date)
-  if (!settings || !lessons || !subjects || !events) return null
+  if (!settings || !lessons || !subjects || !events || !tasks) return null
 
   const today = toISODate(now)
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
@@ -31,6 +38,7 @@ export function Home() {
   const packing = packingTarget(now, lessons, subjects, settings)
 
   const upcoming = upcomingEvents(now, events)
+  const dueTasks = upcomingTasks(now, tasks)
 
   if (lessons.length === 0 && events.length === 0) {
     return (
@@ -105,6 +113,28 @@ export function Home() {
             <EventCard event={e} />
           </div>
         ))
+      )}
+
+      <h2>Uppgifter</h2>
+      {dueTasks.length === 0 ? (
+        <p className="empty">Inga uppgifter de närmaste sju dagarna.</p>
+      ) : (
+        dueTasks.map((t) => (
+          <TaskRow key={t.id} task={t} subject={subjectById.get(t.subjectId ?? '')} today={today} onEdit={() => setEditingTask(t)} />
+        ))
+      )}
+      <div className="actions">
+        <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
+        <Link to="/uppgifter" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Alla uppgifter</Link>
+      </div>
+      {editingTask && (
+        <TaskForm
+          key={editingTask === 'new' ? 'new' : editingTask.id}
+          task={editingTask === 'new' ? null : editingTask}
+          defaultDeadline={today}
+          subjects={subjects}
+          onClose={() => setEditingTask(null)}
+        />
       )}
     </>
   )

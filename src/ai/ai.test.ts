@@ -7,6 +7,7 @@ const ctx: ToolContext = {
   subjects: [{ id: 'ma', name: 'Matte', packItems: [{ id: '1', text: 'miniräknare' }] }],
   lessons: [{ id: 'l', subjectId: 'ma', weekday: 1, start: '08:00', end: '09:00', room: 'B12', teacher: 'Lena', weeks: null }],
   events: [{ id: 'e', title: 'Prov', date: '2026-11-10', start: '09:00', note: '', updatedAt: '' }],
+  tasks: [{ id: 't1', title: 'Läs kapitel 3', subjectId: 'ma', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 't2', title: 'Gammal', deadline: '2026-11-01', done: false, updatedAt: '' }, { id: 't3', title: 'Klar', deadline: '2026-11-12', done: true, updatedAt: '' }],
   contacts: [
     { id: '1', name: 'Anna Berg', email: 'anna@example.com' },
     { id: '2', name: 'Anna Lund', email: 'anna.l@example.com' },
@@ -15,6 +16,15 @@ const ctx: ToolContext = {
 }
 
 describe('verktyg', () => {
+  it('list_tasks tar med försenade men inte klara, och propose_task kopplar ämne', () => {
+    const r = runTool('list_tasks', { from: '2026-11-09', to: '2026-11-15' }, ctx).result as { tasks: { title: string; overdue?: boolean; subject?: string }[] }
+    expect(r.tasks.map((t) => t.title)).toEqual(['Gammal', 'Läs kapitel 3'])
+    expect(r.tasks[0].overdue).toBe(true)
+    expect(r.tasks[1].subject).toBe('Matte')
+    expect(runTool('propose_task', { title: 'Läxa', deadline: '2026-11-13', subject: 'matt' }, ctx).card).toEqual({ type: 'task', task: { title: 'Läxa', deadline: '2026-11-13', subjectId: 'ma' } })
+    expect(runTool('propose_task', { title: 'Läxa', deadline: '2026-11-13', subject: 'Fysik' }, ctx).result).toHaveProperty('note')
+    expect(runTool('propose_task', { title: 'Läxa', deadline: 'fredag' }, ctx).result).toHaveProperty('error')
+  })
   it('schema och packlista för en måndag', () => {
     expect(runTool('get_schedule', { date: '2026-11-09' }, ctx).result).toMatchObject({ lessons: [{ subject: 'Matte', start: '08:00', room: 'B12' }] })
     expect(runTool('get_packing_list', { date: '2026-11-09' }, ctx).result).toMatchObject({ packing: [{ subject: 'Matte', items: ['miniräknare'] }] })

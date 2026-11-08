@@ -1,5 +1,5 @@
 import { isColor } from '../domain/colors'
-import type { Backup, CalendarEvent, Contact, Lesson, Settings, Subject } from '../domain/types'
+import type { Backup, CalendarEvent, Contact, Lesson, Task, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
   throw new Error(`Ogiltig säkerhetskopia: ${msg}`)
@@ -73,24 +73,39 @@ function parseContact(v: unknown): Contact {
   return { id: v.id, name: v.name, email: v.email }
 }
 
+function parseTask(v: unknown): Task {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.title) || !v.title.trim() || !isDate(v.deadline)) return fail('uppgift')
+  if (v.subjectId !== undefined && !isStr(v.subjectId)) fail('uppgiftens ämne')
+  return {
+    id: v.id,
+    title: v.title,
+    ...(v.subjectId !== undefined ? { subjectId: v.subjectId as string } : {}),
+    deadline: v.deadline as string,
+    done: v.done === true,
+    updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
+  }
+}
+
 export function parseBackup(json: unknown): Backup {
   if (!isObj(json) || json.app !== 'studieassistent') return fail('filen kommer inte från appen')
-  if (json.version !== 1 && json.version !== 2 && json.version !== 3) return fail(`okänd version (${String(json.version)})`)
+  if (![1, 2, 3, 4].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
   if (!Array.isArray(json.subjects) || !Array.isArray(json.lessons)) return fail('data saknas')
   const subjects = json.subjects.map(parseSubject)
   const lessons = json.lessons.map(parseLesson)
   const events = Array.isArray(json.events) ? json.events.map(parseEvent) : [] // version 1 saknar händelser
+  const tasks = Array.isArray(json.tasks) ? json.tasks.map(parseTask) : []
   const contacts = Array.isArray(json.contacts) ? json.contacts.map(parseContact) : []
   const ids = new Set(subjects.map((s) => s.id))
   if (lessons.some((l) => !ids.has(l.subjectId))) fail('lektion pekar på ett ämne som inte finns')
   return {
     app: 'studieassistent',
-    version: 3,
+    version: 4,
     exportedAt: isStr(json.exportedAt) ? json.exportedAt : new Date().toISOString(),
     settings: json.settings == null ? null : parseSettings(json.settings),
     subjects,
     lessons,
     events,
     contacts,
+    tasks,
   }
 }

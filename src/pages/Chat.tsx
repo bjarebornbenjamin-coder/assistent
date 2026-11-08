@@ -1,60 +1,47 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ChatError, runChat } from '../ai/chat'
+import { applyCard, cardView } from '../ai/cards'
 import { loadToolContext } from '../ai/context'
-import { addChatMessage, clearChat, newId, saveEvent, setCardStatus } from '../db/repo'
-import { dayLabel, eventTime } from '../domain/calendar'
+import { addChatMessage, clearChat, setCardStatus } from '../db/repo'
 import { Markdown } from '../components/Markdown'
-import type { ChatMessage } from '../domain/types'
-import { useAiConfig, useChat } from '../hooks'
+import type { ChatMessage, Subject } from '../domain/types'
+import { useAiConfig, useChat, useSubjects } from '../hooks'
 
 export function mailtoUrl(to: string, subject: string, body: string): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
 
-function Card({ m }: { m: ChatMessage }) {
+function Card({ m, subjects }: { m: ChatMessage; subjects: Subject[] }) {
   const card = m.card
   if (!card) return null
   const status = m.cardStatus ?? 'pending'
+  const view = cardView(card, subjects)
 
-  async function addEvent() {
-    if (card?.type !== 'event') return
-    await saveEvent({ ...card.event, id: newId(), updatedAt: '' })
-    await setCardStatus(m.id, 'done')
-  }
-  function openMail() {
-    if (card?.type !== 'email') return
-    window.location.href = mailtoUrl(card.to, card.subject, card.body)
-    void setCardStatus(m.id, 'done')
+  async function confirm() {
+    if (!card) return
+    if (card.type === 'email') {
+      window.location.href = mailtoUrl(card.to, card.subject, card.body)
+      await setCardStatus(m.id, 'done')
+      return
+    }
+    await setCardStatus(m.id, await applyCard(card))
   }
 
   return (
     <div className="card proposal">
-      {card.type === 'event' ? (
-        <>
-          <div className="sub">Förslag: ny händelse</div>
-          <div className="title">{card.event.title}</div>
-          <div className="sub">{dayLabel(card.event.date)} · {eventTime(card.event)}</div>
-          {card.event.note && <div className="sub note">{card.event.note}</div>}
-        </>
-      ) : (
-        <>
-          <div className="sub">Utkast, inte skickat</div>
-          <div className="title">Till: {card.toName ? `${card.toName} <${card.to}>` : card.to}</div>
-          <div className="sub">Ämne: {card.subject}</div>
-          <p className="note" style={{ marginTop: 8 }}>{card.body}</p>
-        </>
-      )}
+      <div className="sub">{view.kicker}</div>
+      <div className="title">{view.title}</div>
+      {view.lines.map((l, i) => <div key={i} className="sub note">{l}</div>)}
+      {card.type === 'email' && <p className="note" style={{ marginTop: 8 }}>{card.body}</p>}
       {status === 'pending' ? (
         <div className="actions" style={{ marginTop: 8 }}>
-          <button type="button" className="btn primary" onClick={card.type === 'event' ? addEvent : openMail}>
-            {card.type === 'event' ? 'Lägg in' : 'Öppna i mejlprogram'}
-          </button>
+          <button type="button" className="btn primary" onClick={confirm}>{view.confirmLabel}</button>
           <button type="button" className="btn" onClick={() => setCardStatus(m.id, 'dismissed')}>Avvisa</button>
         </div>
       ) : (
         <p className="sub" style={{ marginTop: 8 }}>
-          {status === 'dismissed' ? 'Avvisat.' : card.type === 'event' ? 'Inlagd i kalendern.' : 'Öppnat i mejlprogrammet. Du skickar själv.'}
+          {status === 'dismissed' ? 'Avvisat.' : status === 'missing' ? 'Finns inte längre, inget ändrades.' : view.doneText}
         </p>
       )}
     </div>
@@ -64,6 +51,7 @@ function Card({ m }: { m: ChatMessage }) {
 export function ChatPage() {
   const config = useAiConfig()
   const messages = useChat()
+  const subjects = useSubjects()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -73,7 +61,7 @@ export function ChatPage() {
     endRef.current?.scrollIntoView({ block: 'end' })
   }, [messages?.length, busy, error])
 
-  if (!config || !messages) return null
+  if (!config || !messages || !subjects) return null
 
   async function send(e: FormEvent) {
     e.preventDefault()
@@ -128,7 +116,7 @@ export function ChatPage() {
         )}
         {messages.map((m) =>
           m.card ? (
-            <Card key={m.id} m={m} />
+            <Card key={m.id} m={m} subjects={subjects} />
           ) : (
             <div key={m.id} className={`bubble ${m.role}`}>{m.role === 'assistant' ? <Markdown text={m.content} /> : m.content}</div>
           ),

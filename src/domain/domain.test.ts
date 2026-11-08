@@ -169,3 +169,21 @@ describe('nedräkning', () => {
     expect(at('2026-11-09T18:00:00', '2026-11-12')).toBe('Nästa lektion på torsdag kl 09:40')
   })
 })
+
+import { isOverdue, tasksOn, upcomingTasks } from './tasks'
+import type { Task } from './types'
+
+const tk = (id: string, deadline: string, done = false): Task => ({ id, title: id, deadline, done, updatedAt: '' })
+
+describe('uppgifter', () => {
+  const now = new Date('2026-11-10T12:00:00')
+  it('kommande: försenade först, inte klara, inte för långt fram', () => {
+    const list = upcomingTasks(now, [tk('sen', '2026-11-08'), tk('idag', '2026-11-10'), tk('klar', '2026-11-10', true), tk('dag7', '2026-11-17'), tk('dag8', '2026-11-18')])
+    expect(list.map((t) => t.id)).toEqual(['sen', 'idag', 'dag7'])
+  })
+  it('per dag och försenad', () => {
+    expect(tasksOn('2026-11-10', [tk('a', '2026-11-10', true), tk('b', '2026-11-10'), tk('c', '2026-11-11')]).map((t) => t.id)).toEqual(['b', 'a'])
+    expect(isOverdue(tk('x', '2026-11-09'), '2026-11-10')).toBe(true)
+    expect(isOverdue(tk('x', '2026-11-09', true), '2026-11-10')).toBe(false)
+  })
+})

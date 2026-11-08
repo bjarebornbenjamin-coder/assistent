@@ -1,19 +1,23 @@
 import { useState } from 'react'
 import { EventCard } from '../components/EventCard'
 import { EventForm } from '../components/EventForm'
+import { TaskForm } from '../components/TaskForm'
+import { TaskRow } from '../components/TaskRow'
+import { tasksOn } from '../domain/tasks'
 import { LessonCard } from '../components/LessonCard'
 import { dayLabel, eventsOn, monthGrid, monthLabel, weekDays } from '../domain/calendar'
 import { WEEKDAYS_SHORT, addDays, isoWeek, parseISODate, toISODate, weekdayOf } from '../domain/dates'
 import { lessonsOn } from '../domain/schedule'
-import type { CalendarEvent } from '../domain/types'
+import type { CalendarEvent, Task } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
-import { useEvents, useLessons, useNow, useSettings, useSubjects } from '../hooks'
+import { useEvents, useLessons, useNow, useSettings, useSubjects, useTasks } from '../hooks'
 
 type View = 'month' | 'week'
 
 export function CalendarPage() {
   const settings = useSettings()
   const events = useEvents()
+  const tasks = useTasks()
   const lessons = useLessons()
   const subjects = useSubjects()
   const today = toISODate(useNow())
@@ -21,8 +25,9 @@ export function CalendarPage() {
   const [view, setView] = useState<View>('month')
   const [focus, setFocus] = useState(today) // datum som vyn är centrerad på
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  if (!settings || !events || !lessons || !subjects) return null
+  if (!settings || !events || !lessons || !subjects || !tasks) return null
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
   const f = parseISODate(focus)
 
@@ -52,9 +57,13 @@ export function CalendarPage() {
         <LessonCard key={l.id} lesson={l} subject={subjectById.get(l.subjectId)} />
       ))}
       {eventsOn(date, events).map((e) => <EventCard key={e.id} event={e} onClick={() => setEditing(e)} />)}
+      {tasksOn(date, tasks).map((t) => (
+        <TaskRow key={t.id} task={t} subject={subjectById.get(t.subjectId ?? '')} today={today} showDeadline={false} onEdit={() => setEditingTask(t)} />
+      ))}
     </>
   )
-  const isEmpty = (date: string) => lessonsOn(date, lessons, settings).length === 0 && eventsOn(date, events).length === 0
+  const isEmpty = (date: string) =>
+    lessonsOn(date, lessons, settings).length === 0 && eventsOn(date, events).length === 0 && tasksOn(date, tasks).length === 0
 
   return (
     <>
@@ -82,6 +91,7 @@ export function CalendarPage() {
               <div className="month-row" role="row" key={w[0]}>
                 {w.map((date) => {
                   const n = eventsOn(date, events).length
+                  const openTasks = tasksOn(date, tasks).filter((t) => !t.done).length
                   const hasLessons = lessonsOn(date, lessons, settings).length > 0
                   const other = parseISODate(date).getMonth() !== f.getMonth()
                   return (
@@ -91,12 +101,13 @@ export function CalendarPage() {
                       role="gridcell"
                       className={`day${other ? ' other' : ''}${date === today ? ' today' : ''}`}
                       aria-pressed={date === focus}
-                      aria-label={`${dayLabel(date)}${hasLessons ? ', lektioner' : ''}${n ? `, ${n} händelse${n > 1 ? 'r' : ''}` : ''}`}
+                      aria-label={`${dayLabel(date)}${hasLessons ? ', lektioner' : ''}${openTasks ? `, ${openTasks} uppgift${openTasks > 1 ? 'er' : ''}` : ''}${n ? `, ${n} händelse${n > 1 ? 'r' : ''}` : ''}`}
                       onClick={() => setFocus(date)}
                     >
                       <span className="num">{parseISODate(date).getDate()}</span>
                       <span className="dots" aria-hidden="true">
                         {hasLessons && <i className="lesson" />}
+                        {openTasks > 0 && <i className="task" />}
                         {Array.from({ length: Math.min(n, 3) }, (_, i) => <i key={i} />)}
                       </span>
                     </button>
@@ -122,6 +133,9 @@ export function CalendarPage() {
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>Ny händelse</button>
       </div>
 
+      {editingTask && (
+        <TaskForm key={editingTask.id} task={editingTask} defaultDeadline={focus} subjects={subjects} onClose={() => setEditingTask(null)} />
+      )}
       {editing && (
         <EventForm
           key={editing === 'new' ? 'new' : editing.id}

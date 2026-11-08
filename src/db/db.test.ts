@@ -8,7 +8,7 @@ const lesson = (subjectId: string, weeks: number[] | null) => ({
 })
 
 beforeEach(async () => {
-  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear()])
+  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear()])
 })
 
 describe('repo', () => {
@@ -39,7 +39,7 @@ describe('repo', () => {
     await saveLesson(lesson(s.id, [0]))
     await saveSettings({ cycleLength: 2, theme: 'dark' })
     const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear()])
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear()])
     await importAll(backup)
     expect((await getSettings()).theme).toBe('dark')
     expect(await db.subjects.count()).toBe(1)
@@ -50,7 +50,7 @@ describe('repo', () => {
 describe('parseBackup', () => {
   it('avvisar fel filer', () => {
     expect(() => parseBackup({})).toThrow(/inte från appen/)
-    expect(() => parseBackup({ app: 'studieassistent', version: 4 })).toThrow(/version/)
+    expect(() => parseBackup({ app: 'studieassistent', version: 5 })).toThrow(/version/)
     expect(() =>
       parseBackup({ app: 'studieassistent', version: 1, settings: null, subjects: [], lessons: [{ id: 'x', subjectId: 'y', weekday: 1, start: '08:00', end: '09:00', room: '', teacher: '', weeks: null }] }),
     ).toThrow(/ämne som inte finns/)

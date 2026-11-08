@@ -49,6 +49,15 @@ export interface CalendarEvent {
   updatedAt: string
 }
 
+export interface Task {
+  id: string
+  title: string
+  subjectId?: string
+  deadline: ISODate
+  done: boolean
+  updatedAt: string
+}
+
 /** Avbockade packsaker för en viss dag (nycklar enligt itemKey). Sparas inte i export. */
 export interface PackChecks {
   date: ISODate
@@ -70,6 +79,7 @@ export interface AiConfig {
 
 export type ChatCard =
   | { type: 'event'; event: Omit<CalendarEvent, 'id' | 'updatedAt'> }
+  | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline'> }
   | { type: 'email'; to: string; toName?: string; subject: string; body: string }
 
 export interface ChatMessage {
@@ -79,16 +89,17 @@ export interface ChatMessage {
   createdAt: string
   card?: ChatCard
   /** Status för kortet: väntar på ditt svar, genomfört eller avvisat. */
-  cardStatus?: 'pending' | 'done' | 'dismissed'
+  cardStatus?: 'pending' | 'done' | 'dismissed' | 'missing'
 }
 
 export interface Backup {
   app: 'studieassistent'
-  version: 3
+  version: 4
   exportedAt: string
   settings: Settings | null
   subjects: Subject[]
   lessons: Lesson[]
   events: CalendarEvent[]
   contacts: Contact[]
+  tasks: Task[]
 }
