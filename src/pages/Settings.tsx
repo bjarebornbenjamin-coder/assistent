@@ -17,6 +17,9 @@ const THEMES: { value: Theme; label: string }[] = [
   { value: 'dark', label: 'Mörkt' },
 ]
 
+/** OpenAI-nycklar börjar med sk-. Ett lösenord till servern ska aldrig vara en sådan. */
+export const looksLikeOpenAiKey = (v: string) => /^sk-[A-Za-z0-9_-]{16,}/.test(v.trim())
+
 function AiSection() {
   const config = useAiConfig()
   const [password, setPassword] = useState('')
@@ -24,6 +27,7 @@ function AiSection() {
   const [modelsMsg, setModelsMsg] = useState('')
   const [testing, setTesting] = useState(false)
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null)
+  const { error: passwordError, fail, touch } = useFieldError()
   if (!config) return null
   return (
     <>
@@ -33,13 +37,36 @@ function AiSection() {
         skyddar servern (APP_PASSWORD). Lösenordet sparas på den här enheten och ingår inte i exporten. När du frågar om schema eller
         händelser skickas just den informationen via servern till OpenAI.
       </p>
+      {config.password && looksLikeOpenAiKey(config.password) && (
+        <p className="error" role="alert">Det sparade lösenordet ser ut som en OpenAI-nyckel. Ta bort det, lägg nyckeln i Vercel och skriv ditt APP_PASSWORD här.</p>
+      )}
       {config.password ? (
         <p>
           Lösenord sparat. <button type="button" className="btn danger" onClick={() => saveAiConfig({ password: '' })}>Ta bort lösenord</button>
         </p>
       ) : (
-        <form className="item" onSubmit={(e: FormEvent) => { e.preventDefault(); if (password.trim()) { void saveAiConfig({ password: password.trim() }); setPassword('') } }}>
-          <input type="password" aria-label="Serverns lösenord" placeholder="Lösenord" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <form
+          className="item"
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault()
+            const value = password.trim()
+            if (!value) return
+            if (looksLikeOpenAiKey(value)) {
+              fail('password', 'Det här ser ut som en OpenAI-nyckel. Den ska inte skrivas här utan läggas i Vercel som OPENAI_API_KEY. Här ska du skriva lösenordet du själv valt som APP_PASSWORD.')
+              return
+            }
+            void saveAiConfig({ password: value })
+            setPassword('')
+          }}
+        >
+          <input
+            type="password"
+            aria-label="Serverns lösenord"
+            placeholder="APP_PASSWORD (inte OpenAI-nyckeln)"
+            autoComplete="off"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); touch('password') }}
+          />
           <button type="submit" className="btn primary">Spara</button>
         </form>
       )}
@@ -58,6 +85,7 @@ function AiSection() {
           {testing ? 'Testar…' : 'Testa anslutningen'}
         </button>
       </div>
+      {passwordError && <p className="error" role="alert">{passwordError}</p>}
       {diagnosis && <p className={diagnosis.ok ? '' : 'error'} role="status">{diagnosis.message}</p>}
 
       <label className="field">

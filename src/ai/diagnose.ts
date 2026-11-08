@@ -39,6 +39,8 @@ export async function diagnose(headers: Record<string, string> | null, fetchFn: 
   if (!health.appPasswordConfigured && !health.supabaseConfigured)
     return { ok: false, message: 'Nyckeln fungerar, men servern saknar APP_PASSWORD. Lägg in det i Vercel och gör Redeploy.' }
 
+  if (headers?.['x-app-password'] && /^sk-[A-Za-z0-9_-]{16,}/.test(headers['x-app-password']))
+    return { ok: false, message: 'Lösenordet du sparat här ser ut som en OpenAI-nyckel. Ta bort det, lägg nyckeln i Vercel som OPENAI_API_KEY och skriv ditt eget APP_PASSWORD här.' }
   if (!headers) return { ok: false, message: 'Servern och nyckeln fungerar. Ange nu lösenordet (APP_PASSWORD) här i Inställningar, eller logga in.' }
   try {
     const res = await fetchWithTimeout('/api/models', { headers }, fetchFn)

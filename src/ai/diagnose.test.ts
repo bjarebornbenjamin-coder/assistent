@@ -21,6 +21,9 @@ describe('diagnose', () => {
     expect((await diagnose({ 'x-app-password': 'fel' }, server(good, 401))).message).toMatch(/stämmer inte/)
     expect((await diagnose({ Authorization: 'Bearer x' }, server(good, 403))).message).toMatch(/ALLOWED_EMAILS/)
   })
+  it('varnar om en OpenAI-nyckel sparats som lösenord', async () => {
+    expect((await diagnose({ 'x-app-password': 'sk-proj-abcdefghijklmnopqrstuvwxyz' }, server(good))).message).toMatch(/ser ut som en OpenAI-nyckel/)
+  })
   it('rapporterar ok när allt fungerar, och nätfel begripligt', async () => {
     expect(await diagnose({ 'x-app-password': 'a' }, server(good))).toMatchObject({ ok: true })
     const offline = (async () => { throw new TypeError('x') }) as unknown as typeof fetch
