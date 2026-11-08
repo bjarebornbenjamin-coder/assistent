@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
+import { NotifySection } from '../push/NotifySection'
 import { SyncSection } from '../sync/SyncSection'
 import { authHeaders } from '../lib/auth'
 import { parseBackup } from '../db/backup'
@@ -184,6 +185,7 @@ export function SettingsPage() {
       </div>
 
       <SyncSection />
+      <NotifySection />
       <AiSection />
       <ContactsSection />
 

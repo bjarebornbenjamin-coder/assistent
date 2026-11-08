@@ -36,7 +36,7 @@ describe('synk', () => {
   it('första inloggningen laddar upp befintlig lokal data (migrering)', async () => {
     await a.subjects.put(subj('s1', 'Matte'))
     await a.lessons.put({ id: 'l1', subjectId: 's1', weekday: 1, start: '08:00', end: '09:00', room: '', teacher: '', weeks: null })
-    await a.settings.put({ id: 'main', cycleLength: 2, cycleAnchor: '2026-11-02', theme: 'dark' })
+    await a.settings.put({ id: 'main', cycleLength: 2, cycleAnchor: '2026-11-02', theme: 'dark', notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 } })
     const r = await runSync(a, remote, 'u1')
     expect(r.pushed).toBe(3)
     expect([...remote.rows.keys()].sort()).toEqual(['lessons:l1', 'settings:main', 'subjects:s1'])

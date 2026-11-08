@@ -1,17 +1,25 @@
 import { DEFAULT_MODEL } from '../ai/models'
 import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
-import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, Settings, Subject, Task } from '../domain/types'
+import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, NotifySettings, Settings, Subject, Task } from '../domain/types'
 import { db } from './db'
 
 export const newId = () => crypto.randomUUID()
 
+export const DEFAULT_NOTIFY: NotifySettings = { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }
+
 export function defaultSettings(): Settings {
-  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system' }
+  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY }
+}
+
+/** Äldre sparade inställningar saknar fält som tillkommit senare. */
+export function withDefaults(stored: Settings | undefined): Settings {
+  const d = defaultSettings()
+  return stored ? { ...d, ...stored, notify: { ...DEFAULT_NOTIFY, ...(stored.notify ?? {}) } } : d
 }
 
 export async function getSettings(): Promise<Settings> {
-  return (await db.settings.get('main')) ?? defaultSettings()
+  return withDefaults(await db.settings.get('main'))
 }
 
 /** Sparar inställningar och rättar lektionernas veckor om cykeln blivit kortare. */

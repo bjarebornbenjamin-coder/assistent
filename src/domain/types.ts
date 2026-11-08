@@ -3,6 +3,15 @@ export type HHmm = string // "HH:mm", lokal tid
 
 export type Theme = 'system' | 'light' | 'dark'
 
+export interface NotifySettings {
+  /** Kvällsnotis om morgondagens lektioner och vad du ska ta med. */
+  evening: boolean
+  eveningTime: HHmm
+  /** Notis en stund före varje lektion. */
+  before: boolean
+  beforeMinutes: number
+}
+
 export interface Settings {
   id: 'main'
   /** Antal veckor i cykeln: 1 = samma varje vecka, 2 = A/B, osv. */
@@ -10,6 +19,7 @@ export interface Settings {
   /** En måndag som tillhör vecka 0 (A) i cykeln. */
   cycleAnchor: ISODate
   theme: Theme
+  notify: NotifySettings
 }
 
 export interface PackItem {

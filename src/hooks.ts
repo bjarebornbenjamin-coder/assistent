@@ -1,12 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import { db } from './db/db'
-import { defaultSettings, getAiConfig } from './db/repo'
+import { getAiConfig, withDefaults } from './db/repo'
 import type { AiConfig, CalendarEvent, ChatMessage, Contact, Task, Lesson, Settings, Subject } from './domain/types'
 
 /** undefined medan data läses från IndexedDB. */
 export function useSettings(): Settings | undefined {
-  return useLiveQuery(async () => (await db.settings.get('main')) ?? defaultSettings(), [])
+  return useLiveQuery(async () => withDefaults(await db.settings.get('main')), [])
 }
 export function useSubjects(): Subject[] | undefined {
   return useLiveQuery(() => db.subjects.orderBy('name').toArray(), [])

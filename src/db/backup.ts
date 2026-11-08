@@ -1,3 +1,4 @@
+import { DEFAULT_NOTIFY } from './repo'
 import { isColor } from '../domain/colors'
 import type { Backup, CalendarEvent, Contact, Lesson, Task, Settings, Subject } from '../domain/types'
 
@@ -16,7 +17,14 @@ function parseSettings(v: unknown): Settings {
     fail('veckocykel')
   if (!isDate(cycleAnchor)) fail('ankardatum')
   if (theme !== 'system' && theme !== 'light' && theme !== 'dark') fail('tema')
-  return { id: 'main', cycleLength, cycleAnchor, theme } as Settings
+  const n = isObj(v.notify) ? v.notify : {}
+  const notify = {
+    evening: typeof n.evening === 'boolean' ? n.evening : DEFAULT_NOTIFY.evening,
+    eveningTime: isTime(n.eveningTime) ? (n.eveningTime as string) : DEFAULT_NOTIFY.eveningTime,
+    before: typeof n.before === 'boolean' ? n.before : DEFAULT_NOTIFY.before,
+    beforeMinutes: typeof n.beforeMinutes === 'number' && n.beforeMinutes >= 0 && n.beforeMinutes <= 240 ? n.beforeMinutes : DEFAULT_NOTIFY.beforeMinutes,
+  }
+  return { id: 'main', cycleLength, cycleAnchor, theme, notify } as Settings
 }
 
 function parseSubject(v: unknown): Subject {

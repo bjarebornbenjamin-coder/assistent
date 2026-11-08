@@ -34,3 +34,38 @@ $$;
 drop trigger if exists records_touch on public.records;
 create trigger records_touch before insert or update on public.records
   for each row execute function public.touch_updated_at();
+
+-- ===== Push-notiser (3.3) =====
+
+-- Enheter som tagit emot notiser (en rad per webbläsarprenumeration).
+create table if not exists public.push_subscriptions (
+  user_id    uuid        not null default auth.uid() references auth.users (id) on delete cascade,
+  endpoint   text        not null,
+  p256dh     text        not null,
+  auth       text        not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, endpoint)
+);
+
+-- Färdiga notiser som appen räknat ut (14 dagar framåt). Servern skickar dem när fire_at passerat.
+create table if not exists public.notifications (
+  user_id uuid        not null default auth.uid() references auth.users (id) on delete cascade,
+  id      text        not null,
+  fire_at timestamptz not null,
+  title   text        not null,
+  body    text        not null,
+  sent    boolean     not null default false,
+  primary key (user_id, id)
+);
+create index if not exists notifications_due_idx on public.notifications (fire_at) where sent = false;
+
+alter table public.push_subscriptions enable row level security;
+alter table public.notifications enable row level security;
+
+drop policy if exists "egna prenumerationer" on public.push_subscriptions;
+create policy "egna prenumerationer" on public.push_subscriptions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "egna notiser" on public.notifications;
+create policy "egna notiser" on public.notifications
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
