@@ -77,7 +77,17 @@ export async function deleteEvent(id: string): Promise<void> {
 }
 
 export async function getAiConfig(): Promise<AiConfig> {
-  return (await db.aiConfig.get('main')) ?? { id: 'main', apiKey: '', model: DEFAULT_MODEL }
+  return (await db.aiConfig.get('main')) ?? { id: 'main', password: '', model: DEFAULT_MODEL }
+}
+
+/** Tar bort en OpenAI-nyckel som äldre versioner sparade i webbläsaren. */
+export async function purgeLegacyApiKey(): Promise<void> {
+  const row = (await db.aiConfig.get('main')) as (Record<string, unknown> & { id: 'main' }) | undefined
+  if (row && 'apiKey' in row) {
+    const { apiKey: _removed, ...rest } = row
+    void _removed
+    await db.aiConfig.put({ password: '', model: DEFAULT_MODEL, ...rest } as never)
+  }
 }
 
 export async function saveAiConfig(patch: Partial<Omit<AiConfig, 'id'>>): Promise<void> {

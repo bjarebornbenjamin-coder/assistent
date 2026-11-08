@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
+import { authHeaders } from '../lib/auth'
 import { parseBackup } from '../db/backup'
 import { deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
 import { toISODate } from '../domain/dates'
@@ -15,7 +16,7 @@ const THEMES: { value: Theme; label: string }[] = [
 
 function AiSection() {
   const config = useAiConfig()
-  const [key, setKey] = useState('')
+  const [password, setPassword] = useState('')
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelsMsg, setModelsMsg] = useState('')
   if (!config) return null
@@ -23,15 +24,17 @@ function AiSection() {
     <>
       <h2>AI-assistent</h2>
       <p className="muted">
-        Nyckeln sparas bara i den här webbläsaren och skickas bara till OpenAI. Den tas inte med i exporten. Alla som kommer åt din
-        webbläsare kan läsa den, så sätt en utgiftsgräns på nyckeln hos OpenAI. När du frågar om schema eller händelser skickas just
-        den informationen till OpenAI.
+        OpenAI-nyckeln finns på servern (miljövariabeln OPENAI_API_KEY) och lämnar aldrig servern. Här anger du bara lösenordet som
+        skyddar servern (APP_PASSWORD). Lösenordet sparas på den här enheten och ingår inte i exporten. När du frågar om schema eller
+        händelser skickas just den informationen via servern till OpenAI.
       </p>
-      {config.apiKey ? (
-        <p>Nyckel sparad (slutar på …{config.apiKey.slice(-4)}). <button type="button" className="btn danger" onClick={() => saveAiConfig({ apiKey: '' })}>Ta bort nyckel</button></p>
+      {config.password ? (
+        <p>
+          Lösenord sparat. <button type="button" className="btn danger" onClick={() => saveAiConfig({ password: '' })}>Ta bort lösenord</button>
+        </p>
       ) : (
-        <form className="item" onSubmit={(e: FormEvent) => { e.preventDefault(); if (key.trim()) { void saveAiConfig({ apiKey: key.trim() }); setKey('') } }}>
-          <input type="password" aria-label="OpenAI API-nyckel" placeholder="sk-…" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} />
+        <form className="item" onSubmit={(e: FormEvent) => { e.preventDefault(); if (password.trim()) { void saveAiConfig({ password: password.trim() }); setPassword('') } }}>
+          <input type="password" aria-label="Serverns lösenord" placeholder="Lösenord" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
           <button type="submit" className="btn primary">Spara</button>
         </form>
       )}
@@ -47,12 +50,14 @@ function AiSection() {
         <button
           type="button"
           className="btn"
-          disabled={!config.apiKey || loadingModels}
+          disabled={!config.password || loadingModels}
           onClick={async () => {
             setLoadingModels(true)
             setModelsMsg('')
             try {
-              const models = await fetchModels(config.apiKey)
+              const headers = await authHeaders()
+              if (!headers) throw new Error('Ange lösenordet först.')
+              const models = await fetchModels(headers)
               await saveAiConfig({ models })
               setModelsMsg(`Hämtade ${models.length} modeller.`)
             } catch (e) {

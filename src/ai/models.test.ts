@@ -12,11 +12,11 @@ describe('modeller', () => {
   })
   it('hämtar lista och ger begripliga fel', async () => {
     const ok = (async () => new Response(JSON.stringify({ data: [{ id: 'gpt-4.1' }, { id: 'o3' }, { id: 'whisper-1' }] }))) as unknown as typeof fetch
-    expect(await fetchModels('k', ok)).toEqual(['gpt-4.1', DEFAULT_MODEL, 'o3'].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })))
+    expect(await fetchModels({ 'x-app-password': 'k' }, ok)).toEqual(['gpt-4.1', DEFAULT_MODEL, 'o3'].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })))
     const unauthorized = (async () => new Response('{}', { status: 401 })) as unknown as typeof fetch
-    await expect(fetchModels('k', unauthorized)).rejects.toThrow(/nyckeln/)
+    await expect(fetchModels({ 'x-app-password': 'k' }, unauthorized)).rejects.toThrow(/lösenord/i)
     const empty = (async () => new Response(JSON.stringify({ data: [{ id: 'whisper-1' }] }))) as unknown as typeof fetch
-    await expect(fetchModels('k', empty)).rejects.toThrow(/inga chattmodeller/)
+    await expect(fetchModels({ 'x-app-password': 'k' }, empty)).rejects.toThrow(/inga chattmodeller/)
   })
 })
 
@@ -31,12 +31,12 @@ describe('reservmodell', () => {
         : new Response(JSON.stringify({ choices: [{ message: { content: 'Hej' } }] }))
     }) as unknown as typeof fetch
     const ctx = { settings: { id: 'main' as const, cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system' as const }, lessons: [], subjects: [], events: [], contacts: [], tasks: [] }
-    const res = await runChat({ apiKey: 'k', model: 'finns-inte', history: [], userText: 'hej', now: new Date(), loadContext: async () => ctx, fetchFn })
+    const res = await runChat({ headers: { 'x-app-password': 'k' }, model: 'finns-inte', history: [], userText: 'hej', now: new Date(), loadContext: async () => ctx, fetchFn })
     expect(used).toEqual(['finns-inte', DEFAULT_MODEL])
     expect(res.reply).toBe('Hej')
     expect(res.notice).toContain('finns-inte')
     // standardmodellen själv ger inget oändligt omförsök
     const always404 = (async () => new Response('{}', { status: 404 })) as unknown as typeof fetch
-    await expect(runChat({ apiKey: 'k', model: DEFAULT_MODEL, history: [], userText: 'hej', now: new Date(), loadContext: async () => ctx, fetchFn: always404 })).rejects.toThrow(/Modellen hittades inte/)
+    await expect(runChat({ headers: { 'x-app-password': 'k' }, model: DEFAULT_MODEL, history: [], userText: 'hej', now: new Date(), loadContext: async () => ctx, fetchFn: always404 })).rejects.toThrow(/Modellen hittades inte/)
   })
 })

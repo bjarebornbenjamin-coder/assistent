@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, newId, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
@@ -111,5 +111,16 @@ describe('avbockad packlista', () => {
     await setPackChecked('2026-11-09', 'bok', false, '2026-11-09') // nästa dag: gårdagens rad rensas
     expect((await db.packChecks.get('2026-11-09'))!.checked).toEqual(['dator'])
     expect(await db.packChecks.get('2026-11-08')).toBeUndefined()
+  })
+})
+
+describe('äldre OpenAI-nyckel', () => {
+  it('tas bort från webbläsaren men inställningar i övrigt behålls', async () => {
+    await db.aiConfig.put({ id: 'main', apiKey: 'sk-gammal', model: 'gpt-4.1' } as never)
+    await purgeLegacyApiKey()
+    const row = (await db.aiConfig.get('main')) as unknown as Record<string, unknown>
+    expect(row).not.toHaveProperty('apiKey')
+    expect(row.model).toBe('gpt-4.1')
+    expect(JSON.stringify(row)).not.toContain('sk-gammal')
   })
 })

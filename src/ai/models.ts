@@ -12,15 +12,15 @@ export function filterChatModels(ids: string[]): string[] {
   return [...new Set([DEFAULT_MODEL, ...kept])].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
 }
 
-export async function fetchModels(apiKey: string, fetchFn: typeof fetch = fetch): Promise<string[]> {
+export async function fetchModels(headers: Record<string, string>, fetchFn: typeof fetch = fetch): Promise<string[]> {
   let res: Response
   try {
-    res = await fetchFn('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${apiKey}` } })
+    res = await fetchFn('/api/models', { headers })
   } catch {
-    throw new Error('Kunde inte nå OpenAI. Kontrollera internetanslutningen.')
+    throw new Error('Kunde inte nå servern. Kontrollera internetanslutningen.')
   }
-  if (res.status === 401) throw new Error('OpenAI avvisade nyckeln.')
-  if (!res.ok) throw new Error(`OpenAI svarade med fel ${res.status}.`)
+  if (res.status === 401) throw new Error('Fel lösenord.')
+  if (!res.ok) throw new Error(`Servern svarade med fel ${res.status}.`)
   const data = (await res.json()) as { data?: { id?: string }[] }
   const models = filterChatModels((data.data ?? []).map((m) => m.id ?? ''))
   if (models.length <= 1) throw new Error('Hittade inga chattmodeller i svaret.')

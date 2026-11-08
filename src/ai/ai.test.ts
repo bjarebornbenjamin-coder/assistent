@@ -56,7 +56,7 @@ function fakeApi(responses: unknown[]) {
   }) as unknown as typeof fetch
   return { fetchFn, calls }
 }
-const base = { apiKey: 'sk-test', model: 'm', history: [], now: new Date('2026-11-08T13:00:00'), loadContext: async () => ctx }
+const base = { headers: { 'x-app-password': 'pw' }, model: 'm', history: [], now: new Date('2026-11-08T13:00:00'), loadContext: async () => ctx }
 
 describe('runChat', () => {
   it('kör verktyg och skickar tillbaka resultatet till modellen', async () => {
@@ -66,7 +66,8 @@ describe('runChat', () => {
     ])
     const res = await runChat({ ...base, userText: 'Vad har jag imorgon?', fetchFn })
     expect(res.reply).toBe('Du har Matte 08:00.')
-    expect(calls[0].init.headers).toMatchObject({ Authorization: 'Bearer sk-test' })
+    expect(calls[0].url).toBe('/api/chat')
+    expect(calls[0].init.headers).toMatchObject({ 'x-app-password': 'pw' })
     const second = JSON.parse(calls[1].init.body as string)
     expect(second.messages.at(-1)).toMatchObject({ role: 'tool', tool_call_id: 'c1' })
     expect(second.messages.at(-1).content).toContain('Matte')
@@ -81,7 +82,7 @@ describe('runChat', () => {
     expect(res.cards).toEqual([{ type: 'email', to: 'olle@example.com', toName: 'Olle', subject: 'Läxan', body: 'Hej Olle' }])
   })
   it('ger begripliga fel', async () => {
-    await expect(runChat({ ...base, userText: 'hej', fetchFn: fakeApi([{ status: 401, body: { error: { message: 'bad' } } }]).fetchFn })).rejects.toThrow(/nyckeln/)
+    await expect(runChat({ ...base, userText: 'hej', fetchFn: fakeApi([{ status: 401, body: { error: { message: 'bad' } } }]).fetchFn })).rejects.toThrow(/lösenord/i)
     await expect(runChat({ ...base, userText: 'hej', fetchFn: (async () => { throw new TypeError('offline') }) as unknown as typeof fetch })).rejects.toThrow(ChatError)
   })
   it('avbryter om modellen aldrig slutar anropa verktyg', async () => {

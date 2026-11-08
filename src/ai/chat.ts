@@ -4,7 +4,7 @@ import { cycleLabel, weekIndex } from '../domain/weekCycle'
 import { DEFAULT_MODEL } from './models'
 import { TOOL_DEFINITIONS, runTool, type ToolContext } from './tools'
 
-const API_URL = 'https://api.openai.com/v1/chat/completions'
+const API_URL = '/api/chat'
 const MAX_ROUNDS = 6
 const HISTORY_LIMIT = 20
 
@@ -37,7 +37,8 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
 }
 
 interface RunOptions {
-  apiKey: string
+  /** Autentiseringsrubriker till appens server. */
+  headers: Record<string, string>
   model: string
   history: Pick<ChatMessage, 'role' | 'content'>[]
   userText: string
@@ -60,10 +61,11 @@ async function describeError(res: Response): Promise<string> {
   } catch {
     /* svaret var inte JSON */
   }
-  if (res.status === 401) return 'OpenAI avvisade nyckeln. Kontrollera API-nyckeln i Inställningar.'
-  if (res.status === 429) return `OpenAI säger att du nått en gräns (för många anrop eller slut på tegoder).${detail ? ` ${detail}` : ''}`
+  if (res.status === 401) return `${detail || 'Fel lösenord.'} Kontrollera lösenordet i Inställningar.`
+  if (res.status === 403) return detail || 'Du har inte åtkomst.'
+  if (res.status === 429) return detail || 'För många anrop eller slut på tegoder hos OpenAI.'
   if (res.status === 404) return `Modellen hittades inte. Kontrollera modellnamnet i Inställningar.${detail ? ` ${detail}` : ''}`
-  return `OpenAI svarade med fel ${res.status}.${detail ? ` ${detail}` : ''}`
+  return `Servern svarade med fel ${res.status}.${detail ? ` ${detail}` : ''}`
 }
 
 export async function runChat(o: RunOptions): Promise<ChatResult> {
@@ -83,11 +85,11 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
     try {
       res = await fetchFn(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${o.apiKey}` },
+        headers: { 'Content-Type': 'application/json', ...o.headers },
         body: JSON.stringify({ model, messages, tools: TOOL_DEFINITIONS }),
       })
     } catch {
-      throw new ChatError('Kunde inte nå OpenAI. Kontrollera internetanslutningen.')
+      throw new ChatError('Kunde inte nå servern. Kontrollera internetanslutningen.')
     }
     if (res.status === 404 && model !== DEFAULT_MODEL) {
       notice = `Modellen ${model} hittades inte, så jag använde ${DEFAULT_MODEL}. Byt modell i Inställningar.`

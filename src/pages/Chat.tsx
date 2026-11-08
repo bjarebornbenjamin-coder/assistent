@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChatError, runChat } from '../ai/chat'
 import { applyCard, cardView } from '../ai/cards'
 import { loadToolContext } from '../ai/context'
+import { authHeaders } from '../lib/auth'
 import { addChatMessage, clearChat, setCardStatus } from '../db/repo'
 import { Markdown } from '../components/Markdown'
 import type { ChatMessage, Subject } from '../domain/types'
@@ -79,8 +80,10 @@ export function ChatPage() {
     const history = messages ?? []
     await addChatMessage({ role: 'user', content: userText })
     try {
+      const headers = await authHeaders()
+      if (!headers) throw new ChatError('Ange lösenordet till servern under Inställningar.')
       const { reply, cards, notice } = await runChat({
-        apiKey: config.apiKey,
+        headers,
         model: config.model,
         history,
         userText,
@@ -96,12 +99,12 @@ export function ChatPage() {
     }
   }
 
-  if (!config.apiKey) {
+  if (!config.password) {
     return (
       <>
         <h1>Chatt</h1>
         <p className="empty">
-          Lägg in din OpenAI API-nyckel under <Link to="/installningar">Inställningar</Link> för att använda assistenten.
+          Ange lösenordet till appens server under <Link to="/installningar">Inställningar</Link> för att använda assistenten.
         </p>
       </>
     )

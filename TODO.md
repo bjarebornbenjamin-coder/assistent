@@ -24,7 +24,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 2.7 Modellval
 
 ## Fas 3 – Större ändringar (fråga först)
-- [ ] 3.1 Flytta OpenAI-anropet till servern
+- [x] 3.1 Flytta OpenAI-anropet till servern
 - [ ] 3.2 Synk mellan enheter
 - [ ] 3.3 Pushnotiser
 - [ ] 3.4 Importera schema från bild

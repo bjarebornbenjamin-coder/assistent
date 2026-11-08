@@ -70,10 +70,11 @@ export interface Contact {
   email: string
 }
 
-/** Sparas bara lokalt och ingår aldrig i export. */
+/** Sparas bara lokalt och ingår aldrig i export. OpenAI-nyckeln finns bara på servern. */
 export interface AiConfig {
   id: 'main'
-  apiKey: string
+  /** Lösenord till appens server (api/chat). */
+  password: string
   model: string
   /** Senast hämtade modelllista från OpenAI. */
   models?: string[]
