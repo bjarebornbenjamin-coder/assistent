@@ -4,6 +4,7 @@ import { ChatError, runChat } from '../ai/chat'
 import { loadToolContext } from '../ai/context'
 import { addChatMessage, clearChat, newId, saveEvent, setCardStatus } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
+import { Markdown } from '../components/Markdown'
 import type { ChatMessage } from '../domain/types'
 import { useAiConfig, useChat } from '../hooks'
 
@@ -70,7 +71,7 @@ export function ChatPage() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages?.length, busy])
+  }, [messages?.length, busy, error])
 
   if (!config || !messages) return null
 
@@ -129,12 +130,12 @@ export function ChatPage() {
           m.card ? (
             <Card key={m.id} m={m} />
           ) : (
-            <div key={m.id} className={`bubble ${m.role}`}>{m.content}</div>
+            <div key={m.id} className={`bubble ${m.role}`}>{m.role === 'assistant' ? <Markdown text={m.content} /> : m.content}</div>
           ),
         )}
         {busy && <div className="bubble assistant muted">Tänker…</div>}
         {error && <p className="error" role="alert">{error}</p>}
-        <div ref={endRef} />
+        <div ref={endRef} className="chat-end" />
       </div>
 
       <form className="composer" onSubmit={send}>

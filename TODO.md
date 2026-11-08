@@ -7,8 +7,8 @@ Fas 3 görs inte utan att fråga först.
 - [x] 1.1 Varna för krockande lektioner
 - [x] 1.2 Stoppa dubbletter i packlistan (även på Hem)
 - [x] 1.3 Visa lektioner i månadsvyn
-- [ ] 1.4 Rendera markdown i chatten
-- [ ] 1.5 Autoscroll i chatten
+- [x] 1.4 Rendera markdown i chatten
+- [x] 1.5 Autoscroll i chatten
 - [ ] 1.6 Navigering på /amnen
 - [ ] 1.7 Rensa gamla felmeddelanden
 - [ ] 1.8 Tydligare bekräftelse vid borttagning av ämne
