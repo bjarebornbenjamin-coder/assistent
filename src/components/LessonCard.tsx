@@ -21,10 +21,11 @@ export function LessonCard({ lesson, subject, highlight, onClick }: Props) {
       </div>
     </div>
   )
-  const cls = `card${highlight ? ' now' : ''}`
+  const cls = `card${highlight ? ' now' : ''}${subject?.color ? ' colored' : ''}`
+  const style = subject?.color ? { borderLeftColor: subject.color } : undefined
   return onClick ? (
-    <button type="button" className={cls} onClick={onClick}>{body}</button>
+    <button type="button" className={cls} style={style} onClick={onClick}>{body}</button>
   ) : (
-    <div className={cls}>{body}</div>
+    <div className={cls} style={style}>{body}</div>
   )
 }

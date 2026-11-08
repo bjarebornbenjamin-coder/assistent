@@ -1,3 +1,4 @@
+import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
 import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, Settings, Subject } from '../domain/types'
 import { db } from './db'
@@ -30,7 +31,8 @@ export async function saveSettings(patch: Partial<Omit<Settings, 'id'>>): Promis
 }
 
 export async function addSubject(name: string): Promise<Subject> {
-  const subject: Subject = { id: newId(), name: name.trim(), packItems: [] }
+  const color = SUBJECT_COLORS[(await db.subjects.count()) % SUBJECT_COLORS.length].value
+  const subject: Subject = { id: newId(), name: name.trim(), color, packItems: [] }
   await db.subjects.add(subject)
   return subject
 }

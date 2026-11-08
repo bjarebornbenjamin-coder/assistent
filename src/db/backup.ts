@@ -1,3 +1,4 @@
+import { isColor } from '../domain/colors'
 import type { Backup, CalendarEvent, Contact, Lesson, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
@@ -24,7 +25,8 @@ function parseSubject(v: unknown): Subject {
     if (!isObj(p) || !isStr(p.id) || !isStr(p.text)) return fail('packlista')
     return { id: p.id as string, text: p.text as string }
   })
-  return { id: v.id, name: v.name, packItems }
+  if (v.color !== undefined && !isColor(v.color)) fail('ämnesfärg')
+  return { id: v.id, name: v.name, ...(v.color !== undefined ? { color: v.color as string } : {}), packItems }
 }
 
 function parseLesson(v: unknown): Lesson {

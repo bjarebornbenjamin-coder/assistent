@@ -20,6 +20,8 @@ export interface PackItem {
 export interface Subject {
   id: string
   name: string
+  /** Hex-färg, t.ex. #1a73e8. Saknas för äldre ämnen. */
+  color?: string
   packItems: PackItem[]
 }
 

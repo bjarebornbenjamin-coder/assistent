@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { addSubject, changePackItems, deleteSubject, newId, updateSubject } from '../db/repo'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { SUBJECT_COLORS } from '../domain/colors'
 import { itemKey } from '../domain/packing'
 import type { Subject } from '../domain/types'
 import { useLessons, useSubjects } from '../hooks'
@@ -47,7 +48,7 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
   return (
     <details className="card">
       <summary>
-        <span className="title">{subject.name}</span>
+        <span className="title"><i className="dot" style={{ background: subject.color ?? 'transparent', borderColor: subject.color ?? 'var(--outline)' }} aria-hidden="true" />{subject.name}</span>
         <span className="sub">{subject.packItems.length} att ta med</span>
       </summary>
 
@@ -62,7 +63,24 @@ function SubjectCard({ subject, lessonCount }: { subject: Subject; lessonCount: 
         />
       </label>
 
-      <div className="muted" style={{ fontSize: 13, marginBottom: 4 }}>Ta med</div>
+      <div className="muted" style={{ fontSize: 13, marginBottom: 4 }}>Färg</div>
+      <div className="swatches" role="radiogroup" aria-label={`Färg för ${subject.name}`}>
+        {SUBJECT_COLORS.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            role="radio"
+            aria-checked={subject.color === c.value}
+            aria-label={c.name}
+            className="swatch"
+            style={{ background: c.value }}
+            onClick={() => updateSubject({ ...subject, color: c.value })}
+          />
+        ))}
+        <button type="button" role="radio" aria-checked={!subject.color} className="btn swatch-none" onClick={() => updateSubject({ ...subject, color: undefined })}>Ingen</button>
+      </div>
+
+      <div className="muted" style={{ fontSize: 13, margin: '12px 0 4px' }}>Ta med</div>
       {subject.packItems.map((item) => (
         <div className="item" key={item.id}>
           <CommitInput

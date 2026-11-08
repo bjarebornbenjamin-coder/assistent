@@ -85,3 +85,19 @@ describe('händelser', () => {
     expect(() => parseBackup(bad)).toThrow(/sluttid/)
   })
 })
+
+describe('ämnesfärg', () => {
+  it('nya ämnen får olika färger och färgen följer med export/import', async () => {
+    const a = await addSubject('A')
+    const b = await addSubject('B')
+    expect(a.color).toMatch(/^#/)
+    expect(b.color).not.toBe(a.color)
+    const copy = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
+    expect(copy.subjects.find((s) => s.id === a.id)?.color).toBe(a.color)
+  })
+  it('avvisar ogiltig färg men tillåter ämnen utan färg', () => {
+    const base = { app: 'studieassistent', version: 3, lessons: [] }
+    expect(() => parseBackup({ ...base, subjects: [{ id: '1', name: 'x', color: 'red', packItems: [] }] })).toThrow(/ämnesfärg/)
+    expect(parseBackup({ ...base, subjects: [{ id: '1', name: 'x', packItems: [] }] }).subjects[0].color).toBeUndefined()
+  })
+})

@@ -157,3 +157,11 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 
 .back { display: inline-block; padding: 8px 0; min-height: 44px; line-height: 28px; color: var(--primary); text-decoration: none; }
 .back + h1 { margin-top: 0; }
+
+.card.colored { border-left-width: 4px; }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.swatch[aria-checked='true'] { outline: 2px solid var(--text); outline-offset: 2px; }
+.swatch-none { padding: 0 12px; min-height: 32px; font-size: 13px; }
+.swatch-none[aria-checked='true'] { outline: 2px solid var(--text); outline-offset: 2px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid; margin-right: 8px; }
