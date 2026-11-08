@@ -3,7 +3,7 @@ import { EventCard } from '../components/EventCard'
 import { EventForm } from '../components/EventForm'
 import { LessonCard } from '../components/LessonCard'
 import { dayLabel, eventsOn, monthGrid, monthLabel, weekDays } from '../domain/calendar'
-import { WEEKDAYS_SHORT, addDays, isoWeek, parseISODate, toISODate } from '../domain/dates'
+import { WEEKDAYS_SHORT, addDays, isoWeek, parseISODate, toISODate, weekdayOf } from '../domain/dates'
 import { lessonsOn } from '../domain/schedule'
 import type { CalendarEvent } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
@@ -25,6 +25,12 @@ export function CalendarPage() {
   if (!settings || !events || !lessons || !subjects) return null
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
   const f = parseISODate(focus)
+
+  /** På söndagar är veckan i princip slut, så veckovyn öppnas på kommande vecka. */
+  function showView(next: View) {
+    setView(next)
+    if (next === 'week' && focus === today && weekdayOf(today) === 7) setFocus(addDays(today, 1))
+  }
 
   function step(dir: -1 | 1) {
     if (view === 'week') return setFocus(addDays(focus, 7 * dir))
@@ -62,8 +68,8 @@ export function CalendarPage() {
       </div>
 
       <div className="seg" role="group" aria-label="Vy">
-        <button type="button" className="tab" aria-pressed={view === 'month'} onClick={() => setView('month')}>Månad</button>
-        <button type="button" className="tab" aria-pressed={view === 'week'} onClick={() => setView('week')}>Vecka</button>
+        <button type="button" className="tab" aria-pressed={view === 'month'} onClick={() => showView('month')}>Månad</button>
+        <button type="button" className="tab" aria-pressed={view === 'week'} onClick={() => showView('week')}>Vecka</button>
       </div>
 
       {view === 'month' ? (

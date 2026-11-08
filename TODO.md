@@ -12,7 +12,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 1.6 Navigering på /amnen
 - [x] 1.7 Rensa gamla felmeddelanden
 - [x] 1.8 Tydligare bekräftelse vid borttagning av ämne
-- [ ] 1.9 Veckovyn på söndagar
+- [x] 1.9 Veckovyn på söndagar
 
 ## Fas 2 – Förbättringar
 - [ ] 2.1 Färg per ämne
