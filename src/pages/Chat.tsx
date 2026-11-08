@@ -8,6 +8,8 @@ import { Markdown } from '../components/Markdown'
 import type { ChatMessage, Subject } from '../domain/types'
 import { useAiConfig, useChat, useSubjects } from '../hooks'
 
+const QUICK_QUESTIONS = ['Vad har jag imorgon?', 'Vad ska jag packa?', 'Vad händer denna vecka?']
+
 export function mailtoUrl(to: string, subject: string, body: string): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }
@@ -65,7 +67,11 @@ export function ChatPage() {
 
   async function send(e: FormEvent) {
     e.preventDefault()
-    const userText = text.trim()
+    await sendText(text)
+  }
+
+  async function sendText(raw: string) {
+    const userText = raw.trim()
     if (!userText || busy || !config) return
     setText('')
     setError('')
@@ -126,6 +132,12 @@ export function ChatPage() {
         <div ref={endRef} className="chat-end" />
       </div>
 
+      <div className="composer-wrap">
+      <div className="quick" role="group" aria-label="Snabbfrågor">
+        {QUICK_QUESTIONS.map((q) => (
+          <button key={q} type="button" className="chip" disabled={busy} onClick={() => sendText(q)}>{q}</button>
+        ))}
+      </div>
       <form className="composer" onSubmit={send}>
         <textarea
           rows={1}
@@ -142,6 +154,7 @@ export function ChatPage() {
         />
         <button type="submit" className="btn primary" disabled={busy || !text.trim()}>Skicka</button>
       </form>
+      </div>
     </>
   )
 }

@@ -20,7 +20,7 @@ Fas 3 görs inte utan att fråga först.
 - [x] 2.3 Bocka av packlistan
 - [x] 2.4 Läxor/uppgifter
 - [x] 2.5 Fler AI-åtgärder
-- [ ] 2.6 Snabbfrågor i chatten
+- [x] 2.6 Snabbfrågor i chatten
 - [ ] 2.7 Modellval
 
 ## Fas 3 – Större ändringar (fråga först)
