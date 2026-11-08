@@ -146,6 +146,46 @@ export async function deleteTask(id: string): Promise<void> {
   await db.tasks.delete(id)
 }
 
+export interface LessonDraft {
+  subject: string
+  weekday: number
+  start: string
+  end: string
+  room: string
+  teacher: string
+  weeks: number[] | null
+}
+
+/** Sparar flera lektioner på en gång. Ämnen som saknas skapas (namnjämförelse utan hänsyn till versaler). */
+export async function importLessons(drafts: LessonDraft[]): Promise<{ lessons: number; newSubjects: number }> {
+  return db.transaction('rw', db.subjects, db.lessons, async () => {
+    const subjects = await db.subjects.toArray()
+    const byName = new Map(subjects.map((s) => [s.name.trim().toLowerCase(), s.id]))
+    let created = 0
+    for (const d of drafts) {
+      const key = d.subject.trim().toLowerCase()
+      if (!byName.has(key)) {
+        const color = SUBJECT_COLORS[(subjects.length + created) % SUBJECT_COLORS.length].value
+        const subject: Subject = { id: newId(), name: d.subject.trim(), color, packItems: [] }
+        await db.subjects.add(subject)
+        byName.set(key, subject.id)
+        created++
+      }
+      await db.lessons.add({
+        id: newId(),
+        subjectId: byName.get(key)!,
+        weekday: d.weekday,
+        start: d.start,
+        end: d.end,
+        room: d.room.trim(),
+        teacher: d.teacher.trim(),
+        weeks: d.weeks,
+      })
+    }
+    return { lessons: drafts.length, newSubjects: created }
+  })
+}
+
 export async function exportAll(): Promise<Backup> {
   return {
     app: 'studieassistent',

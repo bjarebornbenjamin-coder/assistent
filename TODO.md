@@ -27,4 +27,4 @@ Fas 3 görs inte utan att fråga först.
 - [x] 3.1 Flytta OpenAI-anropet till servern
 - [x] 3.2 Synk mellan enheter
 - [x] 3.3 Pushnotiser
-- [ ] 3.4 Importera schema från bild
+- [x] 3.4 Importera schema från bild

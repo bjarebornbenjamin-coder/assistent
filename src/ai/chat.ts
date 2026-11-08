@@ -54,7 +54,7 @@ export interface ChatResult {
   notice?: string
 }
 
-async function describeError(res: Response): Promise<string> {
+export async function describeError(res: Response): Promise<string> {
   let detail = ''
   try {
     detail = ((await res.json()) as { error?: { message?: string } }).error?.message ?? ''

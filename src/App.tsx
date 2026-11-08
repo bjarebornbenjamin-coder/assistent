@@ -5,6 +5,7 @@ import { useNotificationSync } from './push/useNotificationSync'
 import { useSyncRunner } from './sync/useSyncRunner'
 import { CalendarPage } from './pages/Calendar'
 import { ChatPage } from './pages/Chat'
+import { ImportSchedulePage } from './pages/ImportSchedule'
 import { Home } from './pages/Home'
 import { SchedulePage } from './pages/Schedule'
 import { SettingsPage } from './pages/Settings'
@@ -55,6 +56,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/schema" element={<SchedulePage />} />
+            <Route path="/schema/importera" element={<ImportSchedulePage />} />
             <Route path="/kalender" element={<CalendarPage />} />
             <Route path="/chatt" element={<ChatPage />} />
             <Route path="/amnen" element={<SubjectsPage />} />

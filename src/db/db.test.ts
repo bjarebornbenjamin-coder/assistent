@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
@@ -122,5 +122,18 @@ describe('äldre OpenAI-nyckel', () => {
     expect(row).not.toHaveProperty('apiKey')
     expect(row.model).toBe('gpt-4.1')
     expect(JSON.stringify(row)).not.toContain('sk-gammal')
+  })
+})
+
+describe('importLessons', () => {
+  it('skapar saknade ämnen en gång, återanvänder befintliga och sparar allt eller inget', async () => {
+    const matte = await addSubject('Matte')
+    const draft = (subject: string, start: string) => ({ subject, weekday: 1, start, end: '23:00', room: ' A1 ', teacher: '', weeks: null })
+    const r = await importLessons([draft('matte', '08:00'), draft('Spanska', '09:00'), draft('SPANSKA', '10:00')])
+    expect(r).toEqual({ lessons: 3, newSubjects: 1 })
+    expect(await db.subjects.count()).toBe(2)
+    const lessons = await db.lessons.toArray()
+    expect(lessons.filter((l) => l.subjectId === matte.id)).toHaveLength(1)
+    expect(lessons[0].room).toBe('A1')
   })
 })

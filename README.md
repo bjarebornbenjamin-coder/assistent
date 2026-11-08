@@ -59,6 +59,10 @@ Kräver att synken (Supabase) är påslagen. Appen räknar ut vilka notiser du s
 
 Begränsningar: iPhone kräver att appen är installerad på hemskärmen (iOS 16.4+). Notiserna planeras 14 dagar framåt, så appen behöver öppnas minst varannan vecka. Ändrar du schema eller packlistor på en enhet uppdateras planen när appen är öppen där.
 
+## Importera schema från bild
+
+Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren och skickas via `/api/chat` till OpenAI (vald modell måste klara bilder, t.ex. gpt-4o-mini). Resultatet visas som förslag som du kan ändra, avmarkera och kontrollera mot krockar och dubbletter innan något sparas. Bilden sparas inte.
+
 ## Data och säkerhet
 
 - Schema, ämnen, händelser och kontakter sparas i IndexedDB och kan exporteras/importeras som JSON under Inställningar.

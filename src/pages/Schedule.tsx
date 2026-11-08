@@ -67,6 +67,9 @@ export function SchedulePage() {
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till lektion</button>
       </div>
 
+      <h2>Importera</h2>
+      <p><Link to="/schema/importera">Importera schemat från en bild</Link></p>
+
       <h2>Packlistor</h2>
       <p><Link to="/amnen">Redigera ämnen och vad du ska ta med</Link></p>
 
