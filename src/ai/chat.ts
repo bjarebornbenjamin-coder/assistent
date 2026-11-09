@@ -21,6 +21,14 @@ interface ToolCall {
 
 export class ChatError extends Error {}
 
+function foodPrompt(ctx: ToolContext): string {
+  const f = ctx.settings.food
+  return [
+    'Mat: du kan se användarens matlager med list_pantry och inköpslistan med list_shopping. På frågor som "vad ska jag äta idag?" eller "vad kan jag laga?": hämta först list_pantry och föreslå 1–3 enkla rätter som i första hand använder varor som snart går ut (daysLeft 0–2). Basera inte rätter på utgångna varor (negativt daysLeft); nämn dem istället kort. Anta att salt, peppar, vatten, olja och socker finns. Säg vad som saknas och erbjud att lägga det på inköpslistan med propose_shopping_items. Gissa inte vad användaren har: är lagret tomt, säg det och föreslå att de lägger in varor eller skannar ett kvitto.',
+    `Standard är ${f.portions} portioner.${f.allergies.trim() ? ` Allergier/kostönskemål som du måste respektera: ${f.allergies.trim()}.` : ''}`,
+  ].join('\n')
+}
+
 export function systemPrompt(now: Date, ctx: ToolContext): string {
   const today = toISODate(now)
   const week =
@@ -32,6 +40,7 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
     `Idag är ${WEEKDAYS_LONG[weekdayOf(today) - 1]} ${today}, klockan ${toHHmm(now)}.${week}`,
     'Hämta alltid schema, packlista och händelser med verktygen och gissa aldrig. Räkna ut datum själv ("imorgon", "på fredag") och skicka dem som YYYY-MM-DD.',
     'Du kan inte lägga in, ändra, ta bort eller skicka något direkt: propose_*-verktygen och draft_email visar bara ett förslag som användaren själv bekräftar eller skickar. Säg tydligt att det är ett förslag/utkast som väntar på användaren, inte att det är gjort.',
+    foodPrompt(ctx),
     'Om en uppgift saknas (t.ex. vilken Anna som avses eller vad mejlet ska handla om), fråga istället för att hitta på.',
   ].join('\n')
 }
@@ -70,7 +79,7 @@ export async function describeError(res: Response): Promise<string> {
 
 export async function runChat(o: RunOptions): Promise<ChatResult> {
   const fetchFn = o.fetchFn ?? fetch
-  const ctx = await o.loadContext()
+  const ctx = { ...(await o.loadContext()), today: toISODate(o.now) }
   const messages: ApiMessage[] = [
     { role: 'system', content: systemPrompt(o.now, ctx) },
     ...o.history.slice(-HISTORY_LIMIT).map((m) => ({ role: m.role, content: m.content }) as ApiMessage),

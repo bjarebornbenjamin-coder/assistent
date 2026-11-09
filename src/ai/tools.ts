@@ -2,7 +2,9 @@ import { dayLabel, eventTime, eventsOn } from '../domain/calendar'
 import { WEEKDAYS_LONG, addDays, daysBetween } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
-import type { CalendarEvent, ChatCard, Contact, Lesson, Settings, Subject, Task } from '../domain/types'
+import { daysLeft, foodKey } from '../domain/food'
+import { toISODate } from '../domain/dates'
+import type { CalendarEvent, ChatCard, Contact, Lesson, PantryItem, Settings, ShoppingItem, Subject, Task } from '../domain/types'
 
 export interface ToolContext {
   settings: Settings
@@ -11,6 +13,10 @@ export interface ToolContext {
   events: CalendarEvent[]
   contacts: Contact[]
   tasks: Task[]
+  pantry: PantryItem[]
+  shopping: ShoppingItem[]
+  /** Dagens datum (sätts av chatten så att svaren följer appens klocka). */
+  today?: string
 }
 
 export interface ToolOutcome {
@@ -121,6 +127,39 @@ export const TOOL_DEFINITIONS = [
     parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
   },
   {
+    name: 'list_pantry',
+    description: 'Lista vad användaren har hemma i matlagret, med mängd, bäst före-datum och daysLeft (negativt = utgånget). Använd den för matfrågor.',
+    parameters: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_shopping',
+    description: 'Lista användarens inköpslista (done = redan köpt).',
+    parameters: { type: 'object', properties: {} },
+  },
+  {
+    name: 'propose_shopping_items',
+    description: 'Föreslå varor att lägga på inköpslistan. De läggs INTE dit förrän användaren bekräftat i appen. Varor som redan står på listan hoppas över.',
+    parameters: {
+      type: 'object',
+      properties: { items: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, amount: { type: 'string' } }, required: ['name'] } } },
+      required: ['items'],
+    },
+  },
+  {
+    name: 'propose_pantry_add',
+    description: 'Föreslå varor att lägga i matlagret (t.ex. efter inköp). Läggs INTE dit förrän användaren bekräftat. expires är bäst före-datum YYYY-MM-DD, valfritt.',
+    parameters: {
+      type: 'object',
+      properties: { items: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, amount: { type: 'string' }, expires: date }, required: ['name'] } } },
+      required: ['items'],
+    },
+  },
+  {
+    name: 'propose_pantry_remove',
+    description: 'Föreslå att varor tas bort ur matlagret (uppätna eller slut), angivna med namn som i list_pantry. Tas INTE bort förrän användaren bekräftat.',
+    parameters: { type: 'object', properties: { names: { type: 'array', items: { type: 'string' } } }, required: ['names'] },
+  },
+  {
     name: 'draft_email',
     description:
       'Skriv ett mejlutkast. Mejlet SKICKAS INTE av dig; användaren granskar utkastet och öppnar det i sitt mejlprogram. "to" är en kontakts namn eller en e-postadress.',
@@ -159,6 +198,25 @@ const describeEvent = (e: Pick<CalendarEvent, 'title' | 'date' | 'start' | 'end'
 function describeLesson(l: Pick<Lesson, 'weekday' | 'start' | 'end' | 'room' | 'teacher'> & { subjectId?: string }, subjects: Subject[]) {
   const name = subjects.find((s) => s.id === l.subjectId)?.name
   return [name, `${WEEKDAYS_LONG[l.weekday - 1]} ${l.start}–${l.end}`, l.room && `sal ${l.room}`, l.teacher].filter(Boolean).join(', ')
+}
+
+/** Rensar en lista med varor från modellen. */
+function cleanItems(v: unknown, withExpiry = false): { list: { name: string; amount?: string; expires?: string }[] } | { error: string } {
+  if (!Array.isArray(v) || v.length === 0) return { error: 'Inga varor angavs.' }
+  if (v.length > 40) return { error: 'För många varor på en gång (max 40).' }
+  const seen = new Set<string>()
+  const list: { name: string; amount?: string; expires?: string }[] = []
+  for (const raw of v) {
+    const r = (raw ?? {}) as Record<string, unknown>
+    const name = str(r.name).slice(0, 60)
+    if (!name || seen.has(foodKey(name))) continue
+    seen.add(foodKey(name))
+    const amount = str(r.amount).slice(0, 30)
+    const expires = withExpiry ? str(r.expires) : ''
+    if (expires && !DATE.test(expires)) return { error: `Ogiltigt datum för ${name}, använd YYYY-MM-DD.` }
+    list.push({ name, ...(amount ? { amount } : {}), ...(expires ? { expires } : {}) })
+  }
+  return list.length > 0 ? { list } : { error: 'Inga giltiga varor angavs.' }
 }
 
 export function findSubject(name: string, subjects: Subject[]): Subject | undefined {
@@ -288,6 +346,68 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       return {
         result: { status: 'awaiting_user_confirmation', message: 'Borttagningen visas för användaren. Inget är borttaget än.' },
         card: { type: 'lesson_delete', id: old.id, summary: describeLesson(old, ctx.subjects) },
+      }
+    }
+    case 'list_pantry': {
+      const today = ctx.today ?? toISODate(new Date())
+      return {
+        result: {
+          today,
+          items: ctx.pantry
+            .slice()
+            .sort((a, b) => (a.expires ?? '9999').localeCompare(b.expires ?? '9999') || a.name.localeCompare(b.name, 'sv'))
+            .map((p) => ({
+              name: p.name,
+              amount: p.amount,
+              expires: p.expires,
+              daysLeft: p.expires ? daysLeft(p.expires, today) : undefined,
+            })),
+        },
+      }
+    }
+    case 'list_shopping':
+      return { result: { items: ctx.shopping.map((i) => ({ name: i.name, amount: i.amount, done: i.done })) } }
+    case 'propose_shopping_items': {
+      const items = cleanItems(args.items)
+      if ('error' in items) return err(items.error)
+      const onList = new Set(ctx.shopping.filter((i) => !i.done).map((i) => foodKey(i.name)))
+      const fresh = items.list.filter((i) => !onList.has(foodKey(i.name)))
+      if (fresh.length === 0) return err('Allt det här står redan på inköpslistan.')
+      return {
+        result: {
+          status: 'awaiting_user_confirmation',
+          message: 'Förslaget visas för användaren. Inget är tillagt än.',
+          ...(fresh.length < items.list.length ? { note: 'Några varor stod redan på listan och utelämnades.' } : {}),
+        },
+        card: { type: 'shopping_add', items: fresh },
+      }
+    }
+    case 'propose_pantry_add': {
+      const items = cleanItems(args.items, true)
+      if ('error' in items) return err(items.error)
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Inget är tillagt än.' },
+        card: { type: 'pantry_add', items: items.list },
+      }
+    }
+    case 'propose_pantry_remove': {
+      const names = Array.isArray(args.names) ? args.names.filter((n): n is string => typeof n === 'string' && n.trim() !== '').slice(0, 30) : []
+      if (names.length === 0) return err('Inga varor angavs.')
+      const found: PantryItem[] = []
+      const unknown: string[] = []
+      for (const n of names) {
+        const hit = ctx.pantry.find((p) => foodKey(p.name) === foodKey(n) && !found.includes(p)) ?? ctx.pantry.find((p) => foodKey(p.name).includes(foodKey(n)) && !found.includes(p))
+        if (hit) found.push(hit)
+        else unknown.push(n)
+      }
+      if (found.length === 0) return err(`Hittar ingen av varorna i lagret: ${unknown.join(', ')}. Kontrollera namnen med list_pantry.`)
+      return {
+        result: {
+          status: 'awaiting_user_confirmation',
+          message: 'Borttagningen visas för användaren. Inget är borttaget än.',
+          ...(unknown.length ? { note: `Hittade inte: ${unknown.join(', ')}` } : {}),
+        },
+        card: { type: 'pantry_remove', ids: found.map((p) => p.id), names: found.map((p) => p.name) },
       }
     }
     case 'find_contact': {

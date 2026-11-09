@@ -30,7 +30,7 @@ describe('reservmodell', () => {
         ? new Response(JSON.stringify({ error: { message: 'nope' } }), { status: 404 })
         : new Response(JSON.stringify({ choices: [{ message: { content: 'Hej' } }] }))
     }) as unknown as typeof fetch
-    const ctx = { settings: { id: 'main' as const, cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system' as const, notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }, food: { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } } }, lessons: [], subjects: [], events: [], contacts: [], tasks: [] }
+    const ctx = { settings: { id: 'main' as const, cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system' as const, notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }, food: { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } } }, lessons: [], subjects: [], events: [], contacts: [], tasks: [], pantry: [], shopping: [] }
     const res = await runChat({ headers: { 'x-app-password': 'k' }, model: 'finns-inte', history: [], userText: 'hej', now: new Date(), loadContext: async () => ctx, fetchFn })
     expect(used).toEqual(['finns-inte', DEFAULT_MODEL])
     expect(res.reply).toBe('Hej')

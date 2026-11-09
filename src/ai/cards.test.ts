@@ -4,7 +4,7 @@ import { saveEvent, saveLesson } from '../db/repo'
 import { applyCard } from './cards'
 
 beforeEach(async () => {
-  await Promise.all([db.events.clear(), db.lessons.clear(), db.subjects.clear(), db.tasks.clear()])
+  await Promise.all([db.events.clear(), db.lessons.clear(), db.subjects.clear(), db.tasks.clear(), db.pantry.clear(), db.shopping.clear()])
 })
 
 describe('applyCard', () => {
@@ -32,5 +32,20 @@ describe('applyCard', () => {
     await applyCard({ type: 'event', event: { title: 'Prov', date: '2026-11-13', note: '' } })
     expect(await db.tasks.count()).toBe(1)
     expect(await db.events.count()).toBe(1)
+  })
+})
+
+describe('applyCard: mat', () => {
+  it('lägger på inköpslistan (utan dubbletter), i lagret, och tar bort ur lagret', async () => {
+    await applyCard({ type: 'shopping_add', items: [{ name: 'Mjölk', amount: '2 l' }, { name: 'Ägg' }] })
+    await applyCard({ type: 'shopping_add', items: [{ name: 'mjölk' }] })
+    expect((await db.shopping.toArray()).map((i) => i.name).sort()).toEqual(['Mjölk', 'Ägg'])
+    await applyCard({ type: 'pantry_add', items: [{ name: 'Smör', amount: '1 st', expires: '2026-12-01' }, { name: 'Ost' }] })
+    const pantry = await db.pantry.toArray()
+    expect(pantry.map((p) => p.name).sort()).toEqual(['Ost', 'Smör'])
+    const butter = pantry.find((p) => p.name === 'Smör')!
+    expect(await applyCard({ type: 'pantry_remove', ids: [butter.id, 'finns-inte'], names: ['Smör'] })).toBe('done')
+    expect((await db.pantry.toArray()).map((p) => p.name)).toEqual(['Ost'])
+    expect(await applyCard({ type: 'pantry_remove', ids: [butter.id], names: ['Smör'] })).toBe('missing')
   })
 })

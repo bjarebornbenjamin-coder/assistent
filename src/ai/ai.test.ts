@@ -7,6 +7,13 @@ const ctx: ToolContext = {
   subjects: [{ id: 'ma', name: 'Matte', packItems: [{ id: '1', text: 'miniräknare' }] }],
   lessons: [{ id: 'l', subjectId: 'ma', weekday: 1, start: '08:00', end: '09:00', room: 'B12', teacher: 'Lena', weeks: null }],
   events: [{ id: 'e', title: 'Prov', date: '2026-11-10', start: '09:00', note: '', updatedAt: '' }],
+  pantry: [
+    { id: 'p1', name: 'Mjölk', amount: '1 l', expires: '2026-11-09', addedAt: '2026-11-01', source: 'manual', updatedAt: '' },
+    { id: 'p2', name: 'Pasta', amount: '500 g', addedAt: '2026-11-01', source: 'manual', updatedAt: '' },
+    { id: 'p3', name: 'Gurka', expires: '2026-11-11', addedAt: '2026-11-01', source: 'manual', updatedAt: '' },
+  ],
+  shopping: [{ id: 's1', name: 'Ägg', done: false, addedAt: '2026-11-01', updatedAt: '' }, { id: 's2', name: 'Bröd', done: true, addedAt: '2026-11-01', updatedAt: '' }],
+  today: '2026-11-10',
   tasks: [{ id: 't1', title: 'Läs kapitel 3', subjectId: 'ma', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 't2', title: 'Gammal', deadline: '2026-11-01', done: false, updatedAt: '' }, { id: 't3', title: 'Klar', deadline: '2026-11-12', done: true, updatedAt: '' }],
   contacts: [
     { id: '1', name: 'Anna Berg', email: 'anna@example.com' },
@@ -115,5 +122,45 @@ describe('ändra och ta bort', () => {
   it('id följer med i schema- och händelselistor så att modellen kan peka ut dem', () => {
     expect(runTool('get_schedule', { date: '2026-11-09' }, ctx).result).toMatchObject({ lessons: [{ id: 'l' }] })
     expect(runTool('list_events', { from: '2026-11-10', to: '2026-11-10' }, ctx).result).toMatchObject({ events: [{ id: 'e' }] })
+  })
+})
+
+describe('mat', () => {
+  it('list_pantry sorterar efter bäst före och ger daysLeft (negativt = utgånget)', () => {
+    const r = runTool('list_pantry', {}, ctx).result as { today: string; items: { name: string; daysLeft?: number }[] }
+    expect(r.today).toBe('2026-11-10')
+    expect(r.items.map((i) => [i.name, i.daysLeft])).toEqual([['Mjölk', -1], ['Gurka', 1], ['Pasta', undefined]])
+    expect(runTool('list_shopping', {}, ctx).result).toEqual({ items: [{ name: 'Ägg', amount: undefined, done: false }, { name: 'Bröd', amount: undefined, done: true }] })
+  })
+  it('propose_shopping_items hoppar över det som redan står på listan, men inte köpta varor', () => {
+    const r = runTool('propose_shopping_items', { items: [{ name: 'ägg' }, { name: 'Bröd', amount: '1 limpa' }, { name: 'Ost' }, { name: 'ost' }] }, ctx)
+    expect(r.card).toEqual({ type: 'shopping_add', items: [{ name: 'Bröd', amount: '1 limpa' }, { name: 'Ost' }] })
+    expect(r.result).toHaveProperty('note')
+    expect(runTool('propose_shopping_items', { items: [{ name: 'Ägg' }] }, ctx).result).toHaveProperty('error')
+    expect(runTool('propose_shopping_items', { items: [] }, ctx).result).toHaveProperty('error')
+    expect(runTool('propose_shopping_items', { items: Array.from({ length: 41 }, (_, i) => ({ name: `v${i}` })) }, ctx).result).toHaveProperty('error')
+  })
+  it('propose_pantry_add validerar datum', () => {
+    expect(runTool('propose_pantry_add', { items: [{ name: 'Smör', amount: '1 st', expires: '2026-12-01' }] }, ctx).card).toEqual({ type: 'pantry_add', items: [{ name: 'Smör', amount: '1 st', expires: '2026-12-01' }] })
+    expect(runTool('propose_pantry_add', { items: [{ name: 'Smör', expires: 'snart' }] }, ctx).result).toHaveProperty('error')
+  })
+  it('propose_pantry_remove matchar namn mot lagret och rapporterar okända', () => {
+    const r = runTool('propose_pantry_remove', { names: ['mjölk', 'Pasta', 'Kaviar'] }, ctx)
+    expect(r.card).toEqual({ type: 'pantry_remove', ids: ['p1', 'p2'], names: ['Mjölk', 'Pasta'] })
+    expect(JSON.stringify(r.result)).toContain('Kaviar')
+    expect(runTool('propose_pantry_remove', { names: ['Kaviar'] }, ctx).result).toHaveProperty('error')
+    expect(runTool('propose_pantry_remove', { names: [] }, ctx).result).toHaveProperty('error')
+  })
+})
+
+describe('matinstruktioner till modellen', () => {
+  it('systemprompten har matregler, standardportioner och allergier', async () => {
+    const { systemPrompt } = await import('./chat')
+    const base = systemPrompt(new Date('2026-11-10T12:00:00'), ctx)
+    expect(base).toContain('list_pantry')
+    expect(base).toContain('Standard är 2 portioner.')
+    expect(base).not.toContain('Allergier/kostönskemål')
+    const withAllergy = systemPrompt(new Date('2026-11-10T12:00:00'), { ...ctx, settings: { ...ctx.settings, food: { ...ctx.settings.food, allergies: 'nötter' } } })
+    expect(withAllergy).toContain('Allergier/kostönskemål som du måste respektera: nötter.')
   })
 })

@@ -9,7 +9,7 @@ import { Markdown } from '../components/Markdown'
 import type { ChatMessage, Subject } from '../domain/types'
 import { useAiConfig, useChat, useSubjects } from '../hooks'
 
-const QUICK_QUESTIONS = ['Vad har jag imorgon?', 'Vad ska jag packa?', 'Vad händer denna vecka?']
+const QUICK_QUESTIONS = ['Vad har jag imorgon?', 'Vad ska jag packa?', 'Vad händer denna vecka?', 'Vad ska jag äta idag?']
 
 export function mailtoUrl(to: string, subject: string, body: string): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`

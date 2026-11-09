@@ -67,6 +67,8 @@ Begränsningar: iPhone kräver att appen är installerad på hemskärmen (iOS 16
 
 Fliken Mat har tre delar: Lager (med bäst före-datum), Inköpslista och Recept. Kvitto och kylskåp skannas via samma bildavläsning som schemat (`/api/chat`, vision-modell krävs, t.ex. gpt-4o-mini). Allt du ser från skanningar är förslag som du granskar innan något sparas. Kvittots bäst före-datum är AI:ns uppskattning. Recepten skapas av AI:n och sparas inte; kontrollera allergier och att varorna är hela.
 
+Chatten känner till lager och inköpslista: fråga t.ex. "vad ska jag äta idag?" (snabbfrågeknapp finns), "vad kan jag laga på det som snart går ut?" eller "lägg mjölk och ägg på inköpslistan". Den hämtar lagret, utgår från det som snart går ut och föreslår vad som saknas. Att lägga på listan, lägga i lagret eller ta bort ur lagret sker alltid via ett bekräftelsekort, aldrig direkt.
+
 ## Importera schema från bild
 
 Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren och skickas via `/api/chat` till OpenAI (vald modell måste klara bilder, t.ex. gpt-4o-mini). Resultatet visas som förslag som du kan ändra, avmarkera och kontrollera mot krockar och dubbletter innan något sparas. Bilden sparas inte.

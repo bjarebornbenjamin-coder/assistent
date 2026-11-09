@@ -1,5 +1,5 @@
 import { db } from '../db/db'
-import { deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
+import { addPantryItems, addShoppingItems, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
 import type { ChatCard, Subject } from '../domain/types'
 
@@ -40,6 +40,12 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return { kicker: 'Förslag: ändra lektion', title: card.before, lines: [`Blir: ${card.afterText}`], confirmLabel: 'Ändra', doneText: 'Lektionen är ändrad.' }
     case 'lesson_delete':
       return { kicker: 'Förslag: ta bort lektion', title: card.summary, lines: [], confirmLabel: 'Ta bort', doneText: 'Lektionen är borttagen.', danger: true }
+    case 'shopping_add':
+      return { kicker: 'Förslag: inköpslistan', title: `Lägg på listan: ${card.items.map((i) => (i.amount ? `${i.name} (${i.amount})` : i.name)).join(', ')}`, lines: [], confirmLabel: 'Lägg på listan', doneText: 'Lagt på inköpslistan.' }
+    case 'pantry_add':
+      return { kicker: 'Förslag: matlagret', title: `Lägg i lagret: ${card.items.map((i) => (i.amount ? `${i.name} (${i.amount})` : i.name)).join(', ')}`, lines: [], confirmLabel: 'Lägg i lagret', doneText: 'Lagt i matlagret.' }
+    case 'pantry_remove':
+      return { kicker: 'Förslag: matlagret', title: `Ta bort ur lagret: ${card.names.join(', ')}`, lines: [], confirmLabel: 'Ta bort', doneText: 'Borttaget ur lagret.', danger: true }
     case 'email':
       return {
         kicker: 'Utkast, inte skickat',
@@ -83,6 +89,18 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
       if (!(await db.lessons.get(card.id))) return 'missing'
       await deleteLesson(card.id)
       return 'done'
+    case 'shopping_add':
+      await addShoppingItems(card.items)
+      return 'done'
+    case 'pantry_add':
+      await addPantryItems(card.items, 'manual')
+      return 'done'
+    case 'pantry_remove': {
+      const existing = (await db.pantry.bulkGet(card.ids)).filter(Boolean)
+      if (existing.length === 0) return 'missing'
+      await db.pantry.bulkDelete(existing.map((p) => p!.id))
+      return 'done'
+    }
     case 'email':
       return 'done'
   }
