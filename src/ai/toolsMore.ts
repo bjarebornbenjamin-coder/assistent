@@ -46,8 +46,8 @@ export const MORE_TOOL_DEFINITIONS = [
   { name: 'propose_reminder_delete', description: 'Föreslå att ta bort en påminnelse (titel som i list_reminders).', parameters: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } },
   {
     name: 'propose_task_update',
-    description: 'Föreslå ändring av en uppgift (titel som i list_tasks/get_overview): markera klar/inte klar, ny deadline eller ny titel.',
-    parameters: { type: 'object', properties: { title: { type: 'string' }, done: { type: 'boolean' }, deadline: date, new_title: { type: 'string' } }, required: ['title'] },
+    description: 'Föreslå ändring av en uppgift (titel som i list_tasks/get_overview): markera klar/inte klar, ny deadline, klockslag, anteckning eller ny titel. time/note "" tar bort.',
+    parameters: { type: 'object', properties: { title: { type: 'string' }, done: { type: 'boolean' }, deadline: date, time: { type: 'string', description: 'HH:mm' }, note: { type: 'string' }, new_title: { type: 'string' } }, required: ['title'] },
   },
   { name: 'propose_task_delete', description: 'Föreslå att ta bort en uppgift (titel som i list_tasks).', parameters: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } },
   {
@@ -128,9 +128,12 @@ export function runMoreTool(name: string, args: Record<string, unknown>, ctx: To
       const t = f.hit
       const deadline = args.deadline === undefined ? t.deadline : str(args.deadline)
       if (!DATE.test(deadline)) return err('Ogiltig deadline, använd YYYY-MM-DD.')
-      const after = { title: str(args.new_title).slice(0, 100) || t.title, deadline, done: typeof args.done === 'boolean' ? args.done : t.done }
-      if (after.title === t.title && after.deadline === t.deadline && after.done === t.done) return err('Inga ändringar jämfört med nuvarande uppgift.')
-      return proposed({ type: 'task_update', id: t.id, before: `${t.title} (deadline ${short(t.deadline)}${t.done ? ', klar' : ''})`, after })
+      const time = args.time === undefined ? t.time ?? '' : str(args.time)
+      if (time && !TIME.test(time)) return err('Ogiltigt klockslag, använd HH:mm.')
+      const note = args.note === undefined ? t.note ?? '' : str(args.note).slice(0, 500)
+      const after = { title: str(args.new_title).slice(0, 100) || t.title, deadline, done: typeof args.done === 'boolean' ? args.done : t.done, ...(time ? { time } : {}), ...(note ? { note } : {}) }
+      if (after.title === t.title && after.deadline === t.deadline && after.done === t.done && time === (t.time ?? '') && note === (t.note ?? '')) return err('Inga ändringar jämfört med nuvarande uppgift.')
+      return proposed({ type: 'task_update', id: t.id, before: `${t.title} (deadline ${short(t.deadline)}${t.time ? ` ${t.time}` : ''}${t.done ? ', klar' : ''})`, after })
     }
 
     case 'propose_task_delete': {

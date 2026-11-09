@@ -188,3 +188,13 @@ describe('uppgifter', () => {
     expect(isOverdue(tk('x', '2026-11-09', true), '2026-11-10')).toBe(false)
   })
 })
+
+describe('uppgifter med klockslag', async () => {
+  const { dueLabel, upcomingTasks } = await import('./tasks')
+  it('visar klockslag och sorterar dagens uppgifter på tid, utan tid sist', () => {
+    expect(dueLabel({ deadline: '2026-11-10', time: '23:59' }, '2026-11-09')).toBe('Imorgon 23:59')
+    expect(dueLabel({ deadline: '2026-11-10' }, '2026-11-09')).toBe('Imorgon')
+    const t = (id: string, time?: string) => ({ id, title: id, deadline: '2026-11-10', done: false, updatedAt: '', ...(time ? { time } : {}) })
+    expect(upcomingTasks(new Date('2026-11-09T12:00:00'), [t('c'), t('b', '15:00'), t('a', '08:00')]).map((x) => x.id)).toEqual(['a', 'b', 'c'])
+  })
+})

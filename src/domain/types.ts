@@ -146,6 +146,9 @@ export interface Task {
   title: string
   subjectId?: string
   deadline: ISODate
+  /** Klockslag då uppgiften ska vara inne, t.ex. 23:59. */
+  time?: HHmm
+  note?: string
   done: boolean
   updatedAt: string
 }
@@ -176,7 +179,7 @@ export type ChatCard =
   | { type: 'event'; event: Omit<CalendarEvent, 'id' | 'updatedAt'> }
   | { type: 'reminder_add'; reminder: Omit<Reminder, 'id' | 'updatedAt' | 'enabled'> }
   | { type: 'reminder_delete'; id: string; summary: string }
-  | { type: 'task_update'; id: string; before: string; after: Pick<Task, 'title' | 'deadline' | 'done'> }
+  | { type: 'task_update'; id: string; before: string; after: Pick<Task, 'title' | 'deadline' | 'done' | 'time' | 'note'> }
   | { type: 'task_delete'; id: string; summary: string }
   | { type: 'lesson_add'; subject: string; lesson: Pick<Lesson, 'weekday' | 'start' | 'end' | 'room' | 'teacher' | 'weeks'> }
   | { type: 'pack_update'; subjectId: string; subjectName: string; add: string[]; remove: string[] }
@@ -187,7 +190,7 @@ export type ChatCard =
   | { type: 'memory_add'; fact: string }
   | { type: 'memory_delete'; fact: string }
   | { type: 'events_add'; events: Omit<CalendarEvent, 'id' | 'updatedAt'>[] }
-  | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline'> }
+  | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline' | 'time' | 'note'> }
   | { type: 'event_update'; id: string; before: string; afterText: string; after: Omit<CalendarEvent, 'id' | 'updatedAt'> }
   | { type: 'meal_add'; meal: Pick<Meal, 'date' | 'name' | 'protein' | 'carbs' | 'fat'> & Partial<Pick<Meal, 'time' | 'kcal'>> }
   | { type: 'water_add'; date: ISODate; ml: number }

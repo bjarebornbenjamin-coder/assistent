@@ -101,7 +101,7 @@ const BASE_TOOL_DEFINITIONS = [
     description: 'Föreslå en ny läxa/uppgift med deadline. Den läggs INTE in förrän användaren bekräftat i appen. "subject" är ämnets namn (valfritt).',
     parameters: {
       type: 'object',
-      properties: { title: { type: 'string' }, deadline: date, subject: { type: 'string' } },
+      properties: { title: { type: 'string' }, deadline: date, time: { type: 'string', description: 'Klockslag HH:mm då den ska vara inne, valfritt' }, note: { type: 'string', description: 'Anteckning, valfritt' }, subject: { type: 'string' } },
       required: ['title', 'deadline'],
     },
   },
@@ -328,7 +328,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           weekday: WEEKDAYS_LONG[weekdayOf(d) - 1],
           lessons: dayLessons.map((l) => lessonView(l, ctx.subjects)),
           events: eventsOn(d, ctx.events).map((e) => ({ title: e.title, start: e.start, end: e.end, note: e.note || undefined })),
-          tasksDue: tasksOn(d, ctx.tasks).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), done: t.done })),
+          tasksDue: tasksOn(d, ctx.tasks).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), done: t.done, time: t.time, note: t.note })),
           reminders: ctx.reminders.filter((r) => occursOn(r, d)).sort((a, b) => a.time.localeCompare(b.time)).map((r) => ({ title: r.title, time: r.time })),
           packing: packingFor(dayLessons, ctx.subjects).flatMap((g) => g.items.map((i) => i.text)),
         }
@@ -367,6 +367,8 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           tasks: list.map((t) => ({
             title: t.title,
             deadline: t.deadline,
+            time: t.time,
+            note: t.note,
             subject: ctx.subjects.find((s) => s.id === t.subjectId)?.name,
             done: t.done,
             overdue: !t.done && t.deadline < (ctx.today ?? toISODate(new Date())) ? true : undefined,
@@ -380,6 +382,9 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const subjectName = str(args.subject)
       if (!title) return err('Titel saknas.')
       if (!DATE.test(deadline)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const time = str(args.time)
+      if (time && !TIME.test(time)) return err('Ogiltigt klockslag, använd HH:mm.')
+      const note = str(args.note).slice(0, 500)
       const subject = subjectName ? findSubject(subjectName, ctx.subjects) : undefined
       return {
         result: {
@@ -387,7 +392,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           message: 'Förslaget visas för användaren. Det är inte inlagt än.',
           ...(subjectName && !subject ? { note: `Ämnet "${subjectName}" finns inte; uppgiften föreslås utan ämne.` } : {}),
         },
-        card: { type: 'task', task: { title, deadline, ...(subject ? { subjectId: subject.id } : {}) } },
+        card: { type: 'task', task: { title, deadline, ...(time ? { time } : {}), ...(note ? { note } : {}), ...(subject ? { subjectId: subject.id } : {}) } },
       }
     }
     case 'propose_update_event': {

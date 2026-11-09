@@ -107,11 +107,14 @@ function parseContact(v: unknown): Contact {
 function parseTask(v: unknown): Task {
   if (!isObj(v) || !isStr(v.id) || !isStr(v.title) || !v.title.trim() || !isDate(v.deadline)) return fail('uppgift')
   if (v.subjectId !== undefined && !isStr(v.subjectId)) fail('uppgiftens ämne')
+  if (v.time !== undefined && !isTime(v.time)) fail('uppgiftens klockslag')
   return {
     id: v.id,
     title: v.title,
     ...(v.subjectId !== undefined ? { subjectId: v.subjectId as string } : {}),
     deadline: v.deadline as string,
+    ...(v.time !== undefined ? { time: v.time as string } : {}),
+    ...(isStr(v.note) && v.note.trim() ? { note: v.note.slice(0, 2000) } : {}),
     done: v.done === true,
     updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
   }

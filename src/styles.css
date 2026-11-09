@@ -490,3 +490,4 @@ input.switch:checked::after { left: 19px; width: 14px; background: var(--on-prim
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .sub.over { color: var(--warn-text); font-weight: 500; }
 .viz-axis, .viz-goal-label { font-size: 12.5px; }
+.task-main .sub.note { white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

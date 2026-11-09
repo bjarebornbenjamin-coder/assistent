@@ -36,7 +36,7 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return {
         kicker: 'Förslag: ändra uppgift',
         title: card.before,
-        lines: [`Blir: ${card.after.title} (deadline ${shortDate(card.after.deadline)}${card.after.done ? ', klar' : ''})`],
+        lines: [`Blir: ${card.after.title} (deadline ${shortDate(card.after.deadline)}${card.after.time ? ` ${card.after.time}` : ''}${card.after.done ? ', klar' : ''})`, ...(card.after.note ? [card.after.note] : [])],
         confirmLabel: 'Ändra',
         doneText: 'Uppgiften är ändrad.',
       }
@@ -97,7 +97,7 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return {
         kicker: 'Förslag: ny uppgift',
         title: card.task.title,
-        lines: [`Deadline ${dayLabel(card.task.deadline)}`, ...(subject ? [`Ämne: ${subject}`] : [])],
+        lines: [`Deadline ${dayLabel(card.task.deadline)}${card.task.time ? ` kl ${card.task.time}` : ''}`, ...(subject ? [`Ämne: ${subject}`] : []), ...(card.task.note ? [card.task.note] : [])],
         confirmLabel: 'Lägg in',
         doneText: 'Inlagd bland uppgifterna.',
       }
@@ -155,7 +155,10 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
     case 'task_update': {
       const t = await db.tasks.get(card.id)
       if (!t) return 'missing'
-      await saveTask({ ...t, ...card.after })
+      const { time: _t, note: _n, ...rest } = t
+      void _t
+      void _n
+      await saveTask({ ...rest, ...card.after })
       return 'done'
     }
     case 'task_delete':

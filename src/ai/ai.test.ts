@@ -38,6 +38,8 @@ describe('verktyg', () => {
     expect(runTool('propose_task', { title: 'Läxa', deadline: '2026-11-13', subject: 'matt' }, ctx).card).toEqual({ type: 'task', task: { title: 'Läxa', deadline: '2026-11-13', subjectId: 'ma' } })
     expect(runTool('propose_task', { title: 'Läxa', deadline: '2026-11-13', subject: 'Fysik' }, ctx).result).toHaveProperty('note')
     expect(runTool('propose_task', { title: 'Läxa', deadline: 'fredag' }, ctx).result).toHaveProperty('error')
+    expect(runTool('propose_task', { title: 'Essä', deadline: '2026-11-13', time: '23:59', note: 'Classroom' }, ctx).card).toEqual({ type: 'task', task: { title: 'Essä', deadline: '2026-11-13', time: '23:59', note: 'Classroom' } })
+    expect(runTool('propose_task', { title: 'Essä', deadline: '2026-11-13', time: '24:00' }, ctx).result).toHaveProperty('error')
   })
   it('schema och packlista för en måndag', () => {
     expect(runTool('get_schedule', { date: '2026-11-09' }, ctx).result).toMatchObject({ lessons: [{ subject: 'Matte', start: '08:00', room: 'B12' }] })

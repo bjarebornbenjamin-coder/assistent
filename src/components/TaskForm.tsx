@@ -15,6 +15,8 @@ export function TaskForm({ task, defaultDeadline, subjects, onClose }: Props) {
   const [title, setTitle] = useState(task?.title ?? '')
   const [subjectId, setSubjectId] = useState(task?.subjectId ?? '')
   const [deadline, setDeadline] = useState(task?.deadline ?? defaultDeadline)
+  const [time, setTime] = useState(task?.time ?? '')
+  const [note, setNote] = useState(task?.note ?? '')
   const [done, setDone] = useState(task?.done ?? false)
   const { error, fail, touch } = useFieldError()
 
@@ -27,6 +29,8 @@ export function TaskForm({ task, defaultDeadline, subjects, onClose }: Props) {
       title: title.trim(),
       ...(subjectId ? { subjectId } : {}),
       deadline,
+      ...(time ? { time } : {}),
+      ...(note.trim() ? { note: note.trim() } : {}),
       done,
       updatedAt: '',
     })
@@ -57,6 +61,14 @@ export function TaskForm({ task, defaultDeadline, subjects, onClose }: Props) {
         <label className="field">
           <span>Deadline</span>
           <input type="date" value={deadline} onChange={(e) => { setDeadline(e.target.value); touch('deadline') }} required />
+        </label>
+        <label className="field">
+          <span>Klockslag (valfritt)</span>
+          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Anteckning (valfritt)</span>
+          <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="t.ex. lämnas in på Classroom, sidorna 40–52" />
         </label>
         {task && (
           <div className="checks">

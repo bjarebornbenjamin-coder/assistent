@@ -1,7 +1,13 @@
 import { addDays, parseISODate, toISODate } from './dates'
 import type { ISODate, Task } from './types'
 
-const byDeadline = (a: Task, b: Task) => a.deadline.localeCompare(b.deadline) || a.title.localeCompare(b.title, 'sv')
+// Uppgifter utan klockslag räknas som inne vid dagens slut.
+const byDeadline = (a: Task, b: Task) => a.deadline.localeCompare(b.deadline) || (a.time ?? '24').localeCompare(b.time ?? '24') || a.title.localeCompare(b.title, 'sv')
+
+/** "Imorgon 23:59" eller bara "Imorgon". */
+export function dueLabel(t: Pick<Task, 'deadline' | 'time'>, today: ISODate): string {
+  return t.time ? `${deadlineLabel(t.deadline, today)} ${t.time}` : deadlineLabel(t.deadline, today)
+}
 
 /** Ej klara uppgifter som är försenade eller förfaller inom `days` dagar. */
 export function upcomingTasks(now: Date, tasks: Task[], days = 7): Task[] {
