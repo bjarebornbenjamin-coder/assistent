@@ -20,7 +20,7 @@ export function TasksPage() {
 
   return (
     <>
-      <Link to="/" className="back">← Tillbaka till Hem</Link>
+      <Link to="/" className="back">‹ Tillbaka till Hem</Link>
       <h1>Uppgifter</h1>
       {open.length === 0 ? <p className="empty">Inga uppgifter att göra.</p> : open.map(row)}
       <div className="actions">

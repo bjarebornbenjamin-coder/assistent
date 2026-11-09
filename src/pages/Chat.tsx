@@ -109,7 +109,7 @@ export function ChatPage() {
         now: new Date(),
         loadContext: loadToolContext,
       })
-      await addChatMessage({ role: 'assistant', content: notice ? `${reply}\n\n*${notice}*` : reply })
+      await addChatMessage({ role: 'assistant', content: notice ? `${reply}\n\nObs: ${notice}` : reply })
       for (const card of cards) await addChatMessage({ role: 'assistant', content: '', card, cardStatus: 'pending' })
     } catch (err) {
       setError(err instanceof ChatError ? err.message : 'Något gick fel. Försök igen.')
@@ -162,7 +162,7 @@ export function ChatPage() {
             </div>
           )
         })()}
-        {busy && <div className="bubble assistant muted">Tänker…</div>}
+        {busy && <div className="bubble assistant muted thinking" role="status" aria-live="polite">Tänker…</div>}
         {error && (
           <p className="error" role="alert">
             {error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link>

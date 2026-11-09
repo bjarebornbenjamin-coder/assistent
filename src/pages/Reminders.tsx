@@ -17,7 +17,7 @@ export function RemindersPage() {
 
   return (
     <>
-      <Link to="/" className="back">← Tillbaka till Hem</Link>
+      <Link to="/" className="back">‹ Tillbaka till Hem</Link>
       <h1>Påminnelser</h1>
       <p className="muted">Fristående påminnelser skickas som notis. Slå på notiser under Inställningar, och logga in så att servern kan skicka dem.</p>
       {sorted.length === 0 ? (

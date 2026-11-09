@@ -57,7 +57,9 @@ export function App() {
   return (
     <BrowserRouter>
       <main className="shell">
-        {!settings ? null : (
+        {!settings ? (
+          <p className="loading" role="status" aria-busy="true">Laddar…</p>
+        ) : (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/schema" element={<SchedulePage />} />

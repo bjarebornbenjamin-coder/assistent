@@ -264,3 +264,77 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 :root[data-bg-image='on'] .composer-wrap { position: sticky; isolation: isolate; }
 .bg-preview { display: block; width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; border: 1px solid var(--outline); margin: 8px 0; }
 .range { width: 100%; accent-color: var(--primary); }
+
+/* ===================================================================
+   Designsystem: gemensamma mått (punkt 5, 8, 14) och finputs
+   =================================================================== */
+:root {
+  /* Avstånd: 4-stegsskala. Tätt inom en grupp, luftigt mellan grupper. */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  /* Hörnradie: inre = yttre − utfyllnad, så att hörnen blir koncentriska. */
+  --r-outer: 16px;
+  --pad-card: 12px;
+  --r-inner: calc(var(--r-outer) - var(--pad-card));
+  --r-control: 8px;
+  /* Accentfärg (punkt 11): varm bärnsten, används sparsamt för "det som händer nu/snart". */
+  --accent: #92400e; --on-accent: #ffffff; --accent-soft: #fef3c7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --accent: #fbbf24; --on-accent: #1f1300; --accent-soft: #3a2a05; }
+}
+:root[data-theme='dark'] { --accent: #fbbf24; --on-accent: #1f1300; --accent-soft: #3a2a05; }
+
+/* Punkt 8: gruppering med luft – större avstånd före en ny sektion än mellan kort i samma sektion. */
+h2 { margin: var(--space-8) 0 var(--space-2); }
+h1 + h2, .seg + h2, .cal-head + h2 { margin-top: var(--space-4); }
+.card { margin-bottom: var(--space-2); border-radius: var(--r-outer); }
+
+/* Punkt 14: kontroller och bilder inuti kort får inre radie. */
+.card input[type='text'], .card input[type='time'], .card input[type='date'], .card select, .card textarea,
+.stat, .viz-card input { border-radius: var(--r-inner); }
+input[type='text'], input[type='time'], input[type='date'], select, textarea { border-radius: var(--r-control); }
+
+/* Punkt 16: rubriker radbryts jämnt och långa ord bryts i stället för att spräcka layouten. */
+h1, h2, .title, .viz-title, .cal-title { text-wrap: balance; overflow-wrap: anywhere; }
+p, .sub, .note { text-wrap: pretty; }
+
+/* Punkt 18: siffror som ska kunna jämföras i kolumner eller ändras på plats. */
+.time, .num, .next-note, .macro-grid .sub, .viz-table, .viz-axis, .viz-tip, .stat .sub, .ingredients, .day .num { font-variant-numeric: tabular-nums; }
+
+/* Punkt 15: bättre kontrast. */
+::placeholder { color: var(--muted); opacity: 0.85; }
+.day.other { opacity: 0.75; }
+.btn:disabled { opacity: 0.55; }
+:root[data-bg-image='on'] body::after { opacity: max(var(--bg-veil, 0.72), 0.6); }
+
+/* Punkt 7: huvudfunktionen på Hem (nästa lektion) är större. */
+.card.hero { padding: var(--space-4); }
+.card.hero .time { font-size: 16px; }
+.card.hero .title { font-size: 22px; font-weight: 500; line-height: 1.25; }
+.card.hero .sub { font-size: 15px; }
+
+/* Punkt 11: accent för det som händer nu/snart. */
+.next-note {
+  display: inline-block; margin: var(--space-2) 0 0; padding: 4px 12px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px;
+}
+
+/* Punkt 10: tydligare primärknapp (en per vy). */
+.btn.primary { font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.06); }
+
+/* Punkt 19: laddningsläge. */
+.loading { color: var(--muted); padding: var(--space-6) 0; }
+
+/* Punkt 20: animationer bara som återkoppling, och bara om användaren inte bett om mindre rörelse. */
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .tab, .chip, button.card, .task-main, .swatch { transition: transform 80ms ease, background-color 150ms ease, filter 150ms ease; }
+  .btn:active:not(:disabled), .chip:active:not(:disabled), .tab:active, button.card:active { transform: scale(0.97); }
+  .viz-meter > span { transition: width 300ms ease; }
+  .checklist label, .card.task .title { transition: color 150ms ease; }
+  .bubble, .card.proposal { animation: enter 160ms ease-out; }
+  .thinking { animation: pulse 1.2s ease-in-out infinite; }
+  .loading { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+}

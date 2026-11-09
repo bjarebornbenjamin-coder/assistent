@@ -63,7 +63,7 @@ export function ImportSchedulePage() {
 
   return (
     <>
-      <Link to="/schema" className="back">← Tillbaka till Schema</Link>
+      <Link to="/schema" className="back">‹ Tillbaka till Schema</Link>
       <h1>Importera schema från bild</h1>
       <p className="muted">
         Välj en skärmdump eller ett foto av ditt schema. Bilden skickas via appens server till OpenAI för avläsning och sparas inte. Du får granska och ändra

@@ -9,9 +9,11 @@ interface Props {
   subject?: Subject
   highlight?: boolean
   onClick?: () => void
+  /** Större variant för det viktigaste kortet på en sida. */
+  size?: 'large'
 }
 
-export function LessonCard({ lesson, subject, highlight, onClick }: Props) {
+export function LessonCard({ lesson, subject, highlight, onClick, size }: Props) {
   const body = (
     <div className="row">
       <span className="time">{lesson.start}–{lesson.end}</span>
@@ -21,7 +23,7 @@ export function LessonCard({ lesson, subject, highlight, onClick }: Props) {
       </div>
     </div>
   )
-  const cls = `card${highlight ? ' now' : ''}${subject?.color ? ' colored' : ''}`
+  const cls = `card${highlight ? ' now' : ''}${subject?.color ? ' colored' : ''}${size === 'large' ? ' hero' : ''}`
   const style = subject?.color ? { borderLeftColor: subject.color } : undefined
   return onClick ? (
     <button type="button" className={cls} style={style} onClick={onClick}>{body}</button>

@@ -20,6 +20,8 @@ function dayName(date: string, today: string): string {
   return WEEKDAYS_LONG[weekdayOf(date) - 1]
 }
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 function HomeHeader() {
   return (
     <div className="chat-head">
@@ -70,14 +72,14 @@ export function Home() {
       <h2>Nästa lektion</h2>
       {next ? (
         <>
-          <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} />
-          <p className="next-note">{describeNext(now, next)}</p>
+          <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} size="large" />
+          <p className="next-note">{capitalize(describeNext(now, next).replace(/^Nästa lektion /, ''))}</p>
         </>
       ) : (
         <p className="empty">Inga kommande lektioner de närmaste två veckorna.</p>
       )}
 
-      <h2>Idag</h2>
+      <h2>Dagens lektioner</h2>
       {todays.length === 0 ? (
         <p className="empty">Inga lektioner idag.</p>
       ) : (
@@ -115,7 +117,7 @@ export function Home() {
         </div>
       )}
 
-      <h2>Kommande</h2>
+      <h2>Händelser närmaste veckan</h2>
       {upcoming.length === 0 ? (
         <p className="empty">Inga händelser de närmaste sju dagarna.</p>
       ) : (
@@ -127,7 +129,7 @@ export function Home() {
         ))
       )}
 
-      <h2>Uppgifter</h2>
+      <h2>Uppgifter som ska in snart</h2>
       {dueTasks.length === 0 ? (
         <p className="empty">Inga uppgifter de närmaste sju dagarna.</p>
       ) : (

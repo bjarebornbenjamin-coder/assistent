@@ -144,7 +144,7 @@ export function SubjectsPage() {
 
   return (
     <>
-      <Link to="/schema" className="back">← Tillbaka till Schema</Link>
+      <Link to="/schema" className="back">‹ Tillbaka till Schema</Link>
       <h1>Ämnen och packlistor</h1>
       <form className="item" onSubmit={add}>
         <input type="text" aria-label="Nytt ämne" placeholder="Nytt ämne, t.ex. Matte" value={name} onChange={(e) => setName(e.target.value)} />

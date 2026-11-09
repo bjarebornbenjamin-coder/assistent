@@ -70,7 +70,7 @@ export function ScanFoodPage() {
 
   return (
     <>
-      <Link to="/mat" className="back">← Tillbaka till Mat</Link>
+      <Link to="/mat" className="back">‹ Tillbaka till Mat</Link>
       <h1>{t.title}</h1>
       <p className="muted">{t.intro}</p>
       <div className="actions" style={{ marginTop: 8 }}>
