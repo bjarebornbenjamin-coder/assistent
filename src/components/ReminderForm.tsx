@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { deleteReminder, newId, saveReminder } from '../db/repo'
-import { WEEKDAYS_SHORT } from '../domain/dates'
+import { WEEKDAYS_LONG, WEEKDAYS_SHORT, weekdayOf } from '../domain/dates'
+import { useNotifyStatus } from '../push/useNotifyStatus'
 import type { ISODate, Reminder } from '../domain/types'
 import { useFieldError } from '../hooks'
 import { undoable } from '../lib/undo'
 
-type Kind = Reminder['repeat']['kind']
+type Kind = Reminder['repeat']['kind'] | 'weekly'
 
 interface Props {
   reminder: Reminder | null
@@ -16,7 +17,10 @@ interface Props {
 export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
   const [title, setTitle] = useState(reminder?.title ?? '')
   const [time, setTime] = useState(reminder?.time ?? '08:00')
-  const [kind, setKind] = useState<Kind>(reminder?.repeat.kind ?? 'once')
+  const initialKind: Kind = reminder?.repeat.kind === 'weekdays' && reminder.repeat.days.length === 1 ? 'weekly' : reminder?.repeat.kind ?? 'once'
+  const [kind, setKind] = useState<Kind>(initialKind)
+  const [weekday, setWeekday] = useState<number>(reminder?.repeat.kind === 'weekdays' && reminder.repeat.days.length === 1 ? reminder.repeat.days[0] : weekdayOf(defaultDate))
+  const status = useNotifyStatus()
   const [date, setDate] = useState(reminder?.repeat.kind === 'once' ? reminder.repeat.date : defaultDate)
   const [days, setDays] = useState<number[]>(reminder?.repeat.kind === 'weekdays' ? reminder.repeat.days : [1, 2, 3, 4, 5])
   const { error, fail, touch } = useFieldError()
@@ -31,7 +35,7 @@ export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
       id: reminder?.id ?? newId(),
       title: title.trim(),
       time,
-      repeat: kind === 'daily' ? { kind: 'daily' } : kind === 'once' ? { kind: 'once', date } : { kind: 'weekdays', days: [...days].sort() },
+      repeat: kind === 'daily' ? { kind: 'daily' } : kind === 'once' ? { kind: 'once', date } : kind === 'weekly' ? { kind: 'weekdays', days: [weekday] } : { kind: 'weekdays', days: [...days].sort() },
       enabled: reminder?.enabled ?? true,
       updatedAt: '',
     })
@@ -61,6 +65,7 @@ export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
           <select value={kind} onChange={(e) => { setKind(e.target.value as Kind); touch('date'); touch('days') }}>
             <option value="once">En gång</option>
             <option value="daily">Varje dag</option>
+            <option value="weekly">Varje vecka</option>
             <option value="weekdays">Vissa veckodagar</option>
           </select>
         </label>
@@ -70,9 +75,17 @@ export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
             <input type="date" value={date} onChange={(e) => { setDate(e.target.value); touch('date') }} required />
           </label>
         )}
+        {kind === 'weekly' && (
+          <label className="field">
+            <span>Dag</span>
+            <select value={weekday} onChange={(e) => setWeekday(Number(e.target.value))}>
+              {WEEKDAYS_LONG.map((d, i) => <option key={d} value={i + 1}>{`Varje ${d}`}</option>)}
+            </select>
+          </label>
+        )}
         {kind === 'weekdays' && (
           <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-            <legend className="muted" style={{ fontSize: 13, marginBottom: 4 }}>Veckodagar (en dag = varje vecka)</legend>
+            <legend className="muted" style={{ fontSize: 13, marginBottom: 4 }}>Veckodagar</legend>
             <div className="checks">
               {WEEKDAYS_SHORT.map((d, i) => (
                 <label key={d}>
@@ -87,6 +100,7 @@ export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
             </div>
           </fieldset>
         )}
+        {status && !status.on && <p className="warning">{status.reason}</p>}
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions">
           <button type="submit" className="btn primary">Spara</button>

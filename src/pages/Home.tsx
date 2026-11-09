@@ -7,17 +7,16 @@ import { LessonCard } from '../components/LessonCard'
 import { upcomingEvents } from '../domain/calendar'
 import { remainingToday } from '../domain/reminders'
 import { upcomingTasks } from '../domain/tasks'
+import { mealsOn, totalsOf } from '../domain/nutrition'
 import type { Task } from '../domain/types'
-import { WEEKDAYS_LONG, addDays, toISODate, weekdayOf } from '../domain/dates'
+import { toHHmm, toISODate } from '../domain/dates'
 import { setPackChecked } from '../db/repo'
 import { itemKey, packingTarget } from '../domain/packing'
-import { describeNext, lessonsOn, nextLesson } from '../domain/schedule'
-import { useEvents, useLessons, usePackChecks, useReminders, useTasks, useNow, useSettings, useSubjects } from '../hooks'
+import { describeNext, findConflicts, lessonsOn, nextLesson, relativeDay } from '../domain/schedule'
+import { useEvents, useLessons, useMeals, usePackChecks, useReminders, useTasks, useWater, useNow, useSettings, useSubjects } from '../hooks'
 
 function dayName(date: string, today: string): string {
-  if (date === today) return 'idag'
-  if (date === addDays(today, 1)) return 'imorgon'
-  return WEEKDAYS_LONG[weekdayOf(date) - 1]
+  return relativeDay(date, today).replace(/^på /, '')
 }
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -42,11 +41,13 @@ export function Home() {
   const events = useEvents()
   const tasks = useTasks()
   const reminders = useReminders()
+  const meals = useMeals()
+  const water = useWater()
   const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
   const now = useNow()
   const packing0 = settings && lessons && subjects ? packingTarget(now, lessons, subjects, settings) : null
   const checks = usePackChecks(packing0?.date)
-  if (!settings || !lessons || !subjects || !events || !tasks || !reminders) return null
+  if (!settings || !lessons || !subjects || !events || !tasks || !reminders || !meals || !water) return null
 
   const today = toISODate(now)
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
@@ -88,7 +89,15 @@ export function Home() {
       {todays.length === 0 ? (
         <p className="empty">Inga lektioner idag.</p>
       ) : (
-        todays.map((l) => <LessonCard key={l.id} lesson={l} subject={subjectById.get(l.subjectId)} />)
+        todays.map((l) => (
+          <LessonCard
+            key={l.id}
+            lesson={l}
+            subject={subjectById.get(l.subjectId)}
+            past={l.end <= toHHmm(now)}
+            conflict={findConflicts(l, todays, 1).length > 0}
+          />
+        ))
       )}
 
       <h2>Ta med {packing ? dayName(packing.date, today) : ''}</h2>
@@ -129,7 +138,7 @@ export function Home() {
       ) : (
         upcoming.map((e) => (
           <div key={e.id}>
-            <p className="sub" style={{ margin: '8px 0 4px', textTransform: 'capitalize' }}>{dayName(e.date, today)}</p>
+            <p className="sub" style={{ margin: '8px 0 4px' }}>{capitalize(dayName(e.date, today))}</p>
             <EventCard event={e} />
           </div>
         ))
@@ -147,6 +156,21 @@ export function Home() {
         <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
         <Link to="/uppgifter" className="btn">Alla uppgifter</Link>
       </div>
+
+      <h2>Mat och vatten idag</h2>
+      {(() => {
+        const t = totalsOf(mealsOn(today, meals))
+        const ml = water.find((w) => w.date === today)?.ml ?? 0
+        const g = settings.nutrition
+        const n = (v: number) => v.toLocaleString('sv-SE', { maximumFractionDigits: 1 })
+        return (
+          <Link to="/mat?v=kost" className="card kost-row">
+            <span><strong>{t.kcal}</strong> kcal</span>
+            <span>protein <strong>{n(t.protein)}</strong>/{g.proteinG} g</span>
+            <span>vatten <strong>{n(ml / 1000)}</strong>/{n(g.waterMl / 1000)} l</span>
+          </Link>
+        )
+      })()}
 
       <h2>Påminnelser idag</h2>
       {todayReminders.length === 0 ? (

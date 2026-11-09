@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addChatMessage, addWater, saveMeal, addPantryItems, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addChatMessage, addWater, assignMissingColors, saveMeal, addPantryItems, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
@@ -268,5 +268,17 @@ describe('minne i export', () => {
     expect(backup.settings?.memories).toEqual(['Gillar inte svamp', 'Tränar helst på morgonen'])
     const dirty = parseBackup({ app: 'studieassistent', version: 7, subjects: [], lessons: [], settings: { cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system', memories: [' a ', 3, '', 'b'] } })
     expect(dirty.settings?.memories).toEqual(['a', 'b'])
+  })
+})
+
+describe('ämnen utan färg', () => {
+  it('får en ledig färg ur paletten, och färgade ämnen rörs inte', async () => {
+    await db.subjects.clear()
+    await db.subjects.bulkPut([{ id: 'a', name: 'Spanska', packItems: [] }, { id: 'b', name: 'Matte', color: '#1a73e8', packItems: [] }])
+    await assignMissingColors()
+    const [a, b] = await Promise.all([db.subjects.get('a'), db.subjects.get('b')])
+    expect(a!.color).toMatch(/^#[0-9a-f]{6}$/i)
+    expect(a!.color).not.toBe('#1a73e8')
+    expect(b!.color).toBe('#1a73e8')
   })
 })

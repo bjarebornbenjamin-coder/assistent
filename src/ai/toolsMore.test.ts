@@ -69,7 +69,7 @@ describe('nya verktyg: förslag', () => {
   it('inköpslista, lager, kontakt', () => {
     expect(run('propose_shopping_update', { mark_bought: ['ägg'], remove: ['Bröd', 'Ost'] }).card).toEqual({ type: 'shopping_update', boughtIds: ['s1'], removeIds: ['s2'], bought: ['Ägg'], removed: ['Bröd'] })
     isErr('propose_shopping_update', { mark_bought: ['Ost'] })
-    expect(run('propose_pantry_update', { name: 'mjölk', amount: '0,5 l', expires: '' }).card).toEqual({ type: 'pantry_update', id: 'pa1', before: 'Mjölk, 1 l, bäst före 2026-11-12', after: { name: 'Mjölk', amount: '0,5 l' } })
+    expect(run('propose_pantry_update', { name: 'mjölk', amount: '0,5 l', expires: '' }).card).toEqual({ type: 'pantry_update', id: 'pa1', before: 'Mjölk, 1 l, bäst före tors 12 nov.', after: { name: 'Mjölk', amount: '0,5 l' } })
     isErr('propose_pantry_update', { name: 'Mjölk', expires: 'snart' })
     expect(run('propose_contact', { name: 'Anna', email: 'anna@example.com' }).card).toEqual({ type: 'contact_add', contact: { name: 'Anna', email: 'anna@example.com' } })
     isErr('propose_contact', { name: 'Olle 2', email: 'OLLE@example.com' })

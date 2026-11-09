@@ -107,6 +107,20 @@ export async function getAiConfig(): Promise<AiConfig> {
   return (await db.aiConfig.get('main')) ?? { id: 'main', password: '', model: DEFAULT_MODEL }
 }
 
+/** Äldre ämnen saknar färg (visas då som en vit prick). Ge dem en färg ur paletten. */
+export async function assignMissingColors(): Promise<void> {
+  const subjects = await db.subjects.toArray()
+  const missing = subjects.filter((s) => !s.color)
+  if (missing.length === 0) return
+  const used = new Set(subjects.map((s) => s.color).filter(Boolean))
+  const free = SUBJECT_COLORS.map((c) => c.value).filter((c) => !used.has(c))
+  await db.transaction('rw', db.subjects, async () => {
+    for (let i = 0; i < missing.length; i++) {
+      await db.subjects.put({ ...missing[i], color: free[i] ?? SUBJECT_COLORS[(subjects.length + i) % SUBJECT_COLORS.length].value })
+    }
+  })
+}
+
 /** Tar bort en OpenAI-nyckel som äldre versioner sparade i webbläsaren. */
 export async function purgeLegacyApiKey(): Promise<void> {
   const row = (await db.aiConfig.get('main')) as (Record<string, unknown> & { id: 'main' }) | undefined

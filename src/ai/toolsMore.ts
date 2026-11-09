@@ -28,6 +28,8 @@ function findByName<T>(items: T[], name: string, get: (t: T) => string): { hit?:
   return { error: `Flera träffar för "${name}": ${partial.slice(0, 6).map(get).join(', ')}. Fråga användaren vilken.` }
 }
 
+const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+
 const reminderSummary = (r: Pick<Reminder, 'title' | 'time' | 'repeat'>) => `${r.title}, ${r.time}, ${describeRepeat(r.repeat)}`
 
 export const MORE_TOOL_DEFINITIONS = [
@@ -128,13 +130,13 @@ export function runMoreTool(name: string, args: Record<string, unknown>, ctx: To
       if (!DATE.test(deadline)) return err('Ogiltig deadline, använd YYYY-MM-DD.')
       const after = { title: str(args.new_title).slice(0, 100) || t.title, deadline, done: typeof args.done === 'boolean' ? args.done : t.done }
       if (after.title === t.title && after.deadline === t.deadline && after.done === t.done) return err('Inga ändringar jämfört med nuvarande uppgift.')
-      return proposed({ type: 'task_update', id: t.id, before: `${t.title} (deadline ${t.deadline}${t.done ? ', klar' : ''})`, after })
+      return proposed({ type: 'task_update', id: t.id, before: `${t.title} (deadline ${short(t.deadline)}${t.done ? ', klar' : ''})`, after })
     }
 
     case 'propose_task_delete': {
       const f = findByName(ctx.tasks, str(args.title), (t) => t.title)
       if (!f.hit) return err(f.error!)
-      return proposed({ type: 'task_delete', id: f.hit.id, summary: `${f.hit.title} (deadline ${f.hit.deadline})` })
+      return proposed({ type: 'task_delete', id: f.hit.id, summary: `${f.hit.title} (deadline ${short(f.hit.deadline)})` })
     }
 
     case 'propose_lesson': {
@@ -192,7 +194,7 @@ export function runMoreTool(name: string, args: Record<string, unknown>, ctx: To
       return proposed({
         type: 'pantry_update',
         id: p.id,
-        before: [p.name, p.amount, p.expires && `bäst före ${p.expires}`].filter(Boolean).join(', '),
+        before: [p.name, p.amount, p.expires && `bäst före ${short(p.expires)}`].filter(Boolean).join(', '),
         after: { name: p.name, ...(amount ? { amount } : {}), ...(expires ? { expires } : {}) },
       })
     }

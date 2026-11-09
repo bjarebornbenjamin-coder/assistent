@@ -1,6 +1,8 @@
 import { db } from '../db/db'
 import { addPantryItems, addShoppingItems, addWater, saveMeal, changePackItems, deleteReminder, deleteShoppingItem, deleteTask, getSettings, saveContact, savePantryItem, saveReminder, saveSettings, saveShoppingItem, addSubject, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
+import { parseISODate } from '../domain/dates'
+const shortDate = (d: string) => parseISODate(d).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
 import { mealKcal } from '../domain/nutrition'
 import { foodKey } from '../domain/food'
 import { describeRepeat } from '../domain/reminders'
@@ -34,7 +36,7 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return {
         kicker: 'Förslag: ändra uppgift',
         title: card.before,
-        lines: [`Blir: ${card.after.title} (deadline ${card.after.deadline}${card.after.done ? ', klar' : ''})`],
+        lines: [`Blir: ${card.after.title} (deadline ${shortDate(card.after.deadline)}${card.after.done ? ', klar' : ''})`],
         confirmLabel: 'Ändra',
         doneText: 'Uppgiften är ändrad.',
       }
@@ -70,7 +72,7 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return {
         kicker: 'Förslag: ändra vara i lagret',
         title: card.before,
-        lines: [`Blir: ${[card.after.name, card.after.amount, card.after.expires && `bäst före ${card.after.expires}`].filter(Boolean).join(', ')}`],
+        lines: [`Blir: ${[card.after.name, card.after.amount, card.after.expires && `bäst före ${shortDate(card.after.expires)}`].filter(Boolean).join(', ')}`],
         confirmLabel: 'Ändra',
         doneText: 'Varan är ändrad.',
       }

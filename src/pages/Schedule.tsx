@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { LessonCard } from '../components/LessonCard'
 import { LessonForm } from '../components/LessonForm'
 import { WEEKDAYS_LONG, WEEKDAYS_SHORT, toISODate, weekdayOf } from '../domain/dates'
-import { lessonsOnWeek } from '../domain/schedule'
+import { findConflicts, lessonsOnWeek } from '../domain/schedule'
 import type { Lesson } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
 import { useLessons, useNow, useSettings, useSubjects } from '../hooks'
@@ -59,7 +59,7 @@ export function SchedulePage() {
         <p className="empty">Inga lektioner på {WEEKDAYS_LONG[day - 1]}.</p>
       ) : (
         dayLessons.map((l) => (
-          <LessonCard key={l.id} lesson={l} subject={subjectById.get(l.subjectId)} onClick={() => setEditing(l)} />
+          <LessonCard key={l.id} lesson={l} subject={subjectById.get(l.subjectId)} conflict={findConflicts(l, dayLessons, cycleLength).length > 0} onClick={() => setEditing(l)} />
         ))
       )}
 

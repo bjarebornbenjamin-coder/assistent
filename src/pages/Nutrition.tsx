@@ -10,15 +10,15 @@ import { useMeals, useNow, useSettings, useWater } from '../hooks'
 /** Gram med svenskt decimaltecken. */
 const g = (n: number) => `${n.toLocaleString('sv-SE', { maximumFractionDigits: 1 })} g`
 
-function MacroStat({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
+function MacroStat({ label, value, goal, color, unit = 'g' }: { label: string; value: number; goal: number; color: string; unit?: 'g' | 'kcal' }) {
   const pct = goal > 0 ? Math.round((value / goal) * 100) : 0
   return (
     <div>
       <div className="sub">{label}</div>
-      <div className="big">{g(value)}</div>
-      <div className="sub">mål {g(goal)} · {pct} %</div>
+      <div className="big">{unit === 'kcal' ? value : g(value)}</div>
+      <div className={pct > 105 ? 'sub over' : 'sub'}>mål {unit === 'kcal' ? goal : g(goal)} · {pct} %{pct > 105 ? ' (över målet)' : ''}</div>
       <div className="viz-meter" role="meter" aria-label={`${label}: ${pct} % av målet`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, pct)}>
-        <span style={{ width: `${progress(value, goal) * 100}%`, background: color }} />
+        <span style={{ width: `${progress(value, goal) * 100}%`, background: pct > 105 ? 'var(--warn-text)' : color }} />
       </div>
     </div>
   )
@@ -61,7 +61,7 @@ function DayView() {
       <h2>Dagens summa</h2>
       <div className="card">
         <div className="macro-grid">
-          <div><div className="sub">Kalorier</div><div className="big">{totals.kcal}</div><div className="sub">mål ca {goalKcal(goals)}</div></div>
+          <MacroStat label="Kalorier" value={totals.kcal} goal={goalKcal(goals)} color="var(--primary)" unit="kcal" />
           <MacroStat label="Protein" value={totals.protein} goal={goals.proteinG} color="var(--viz-protein)" />
           <MacroStat label="Kolhydrater" value={totals.carbs} goal={goals.carbsG} color="var(--viz-carbs)" />
           <MacroStat label="Fett" value={totals.fat} goal={goals.fatG} color="var(--viz-fat)" />
@@ -91,7 +91,7 @@ function DayView() {
       {dayMeals.length === 0 ? <p className="empty">Inga måltider loggade.</p> : dayMeals.map((m) => (
         <button key={m.id} type="button" className="card meal" onClick={() => setEditing(m)}>
           <div className="row">
-            <span className="time" style={{ minWidth: '3.5em' }}>{m.time ?? ''}</span>
+            {m.time && <span className="time" style={{ minWidth: '3.5em' }}>{m.time}</span>}
             <div>
               <div className="title">{m.name}</div>
               <div className="sub">{mealKcal(m)} kcal · P {g(m.protein)} · K {g(m.carbs)} · F {g(m.fat)}</div>
@@ -141,7 +141,7 @@ function TrendView() {
       </div>
 
       <p className="muted">
-        {loggedDays === 0 ? `Inga måltider loggade de senaste ${days} dagarna.` : `Snitt över de ${loggedDays} dagar du loggat måltider (tomma dagar räknas inte).`}
+        {loggedDays === 0 ? `Inga måltider loggade de senaste ${days} dagarna.` : loggedDays === 1 ? 'Snitt för den enda dag du loggat måltider.' : `Snitt över de ${loggedDays} dagar du loggat måltider (tomma dagar räknas inte).`}
       </p>
       {avg && (
         <div className="stat-grid">
@@ -219,6 +219,24 @@ function GoalsView() {
         {field('fatG', 'Fett', 'g', 0, 1000)}
         {field('waterMl', 'Vatten', 'ml', 0, 20000)}
         {field('glassMl', 'Ett glas vatten', 'ml', 50, 2000)}
+      </div>
+      <div className="actions" style={{ marginTop: 0 }}>
+        <button
+          type="button"
+          className="btn primary"
+          onClick={async () => {
+            const next = { ...goals }
+            for (const [key, raw] of Object.entries(draft) as [keyof NutritionSettings, string][]) {
+              const n = Math.round(Number(raw.replace(',', '.')))
+              if (Number.isFinite(n) && n >= 0) next[key] = n
+            }
+            await saveSettings({ nutrition: next })
+            setDraft({})
+            setSaved('Målen är sparade.')
+          }}
+        >
+          Spara mål
+        </button>
       </div>
       {saved && <p className="muted" role="status">{saved}</p>}
     </>

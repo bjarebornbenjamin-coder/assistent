@@ -70,6 +70,18 @@ export function formatDuration(minutes: number): string {
   return m % 60 === 0 ? `${h} h` : `${h} h ${m % 60} min`
 }
 
+const MONTHS = ['jan', 'feb', 'mars', 'apr', 'maj', 'juni', 'juli', 'aug', 'sep', 'okt', 'nov', 'dec']
+
+/** "imorgon", "på onsdag (11 nov)" eller "nästa måndag (16 nov)" när det är samma veckodag som idag. */
+export function relativeDay(date: ISODate, today: ISODate): string {
+  if (date === today) return 'idag'
+  if (date === addDays(today, 1)) return 'imorgon'
+  const wd = WEEKDAYS_LONG[weekdayOf(date) - 1]
+  const [, m, d] = date.split('-').map(Number)
+  const short = `${d} ${MONTHS[m - 1]}`
+  return weekdayOf(date) === weekdayOf(today) ? `nästa ${wd} (${short})` : `på ${wd} (${short})`
+}
+
 /** Text under "Nästa lektion": pågår, nedräkning idag, eller dag och tid. */
 export function describeNext(now: Date, next: NextLesson): string {
   if (next.ongoing) return `Pågår nu – slutar ${next.lesson.end}`
@@ -78,6 +90,5 @@ export function describeNext(now: Date, next: NextLesson): string {
     const nowMin = now.getHours() * 60 + now.getMinutes()
     return `Nästa lektion om ${formatDuration(minutesOf(next.lesson.start) - nowMin)}`
   }
-  const day = next.date === addDays(today, 1) ? 'imorgon' : `på ${WEEKDAYS_LONG[weekdayOf(next.date) - 1]}`
-  return `Nästa lektion ${day} kl ${next.lesson.start}`
+  return `Nästa lektion ${relativeDay(next.date, today)} kl ${next.lesson.start}`
 }

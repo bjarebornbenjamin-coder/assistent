@@ -53,7 +53,7 @@ export function MealForm({ meal, date, draft, onClose }: Props) {
       setProtein(String(est.protein))
       setCarbs(String(est.carbs))
       setFat(String(est.fat))
-      setKcal(String(est.kcal))
+      setKcal('') // räknas från makrona (4/4/9), så att kalorier och makron alltid stämmer överens
       setAssumptions(est.assumptions || 'AI-uppskattning utan förklaring.')
       setUsedAi(true)
       touch('numbers')

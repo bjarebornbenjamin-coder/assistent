@@ -30,7 +30,6 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
     lesson?.weeks ?? Array.from({ length: cycleLength }, (_, i) => i),
   )
   const { error, fail, touch } = useFieldError()
-  const [warned, setWarned] = useState(false)
 
   const conflicts =
     start && end && end > start && weeks.length > 0
@@ -42,7 +41,6 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
     if (!start || !end || end <= start) return fail('time', 'Sluttiden måste vara efter starttiden.')
     if (subjectId === NEW && !newName.trim()) return fail('subject', 'Skriv namnet på ämnet.')
     if (weeks.length === 0) return fail('weeks', 'Välj minst en vecka.')
-    if (conflicts.length > 0 && !warned) return setWarned(true)
     const id = subjectId === NEW ? (await addSubject(newName)).id : subjectId
     await saveLesson({
       id: lesson?.id ?? newId(),
@@ -84,14 +82,14 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
 
         <label className="field">
           <span>Dag</span>
-          <select value={weekday} onChange={(e) => { setWeekday(Number(e.target.value)); setWarned(false) }}>
+          <select value={weekday} onChange={(e) => { setWeekday(Number(e.target.value)) }}>
             {WEEKDAYS_LONG.map((d, i) => <option key={d} value={i + 1}>{d[0].toUpperCase() + d.slice(1)}</option>)}
           </select>
         </label>
 
         <div className="two">
-          <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => { setStart(e.target.value); setWarned(false); touch('time') }} required /></label>
-          <label className="field"><span>Slut</span><input type="time" value={end} onChange={(e) => { setEnd(e.target.value); setWarned(false); touch('time') }} required /></label>
+          <label className="field"><span>Start</span><input type="time" value={start} onChange={(e) => { setStart(e.target.value); touch('time') }} required /></label>
+          <label className="field"><span>Slut</span><input type="time" value={end} onChange={(e) => { setEnd(e.target.value); touch('time') }} required /></label>
         </div>
         <div className="two">
           <label className="field"><span>Sal</span><input type="text" value={room} onChange={(e) => setRoom(e.target.value)} /></label>
@@ -107,7 +105,7 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
                   <input
                     type="checkbox"
                     checked={weeks.includes(i)}
-                    onChange={(e) => { setWeeks(e.target.checked ? [...weeks, i] : weeks.filter((w) => w !== i)); setWarned(false); touch('weeks') }}
+                    onChange={(e) => { setWeeks(e.target.checked ? [...weeks, i] : weeks.filter((w) => w !== i)); touch('weeks') }}
                   />
                   Vecka {cycleLabel(i)}
                 </label>
@@ -116,17 +114,17 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
           </fieldset>
         )}
 
-        {warned && conflicts.length > 0 && (
+        {conflicts.length > 0 && (
           <div className="warning" role="alert">
             {conflicts.map((c) => (
               <p key={c.id}>Krockar med {subjectName(c.subjectId)} {c.start}–{c.end}</p>
             ))}
-            <p>Spara ändå, eller ändra tid eller dag.</p>
+            <p>Du kan spara ändå, eller ändra tid eller dag.</p>
           </div>
         )}
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions">
-          <button type="submit" className="btn primary">{warned && conflicts.length > 0 ? 'Spara ändå' : 'Spara'}</button>
+          <button type="submit" className="btn primary">{conflicts.length > 0 ? 'Spara ändå' : 'Spara'}</button>
           <button type="button" className="btn" onClick={onClose}>Avbryt</button>
           <span className="spacer" />
           {lesson && <button type="button" className="btn danger" onClick={remove}>Ta bort</button>}

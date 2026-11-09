@@ -166,7 +166,8 @@ describe('nedräkning', () => {
     expect(at('2026-11-09T08:20:00', '2026-11-09')).toBe('Nästa lektion om 1 h 20 min')
     expect(at('2026-11-09T09:35:00', '2026-11-09')).toBe('Nästa lektion om 5 min')
     expect(at('2026-11-09T18:00:00', '2026-11-10')).toBe('Nästa lektion imorgon kl 09:40')
-    expect(at('2026-11-09T18:00:00', '2026-11-12')).toBe('Nästa lektion på torsdag kl 09:40')
+    expect(at('2026-11-09T18:00:00', '2026-11-12')).toBe('Nästa lektion på torsdag (12 nov) kl 09:40')
+    expect(at('2026-11-09T19:00:00', '2026-11-16')).toBe('Nästa lektion nästa måndag (16 nov) kl 09:40') // testarens fall
   })
 })
 

@@ -468,3 +468,25 @@ a.btn.primary:visited { color: var(--on-primary); }
 .toast-undo { background: none; border: 0; color: #a8c7fa; font: inherit; font-weight: 600; padding: 8px 12px; min-height: 40px; cursor: pointer; border-radius: 999px; }
 .toast-undo:hover { background: rgba(255,255,255,.08); }
 @media (prefers-reduced-motion: no-preference) { .toast { animation: enter 160ms ease-out; } }
+
+/* Varningar i gul/orange (Material "warning"), inte blå som vanlig info */
+:root { --warn-bg: #fef7e0; --warn-text: #5c3c00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --warn-bg: #3a2a05; --warn-text: #fbd38d; } }
+:root[data-theme='dark'] { --warn-bg: #3a2a05; --warn-text: #fbd38d; }
+.warning { background: var(--warn-bg); color: var(--warn-text); border-radius: 12px; padding: 10px 14px; margin: 8px 0; font-size: 14px; }
+.tag-warn { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--warn-text); background: var(--warn-bg); border-radius: 999px; padding: 2px 8px; }
+
+/* Passerade lektioner tonas ned */
+.card.past { opacity: 0.55; }
+
+/* På/av-knapp i stället för kryssruta */
+input.switch { appearance: none; -webkit-appearance: none; width: 40px; height: 24px; border-radius: 999px; background: var(--surface-3); border: 2px solid var(--outline-strong); position: relative; cursor: pointer; flex: none; margin: 0; }
+input.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--outline-strong); transition: left 120ms ease, width 120ms ease; }
+input.switch:checked { background: var(--primary); border-color: var(--primary); }
+input.switch:checked::after { left: 19px; width: 14px; background: var(--on-primary); }
+
+/* Kostrad på Hem */
+.card.kost-row { display: flex; flex-wrap: wrap; gap: 4px 16px; text-decoration: none; color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sub.over { color: var(--warn-text); font-weight: 500; }
+.viz-axis, .viz-goal-label { font-size: 12.5px; }
