@@ -35,10 +35,7 @@ function AiSection() {
     <>
       <h2>AI-assistent</h2>
       <p className="muted">
-        OpenAI-nyckeln finns på servern (miljövariabeln OPENAI_API_KEY) och lämnar aldrig servern. Ett lösenord är valfritt: sätter du
-        APP_PASSWORD i Vercel måste du skriva samma lösenord här, annars kan alla som har webbadressen använda din nyckel. Lösenordet
-        sparas på den här enheten och ingår inte i exporten. När du frågar om schema eller händelser skickas just den informationen via
-        servern till OpenAI.
+        Lösenordet till servern (APP_PASSWORD i Vercel). Valfritt, men utan det kan alla med adressen använda din OpenAI-nyckel.
       </p>
       {config.password && looksLikeOpenAiKey(config.password) && (
         <p className="error" role="alert">Det sparade lösenordet ser ut som en OpenAI-nyckel. Ta bort det, lägg nyckeln i Vercel och skriv ditt APP_PASSWORD här.</p>
@@ -150,7 +147,7 @@ function BackgroundSection() {
   return (
     <>
       <h2>Bakgrundsbild</h2>
-      <p className="muted">Välj en bild, till exempel en impressionistisk målning. Använd en bild du har rätt att använda; målningar av konstnärer som dog för mer än 70 år sedan (Monet, Renoir, Degas, Morisot) är fria. Bilden sparas bara på den här enheten.</p>
+      <p className="muted">Till exempel en fri impressionistisk målning (Monet, Renoir, Morisot). Sparas bara på den här enheten.</p>
       {bg.image && <img src={bg.image} alt="Vald bakgrundsbild" className="bg-preview" />}
       {bg.image && (
         <label className="field">

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { Lesson, Subject } from '../domain/types'
 
 export function lessonMeta(l: Lesson): string {
@@ -24,7 +25,8 @@ export function LessonCard({ lesson, subject, highlight, onClick, size }: Props)
     </div>
   )
   const cls = `card${highlight ? ' now' : ''}${subject?.color ? ' colored' : ''}${size === 'large' ? ' hero' : ''}`
-  const style = subject?.color ? { borderLeftColor: subject.color } : undefined
+  // Ämnets färg används som tonad fyllning (som händelser i Google Kalender), inte som kant.
+  const style = subject?.color ? ({ '--subject': subject.color } as CSSProperties) : undefined
   return onClick ? (
     <button type="button" className={cls} style={style} onClick={onClick}>{body}</button>
   ) : (

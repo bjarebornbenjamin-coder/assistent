@@ -23,10 +23,14 @@ function dayName(date: string, today: string): string {
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 function HomeHeader() {
+  const today = new Date()
   return (
-    <div className="chat-head">
-      <h1>Hem</h1>
-      <Link to="/installningar" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Inställningar</Link>
+    <div className="page-head">
+      <div>
+        <div className="eyebrow">{today.toLocaleDateString('sv-SE', { weekday: 'long' })}</div>
+        <h1>{today.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}</h1>
+      </div>
+      <Link to="/installningar" className="btn text">Inställningar</Link>
     </div>
   )
 }

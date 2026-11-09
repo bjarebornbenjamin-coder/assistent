@@ -338,3 +338,119 @@ p, .sub, .note { text-wrap: pretty; }
   @keyframes enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 }
+
+/* ===================================================================
+   Tema: Google Kalender (Material 3). Läggs sist och ersätter tidigare stilar.
+   Regler: inga ramar runt innehåll, färg som tonad fyllning, en knappstil,
+   små versala etiketter som rubriker, vit huvudyta.
+   =================================================================== */
+:root {
+  --bg: #f8fafd;              /* sidbakgrund bakom huvudytan (dator) */
+  --surface: #ffffff;          /* huvudyta */
+  --surface-2: #f0f4f9;        /* tonade block, t.ex. listrader */
+  --surface-3: #e9eef6;        /* hover/tryck */
+  --primary: #0b57d0;
+  --on-primary: #ffffff;
+  --primary-container: #c2e7ff;
+  --on-primary-container: #001d35;
+  --text: #1f1f1f;
+  --muted: #444746;
+  --outline: #dde3ea;          /* avdelare */
+  --outline-strong: #747775;   /* knapp- och fältkanter */
+  --danger: #b3261e;
+  --accent: var(--primary);
+  --accent-soft: #d3e3fd;
+  font-family: 'Google Sans', 'Google Sans Text', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #131314; --surface: #1b1b1c; --surface-2: #232426; --surface-3: #2d2e30;
+    --primary: #a8c7fa; --on-primary: #062e6f; --primary-container: #004a77; --on-primary-container: #c2e7ff;
+    --text: #e3e3e3; --muted: #c4c7c5; --outline: #333537; --outline-strong: #8e918f; --danger: #f2b8b5;
+    --accent: var(--primary); --accent-soft: #0842a0;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #131314; --surface: #1b1b1c; --surface-2: #232426; --surface-3: #2d2e30;
+  --primary: #a8c7fa; --on-primary: #062e6f; --primary-container: #004a77; --on-primary-container: #c2e7ff;
+  --text: #e3e3e3; --muted: #c4c7c5; --outline: #333537; --outline-strong: #8e918f; --danger: #f2b8b5;
+  --accent: var(--primary); --accent-soft: #0842a0;
+}
+
+/* Yta: på mobil är hela sidan vit (som Kalender-appen); på större skärm ligger innehållet på en vit rundad yta. */
+body { background: var(--surface); color: var(--text); }
+@media (min-width: 760px) {
+  body { background: var(--bg); }
+  .shell { background: var(--surface); border-radius: 28px; margin-top: 16px; margin-bottom: 96px; padding: 24px 32px 32px; min-height: calc(100dvh - 128px); }
+}
+
+/* Typografi: stor ljus rubrik, små versala etiketter. */
+h1 { font-size: 22px; font-weight: 400; line-height: 28px; margin: 4px 0 12px; letter-spacing: 0; }
+h2 { font-size: 11px; font-weight: 500; line-height: 16px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin: var(--space-6) 0 var(--space-2); }
+.eyebrow { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; color: var(--primary); }
+.page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.page-head h1 { margin: 0; font-size: 28px; line-height: 36px; }
+.muted, .sub { color: var(--muted); }
+p.muted { font-size: 14px; }
+
+/* Innehåll: inga ramar. Rader är tonade block med luft emellan. */
+.card, .viz-card, .stat { border: 0; background: var(--surface-2); border-radius: 12px; }
+.card { padding: 10px 14px; margin-bottom: 6px; }
+button.card:hover, .card.task:hover, .card.meal:hover { background: var(--surface-3); }
+.card.colored { background: color-mix(in srgb, var(--subject, var(--primary)) 16%, var(--surface)); border: 0; }
+.card.colored:hover { background: color-mix(in srgb, var(--subject, var(--primary)) 24%, var(--surface)); }
+.card.event { background: color-mix(in srgb, var(--primary) 12%, var(--surface)); border: 0; }
+.card.now { background: var(--primary-container); color: var(--on-primary-container); }
+.card.hero { padding: 16px 18px; border-radius: 16px; }
+.card.proposal { background: var(--surface-2); border: 0; }
+.card.recipe { padding: 16px; }
+.time { color: var(--muted); }
+
+/* Knappar: en stil. Konturknapp, fylld primär, textknapp. */
+.btn { border: 1px solid var(--outline-strong); color: var(--primary); background: transparent; font-weight: 500; box-shadow: none; }
+.btn.primary { background: var(--primary); color: var(--on-primary); border-color: transparent; font-weight: 500; box-shadow: none; }
+.btn.danger { color: var(--danger); }
+.btn.text { border-color: transparent; padding-left: 12px; padding-right: 12px; text-decoration: none; display: inline-flex; align-items: center; }
+.btn.text:hover { background: var(--surface-2); }
+.btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.btn.primary:hover:not(:disabled) { background: var(--primary); filter: brightness(1.08); }
+
+/* Valda flikar och segment: tonad blå, som "Week"-väljaren. */
+.tab { color: var(--muted); }
+.tab[aria-pressed='true'], .tab[aria-selected='true'] { background: var(--primary-container); color: var(--on-primary-container); font-weight: 500; }
+.seg .tab { border-color: var(--outline-strong); }
+.seg .tab[aria-pressed='true'] { border-color: transparent; }
+.tab.today { border-color: var(--primary); }
+
+/* Fält: konturerade som i Google-formulär. */
+input[type='text'], input[type='time'], input[type='date'], select, textarea { border: 1px solid var(--outline-strong); background: var(--surface); border-radius: 8px; }
+.card input[type='text'], .card input[type='time'], .card input[type='date'], .card select { background: var(--surface); }
+
+/* Bottenmeny: Material 3, markerad flik som en tonad "pill". */
+.nav { background: var(--surface-2); border-top: 0; padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); gap: 2px; }
+.nav a { padding: 8px 2px; margin: 0 2px; border-radius: 999px; color: var(--muted); font-size: 12.5px; font-weight: 500; box-shadow: none; }
+.nav a[aria-current='page'] { background: var(--primary-container); color: var(--on-primary-container); box-shadow: none; }
+
+/* Kalender: dagens datum som blå cirkel, vald dag som tonad. */
+.day[aria-pressed='true'] { background: var(--surface-2); color: var(--text); }
+.day.today .num { background: var(--primary); color: var(--on-primary); }
+.month-row.head span { font-size: 11px; font-weight: 500; letter-spacing: 0.8px; }
+
+/* Nedräkning och märken: blå tonad, inte en ny färg. */
+.next-note { background: var(--accent-soft); color: var(--primary); font-weight: 500; }
+
+/* Chatt: bubblor utan ramar. */
+.bubble.assistant { background: var(--surface-2); border: 0; }
+.bubble.user { background: var(--primary-container); color: var(--on-primary-container); }
+.composer-wrap { background: var(--surface); }
+.chip { border-color: var(--outline-strong); background: transparent; }
+
+/* Avdelare och diagram: svaga linjer. */
+.ingredients li { border-bottom-color: var(--outline); }
+.viz-grid { stroke: var(--outline); }
+.warning { background: var(--accent-soft); color: var(--text); }
+.sheet { background: var(--surface); }
+@media (min-width: 760px) {
+  .nav { justify-content: center; }
+  .nav a { flex: 0 1 140px; }
+}

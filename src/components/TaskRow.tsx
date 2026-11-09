@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { setTaskDone } from '../db/repo'
 import { deadlineLabel, isOverdue } from '../domain/tasks'
 import type { Subject, Task } from '../domain/types'
@@ -15,7 +16,7 @@ export function TaskRow({ task, subject, today, showDeadline = true, onEdit }: P
   const overdue = isOverdue(task, today)
   const meta = [subject?.name, showDeadline ? deadlineLabel(task.deadline, today) : null].filter(Boolean).join(' · ')
   return (
-    <div className={`card task${task.done ? ' done' : ''}`} style={subject?.color ? { borderLeftColor: subject.color, borderLeftWidth: 4 } : undefined}>
+    <div className={`card task${task.done ? ' done' : ''}${subject?.color ? ' colored' : ''}`} style={subject?.color ? ({ '--subject': subject.color } as CSSProperties) : undefined}>
       <input
         type="checkbox"
         aria-label={`Klar: ${task.title}`}

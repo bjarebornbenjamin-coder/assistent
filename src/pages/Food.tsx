@@ -197,7 +197,7 @@ function RecipesTab() {
       <p className="muted">
         {usable.length === 0
           ? 'Lägg först in varor i lagret.'
-          : `Förslagen utgår från ${usable.length} varor i lagret, med det som snart går ut först. Salt, peppar, vatten, olja och socker antas finnas. Receptet är AI-genererat: kontrollera själv att varorna är hela och passar dina allergier.`}
+          : `Utgår från ${usable.length} varor, det som går ut först. AI-genererat: kolla allergier.`}
       </p>
       <div className="actions" style={{ marginTop: 8 }}>
         <button type="button" className="btn primary" disabled={busy || usable.length === 0} onClick={suggest}>
