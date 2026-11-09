@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom'
 import { useSettings } from './hooks'
+import { useApplyBackground } from './lib/background'
 import { useNotificationSync } from './push/useNotificationSync'
 import { useSyncRunner } from './sync/useSyncRunner'
 import { CalendarPage } from './pages/Calendar'
@@ -42,6 +43,7 @@ function Nav() {
 
 export function App() {
   useSyncRunner()
+  useApplyBackground()
   useNotificationSync()
   const settings = useSettings()
   const theme = settings?.theme

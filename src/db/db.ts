@@ -16,6 +16,8 @@ export class AppDB extends Dexie {
   shopping!: Table<ShoppingItem, string>
   meals!: Table<Meal, string>
   water!: Table<WaterDay, string>
+  /** Lokala, osynkade inställningar per enhet (t.ex. bakgrundsbild). */
+  local!: Table<{ key: string; value: string; updatedAt: string }, string>
   /** Synk: innehållets hash vid senaste synk, per post. */
   syncState!: Table<{ key: string; hash: string }, string>
   syncMeta!: Table<{ key: 'main'; userId: string; cursor: string | null }, string>
@@ -35,6 +37,7 @@ export class AppDB extends Dexie {
     this.version(7).stores({ reminders: 'id' })
     this.version(8).stores({ pantry: 'id, expires', shopping: 'id' })
     this.version(9).stores({ meals: 'id, date', water: 'id' })
+    this.version(10).stores({ local: 'key' })
   }
 }
 

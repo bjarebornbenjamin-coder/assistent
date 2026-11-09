@@ -3,6 +3,8 @@ import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
 import { NotifySection } from '../push/NotifySection'
 import { SyncSection } from '../sync/SyncSection'
 import { diagnose, type Diagnosis } from '../ai/diagnose'
+import { setBackgroundImage, setBackgroundVeil, useBackground } from '../lib/background'
+import { imageToDataUrl } from '../lib/image'
 import { authHeaders } from '../lib/auth'
 import { parseBackup } from '../db/backup'
 import { deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
@@ -121,6 +123,57 @@ function AiSection() {
       </div>
       {modelsMsg && <p className="muted" role="status">{modelsMsg}</p>}
       <p className="muted">Listan nedan är en förvald lista tills du hämtar en färsk. Fungerar inte modellen används {DEFAULT_MODEL}.</p>
+    </>
+  )
+}
+
+function BackgroundSection() {
+  const bg = useBackground()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+  if (!bg) return null
+
+  async function choose(file: File) {
+    setBusy(true)
+    setMessage('')
+    try {
+      await setBackgroundImage(await imageToDataUrl(file, 1920, 2_500_000))
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Kunde inte använda bilden.')
+    } finally {
+      setBusy(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <>
+      <h2>Bakgrundsbild</h2>
+      <p className="muted">Välj en bild, till exempel en impressionistisk målning. Använd en bild du har rätt att använda; målningar av konstnärer som dog för mer än 70 år sedan (Monet, Renoir, Degas, Morisot) är fria. Bilden sparas bara på den här enheten.</p>
+      {bg.image && <img src={bg.image} alt="Vald bakgrundsbild" className="bg-preview" />}
+      {bg.image && (
+        <label className="field">
+          <span>Tydlighet på bilden</span>
+          <input
+            type="range"
+            className="range"
+            min={5}
+            max={70}
+            step={5}
+            value={Math.round((1 - bg.veil) * 100)}
+            aria-valuetext={`${Math.round((1 - bg.veil) * 100)} % av bilden syns`}
+            onChange={(e) => setBackgroundVeil(1 - Number(e.target.value) / 100)}
+          />
+          <span className="sub" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Lugn</span><span>Tydlig</span></span>
+        </label>
+      )}
+      <div className="actions" style={{ marginTop: 0 }}>
+        <button type="button" className="btn" disabled={busy} onClick={() => fileRef.current?.click()}>{busy ? 'Läser bilden…' : bg.image ? 'Byt bild' : 'Välj bild'}</button>
+        {bg.image && <button type="button" className="btn danger" onClick={() => setBackgroundImage(null)}>Ta bort bilden</button>}
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && choose(e.target.files[0])} />
+      </div>
+      {message && <p className="error" role="alert">{message}</p>}
     </>
   )
 }
@@ -254,6 +307,8 @@ export function SettingsPage() {
           </select>
         </label>
       )}
+
+      <BackgroundSection />
 
       <h2>Utseende</h2>
       <div className="seg" role="group" aria-label="Tema">

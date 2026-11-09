@@ -252,3 +252,15 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 
 .viz-table-scroll { overflow-x: auto; }
 .viz-table td, .viz-table th { white-space: nowrap; }
+
+/* ===== Egen bakgrundsbild med hinna för läsbarhet ===== */
+:root[data-bg-image='on'] body { background: transparent; }
+:root[data-bg-image='on'] body::before,
+:root[data-bg-image='on'] body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+:root[data-bg-image='on'] body::before { background: var(--bg-image) center / cover no-repeat; z-index: -2; }
+:root[data-bg-image='on'] body::after { background: var(--bg); opacity: var(--bg-veil, 0.72); }
+:root[data-bg-image='on'] .composer-wrap { background: transparent; }
+:root[data-bg-image='on'] .composer-wrap::before { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: 0.85; z-index: -1; border-radius: 16px 16px 0 0; }
+:root[data-bg-image='on'] .composer-wrap { position: sticky; isolation: isolate; }
+.bg-preview { display: block; width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; border: 1px solid var(--outline); margin: 8px 0; }
+.range { width: 100%; accent-color: var(--primary); }
