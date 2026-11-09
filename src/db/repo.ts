@@ -233,6 +233,46 @@ export async function deleteShoppingItem(id: string): Promise<void> {
   await db.shopping.delete(id)
 }
 
+export interface PantryDraft {
+  name: string
+  amount?: string
+  expires?: string
+}
+
+/** Lägger flera varor i lagret. Om `clearFromList`, tas samma varor bort från inköpslistan (ej köpta, exakt namn). */
+export async function addPantryItems(
+  drafts: PantryDraft[],
+  source: PantryItem['source'],
+  opts: { clearFromList?: boolean; today?: string } = {},
+): Promise<{ added: number; removedFromList: number }> {
+  const today = opts.today ?? toISODate(new Date())
+  return db.transaction('rw', db.pantry, db.shopping, async () => {
+    let added = 0
+    for (const d of drafts) {
+      const name = d.name.trim()
+      if (!name) continue
+      await db.pantry.add({
+        id: newId(),
+        name,
+        ...(d.amount?.trim() ? { amount: d.amount.trim() } : {}),
+        ...(d.expires ? { expires: d.expires } : {}),
+        addedAt: today,
+        source,
+        updatedAt: new Date().toISOString(),
+      })
+      added++
+    }
+    let removedFromList = 0
+    if (opts.clearFromList) {
+      const names = new Set(drafts.map((d) => foodKey(d.name)))
+      const hits = (await db.shopping.toArray()).filter((i) => !i.done && names.has(foodKey(i.name)))
+      await db.shopping.bulkDelete(hits.map((i) => i.id))
+      removedFromList = hits.length
+    }
+    return { added, removedFromList }
+  })
+}
+
 export interface ShoppingDraft {
   name: string
   amount?: string

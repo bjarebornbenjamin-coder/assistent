@@ -9,6 +9,7 @@ import { ImportSchedulePage } from './pages/ImportSchedule'
 import { FoodPage } from './pages/Food'
 import { Home } from './pages/Home'
 import { RemindersPage } from './pages/Reminders'
+import { ScanFoodPage } from './pages/ScanFood'
 import { SchedulePage } from './pages/Schedule'
 import { SettingsPage } from './pages/Settings'
 import { SubjectsPage } from './pages/Subjects'
@@ -64,6 +65,7 @@ export function App() {
             <Route path="/amnen" element={<SubjectsPage />} />
             <Route path="/uppgifter" element={<TasksPage />} />
             <Route path="/mat" element={<FoodPage />} />
+            <Route path="/mat/skanna" element={<ScanFoodPage />} />
             <Route path="/paminnelser" element={<RemindersPage />} />
             <Route path="/installningar" element={<SettingsPage />} />
           </Routes>

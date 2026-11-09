@@ -1,7 +1,8 @@
 import { WEEKDAYS_LONG, WEEKDAYS_SHORT } from '../domain/dates'
 import { findConflicts } from '../domain/schedule'
 import type { Lesson, Subject } from '../domain/types'
-import { describeError, ChatError } from './chat'
+import { ChatError } from './chat'
+import { callVision, visionMessages } from './vision'
 
 export interface ImportRow {
   key: string
@@ -24,18 +25,7 @@ export const IMPORT_PROMPT = [
   'Ta bara med riktiga lektioner (inte raster, lunch eller tomma rutor). Hitta inte på något som inte syns i bilden. Om en cell är oläslig, hoppa över den.',
 ].join('\n')
 
-export function buildMessages(imageDataUrl: string) {
-  return [
-    { role: 'system', content: IMPORT_PROMPT },
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: 'Läs av det här schemat.' },
-        { type: 'image_url', image_url: { url: imageDataUrl, detail: 'high' } },
-      ],
-    },
-  ]
-}
+export const buildMessages = (imageDataUrl: string) => visionMessages(IMPORT_PROMPT, 'Läs av det här schemat.', imageDataUrl)
 
 const DAY_NAMES: Record<string, number> = {}
 WEEKDAYS_LONG.forEach((d, i) => {
@@ -108,27 +98,13 @@ export function parseImportResponse(text: string, cycleLength: number): { rows: 
 }
 
 /** Skickar bilden via appens server till OpenAI och returnerar råtexten i svaret. */
-export async function readScheduleImage(
+export function readScheduleImage(
   imageDataUrl: string,
   model: string,
   headers: Record<string, string>,
   fetchFn: typeof fetch = fetch,
 ): Promise<string> {
-  let res: Response
-  try {
-    res = await fetchFn('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ model, messages: buildMessages(imageDataUrl), response_format: { type: 'json_object' } }),
-    })
-  } catch {
-    throw new ChatError('Kunde inte nå servern. Kontrollera internetanslutningen.')
-  }
-  if (!res.ok) throw new ChatError(await describeError(res))
-  const data = (await res.json()) as { choices?: { message?: { content?: string | null } }[] }
-  const content = data.choices?.[0]?.message?.content
-  if (!content) throw new ChatError('Tomt svar från AI:n.')
-  return content
+  return callVision({ system: IMPORT_PROMPT, text: 'Läs av det här schemat.', image: imageDataUrl, model, headers }, fetchFn)
 }
 
 export interface RowStatus {

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PantryForm } from '../components/PantryForm'
 import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveShoppingItem } from '../db/repo'
 import { toISODate } from '../domain/dates'
@@ -58,6 +58,8 @@ function PantryTab() {
       })}
       <div className="actions">
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till vara</button>
+        <Link to="/mat/skanna?typ=kvitto" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Skanna kvitto</Link>
+        <Link to="/mat/skanna?typ=kylskap" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Skanna kylskåp</Link>
       </div>
       {editing && <PantryForm key={editing === 'new' ? 'new' : editing.id} item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {runningOut && <RunOutDialog item={runningOut} onClose={() => setRunningOut(null)} />}

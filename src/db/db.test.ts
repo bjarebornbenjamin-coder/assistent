@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addChatMessage, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addChatMessage, addPantryItems, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
@@ -217,5 +217,17 @@ describe('inköpslista', () => {
     await runOut('p2', false)
     expect(await db.pantry.count()).toBe(0)
     expect((await db.shopping.toArray()).map((i) => i.name).sort()).toEqual(['B', 'Smör'])
+  })
+})
+
+describe('addPantryItems', () => {
+  it('sparar varor med källa och datum, och rensar samma varor från inköpslistan', async () => {
+    await Promise.all([db.pantry.clear(), db.shopping.clear()])
+    await addShoppingItems([{ name: 'Mjölk' }, { name: 'Ägg' }, { name: 'Bröd' }])
+    const r = await addPantryItems([{ name: ' mjölk ', amount: '1 l', expires: '2026-11-17' }, { name: 'Ris' }, { name: '  ' }], 'receipt', { clearFromList: true, today: '2026-11-10' })
+    expect(r).toEqual({ added: 2, removedFromList: 1 })
+    const items = await db.pantry.toArray()
+    expect(items.find((i) => i.name === 'mjölk')).toMatchObject({ amount: '1 l', expires: '2026-11-17', source: 'receipt', addedAt: '2026-11-10' })
+    expect((await db.shopping.toArray()).map((i) => i.name).sort()).toEqual(['Bröd', 'Ägg'])
   })
 })
