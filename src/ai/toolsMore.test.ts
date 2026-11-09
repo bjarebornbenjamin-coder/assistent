@@ -22,7 +22,7 @@ const ctx: ToolContext = {
   pantry: [{ id: 'pa1', name: 'Mjölk', amount: '1 l', expires: '2026-11-12', addedAt: '2026-11-01', source: 'manual', updatedAt: '' }],
   shopping: [{ id: 's1', name: 'Ägg', done: false, addedAt: '2026-11-01', updatedAt: '' }, { id: 's2', name: 'Bröd', done: false, addedAt: '2026-11-01', updatedAt: '' }],
   reminders: [{ id: 'r1', title: 'Ta medicin', time: '07:30', repeat: { kind: 'daily' }, enabled: true, updatedAt: '' }],
-  meals: [], water: [], workouts: [], today: '2026-11-10',
+  meals: [], water: [], workouts: [], mealPlan: [], today: '2026-11-10',
 }
 const run = (name: string, args: Record<string, unknown>) => runTool(name, args, ctx)
 const isErr = (name: string, args: Record<string, unknown>) => expect(run(name, args).result).toHaveProperty('error')

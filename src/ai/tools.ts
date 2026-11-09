@@ -9,7 +9,7 @@ import { goalKcal, lastDays, mealKcal, mealsOn } from '../domain/nutrition'
 import { occursOn } from '../domain/reminders'
 import { tasksOn } from '../domain/tasks'
 import { toISODate } from '../domain/dates'
-import type { Workout, CalendarEvent, ChatCard, Contact, Lesson, Meal, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task, WaterDay } from '../domain/types'
+import type { PlannedDinner, Workout, CalendarEvent, ChatCard, Contact, Lesson, Meal, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task, WaterDay } from '../domain/types'
 
 export interface ToolContext {
   settings: Settings
@@ -24,6 +24,7 @@ export interface ToolContext {
   meals: Meal[]
   water: WaterDay[]
   workouts: Workout[]
+  mealPlan: PlannedDinner[]
   /** Dagens datum (sätts av chatten så att svaren följer appens klocka). */
   today?: string
   /** Klockslaget nu, HH:mm. */

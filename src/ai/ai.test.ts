@@ -21,6 +21,7 @@ const ctx: ToolContext = {
   ],
   water: [{ id: '2026-11-10', date: '2026-11-10', ml: 1250, updatedAt: '' }],
   workouts: [],
+  mealPlan: [{ id: '2026-11-10', date: '2026-11-10', title: 'Pasta carbonara', reason: 'snabb', portions: 2, minutes: 25, ingredients: [{ name: 'Pasta', amount: '200 g' }], steps: ['Koka pastan.'], updatedAt: '' }],
   reminders: [{ id: 'r1', title: 'Ta medicin', time: '07:30', repeat: { kind: 'weekdays', days: [2] }, enabled: true, updatedAt: '' }],
   tasks: [{ id: 't1', title: 'Läs kapitel 3', subjectId: 'ma', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 't2', title: 'Gammal', deadline: '2026-11-01', done: false, updatedAt: '' }, { id: 't3', title: 'Klar', deadline: '2026-11-12', done: true, updatedAt: '' }],
   contacts: [
@@ -309,5 +310,13 @@ describe('försenad räknas från idag', () => {
     const c = { ...ctx, today: '2026-11-12', tasks: [{ id: 'x', title: 'Sälja ljus', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 'y', title: 'Gammal', deadline: '2026-11-11', done: false, updatedAt: '' }] }
     const r = runTool('get_overview', { from: '2026-11-13' }, c).result as { overdueTasks?: { title: string }[] }
     expect(r.overdueTasks?.map((t) => t.title)).toEqual(['Gammal'])
+  })
+})
+
+describe('get_meal_plan', () => {
+  it('ger menyn från idag', () => {
+    const r = runTool('get_meal_plan', {}, { ...ctx, today: '2026-11-10' }).result as { dinners: { title: string }[] }
+    expect(r.dinners.map((d) => d.title)).toEqual(['Pasta carbonara'])
+    expect(runTool('get_meal_plan', { from: '2026-11-11' }, ctx).result).toHaveProperty('note')
   })
 })

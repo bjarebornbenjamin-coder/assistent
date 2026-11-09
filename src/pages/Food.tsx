@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { NutritionTab } from './Nutrition'
 import { MealForm } from '../components/MealForm'
 import { PantryForm } from '../components/PantryForm'
+import { IngredientList } from '../components/IngredientList'
+import { MealPlanTab } from './MealPlan'
 import { fetchRecipes, type Recipe } from '../ai/recipes'
 import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveSettings, saveShoppingItem } from '../db/repo'
 import { toISODate } from '../domain/dates'
@@ -12,7 +14,7 @@ import { useAiConfig, useFieldError, useNow, usePantry, useSettings, useShopping
 import { authHeaders } from '../lib/auth'
 import { undoable } from '../lib/undo'
 
-type Tab = 'lager' | 'inkop' | 'recept' | 'kost'
+type Tab = 'lager' | 'inkop' | 'recept' | 'meny' | 'kost'
 
 function RunOutDialog({ item, onClose }: { item: PantryItem; onClose: () => void }) {
   const done = async (addToList: boolean) => {
@@ -229,20 +231,7 @@ function RecipesTab() {
           )}
 
           <h3 className="recipe-h">Ingredienser</h3>
-          <ul className="ingredients">
-            {r.ingredients.map((i) => (
-              <li key={i.name} className={i.status === 'missing' || i.status === 'pantry-low' ? 'missing' : ''}>
-                <span>{i.amount ? `${i.amount} ` : ''}{i.name}</span>
-                <span className="sub">
-                  {i.status === 'pantry' && (expiring.has(i.pantryName ?? '') ? 'har hemma, snart ute' : 'har hemma')}
-                  {i.status === 'pantry-low' && 'har hemma, kanske för lite'}
-                  {i.status === 'pantry-check' && 'har hemma, kolla mängden'}
-                  {i.status === 'staple' && 'basvara'}
-                  {i.status === 'missing' && 'saknas'}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <IngredientList items={r.ingredients} expiring={expiring} />
           {r.equipment.length > 0 && <p className="sub">Du behöver: {r.equipment.join(', ')}</p>}
 
           <details style={{ marginTop: 8 }} open>
@@ -274,7 +263,7 @@ function RecipesTab() {
 export function FoodPage() {
   const [params, setParams] = useSearchParams()
   const v = params.get('v')
-  const tab: Tab = v === 'inkop' ? 'inkop' : v === 'recept' ? 'recept' : v === 'kost' ? 'kost' : 'lager'
+  const tab: Tab = v === 'inkop' ? 'inkop' : v === 'recept' ? 'recept' : v === 'meny' ? 'meny' : v === 'kost' ? 'kost' : 'lager'
   const select = (t: Tab) => setParams(t === 'lager' ? {} : { v: t }, { replace: true })
 
   return (
@@ -284,9 +273,10 @@ export function FoodPage() {
         <button type="button" className="tab" aria-pressed={tab === 'lager'} onClick={() => select('lager')}>Lager</button>
         <button type="button" className="tab" aria-pressed={tab === 'inkop'} onClick={() => select('inkop')}>Inköp</button>
         <button type="button" className="tab" aria-pressed={tab === 'recept'} onClick={() => select('recept')}>Recept</button>
+        <button type="button" className="tab" aria-pressed={tab === 'meny'} onClick={() => select('meny')}>Meny</button>
         <button type="button" className="tab" aria-pressed={tab === 'kost'} onClick={() => select('kost')}>Kost</button>
       </div>
-      {tab === 'lager' ? <PantryTab /> : tab === 'inkop' ? <ShoppingTab /> : tab === 'recept' ? <RecipesTab /> : <NutritionTab />}
+      {tab === 'lager' ? <PantryTab /> : tab === 'inkop' ? <ShoppingTab /> : tab === 'recept' ? <RecipesTab /> : tab === 'meny' ? <MealPlanTab /> : <NutritionTab />}
     </>
   )
 }

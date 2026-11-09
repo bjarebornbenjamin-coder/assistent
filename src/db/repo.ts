@@ -400,13 +400,14 @@ export async function exportAll(): Promise<Backup> {
     meals: await db.meals.toArray(),
     water: await db.water.toArray(),
     workouts: await db.workouts.toArray(),
+    mealPlan: await db.mealPlan.toArray(),
   }
 }
 
 /** Ersätter all data med innehållet i säkerhetskopian. */
 export async function importAll(backup: Backup): Promise<void> {
-  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders, db.pantry, db.shopping, db.meals, db.water, db.workouts], async () => {
-    await Promise.all([db.workouts.clear(), db.meals.clear(), db.water.clear(), db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
+  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders, db.pantry, db.shopping, db.meals, db.water, db.workouts, db.mealPlan], async () => {
+    await Promise.all([db.mealPlan.clear(), db.workouts.clear(), db.meals.clear(), db.water.clear(), db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
     if (backup.settings) await db.settings.put(backup.settings)
     await db.subjects.bulkPut(backup.subjects)
     await db.lessons.bulkPut(backup.lessons)
@@ -419,5 +420,6 @@ export async function importAll(backup: Backup): Promise<void> {
     await db.meals.bulkPut(backup.meals)
     await db.water.bulkPut(backup.water)
     await db.workouts.bulkPut(backup.workouts)
+    await db.mealPlan.bulkPut(backup.mealPlan)
   })
 }

@@ -1,6 +1,6 @@
 import { foodKey } from '../domain/food'
 import { describeRepeat } from '../domain/reminders'
-import { WEEKDAYS_LONG, toISODate } from '../domain/dates'
+import { WEEKDAYS_LONG, addDays, toISODate } from '../domain/dates'
 import { agenda } from '../domain/calendar'
 import { planStudy } from '../domain/study'
 import { normalizeType } from '../domain/training'
@@ -38,6 +38,11 @@ const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('sv-SE
 const reminderSummary = (r: Pick<Reminder, 'title' | 'time' | 'repeat'>) => `${r.title}, ${r.time}, ${describeRepeat(r.repeat)}`
 
 export const MORE_TOOL_DEFINITIONS = [
+  {
+    name: 'get_meal_plan',
+    description: 'Veckomenyn: planerade middagar från och med ett datum (standard idag), med ingredienser, steg och näring per portion. Användaren gör menyn under Mat → Meny.',
+    parameters: { type: 'object', properties: { from: date, days: { type: 'integer', description: '1–14, standard 7' } } },
+  },
   {
     name: 'list_workouts',
     description: 'Träningsloggen: genomförda pass mellan två datum (max 92 dagar), med övningar, vikter, distans och tid, plus senaste resultatet per övning. För frågor som "vad tog jag i bänk senast?" eller "hur mycket har jag tränat?".',
@@ -141,6 +146,21 @@ export const MORE_TOOL_DEFINITIONS = [
 
 export function runMoreTool(name: string, args: Record<string, unknown>, ctx: ToolContext): ToolOutcome | null {
   switch (name) {
+    case 'get_meal_plan': {
+      const from = str(args.from) || (ctx.today ?? toISODate(new Date()))
+      if (!DATE.test(from)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const days = args.days === undefined ? 7 : Number(args.days)
+      if (!Number.isInteger(days) || days < 1 || days > 14) return err('days måste vara 1–14.')
+      const to = addDays(from, days - 1)
+      const list = ctx.mealPlan.filter((d) => d.date >= from && d.date <= to).sort((a, b) => a.date.localeCompare(b.date))
+      return {
+        result: {
+          dinners: list.map((d) => ({ date: d.date, title: d.title, reason: d.reason || undefined, minutes: d.minutes ?? undefined, portions: d.portions, ingredients: d.ingredients, steps: d.steps, perPortion: d.nutrition })),
+          ...(list.length === 0 ? { note: 'Ingen veckomeny för perioden. Användaren kan göra en under Mat → Meny.' } : {}),
+        },
+      }
+    }
+
     case 'list_workouts': {
       const from = str(args.from)
       const to = str(args.to)

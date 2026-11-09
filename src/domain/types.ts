@@ -165,6 +165,22 @@ export interface Workout {
   updatedAt: string
 }
 
+/** En middag i veckomenyn. id = datum, så en middag per dag. */
+export interface PlannedDinner {
+  id: ISODate
+  date: ISODate
+  title: string
+  /** Varför rätten passar just den dagen. */
+  reason: string
+  portions: number
+  minutes: number | null
+  ingredients: { name: string; amount: string }[]
+  steps: string[]
+  /** Uppskattat per portion. */
+  nutrition?: { kcal: number; protein: number; carbs: number; fat: number }
+  updatedAt: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -253,4 +269,5 @@ export interface Backup {
   meals: Meal[]
   water: WaterDay[]
   workouts: Workout[]
+  mealPlan: PlannedDinner[]
 }

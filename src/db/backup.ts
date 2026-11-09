@@ -1,6 +1,6 @@
 import { DEFAULT_FOOD, DEFAULT_NOTIFY, DEFAULT_NUTRITION } from './repo'
 import { isColor } from '../domain/colors'
-import type { Workout, Backup, CalendarEvent, Contact, Lesson, Meal, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
+import type { PlannedDinner, Workout, Backup, CalendarEvent, Contact, Lesson, Meal, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
   throw new Error(`Ogiltig säkerhetskopia: ${msg}`)
@@ -222,6 +222,27 @@ function parseWorkout(v: unknown): Workout {
   }
 }
 
+function parseDinner(v: unknown): PlannedDinner {
+  if (!isObj(v) || !isDate(v.date) || v.id !== v.date || !isStr(v.title) || !v.title.trim()) return fail('middag i veckomenyn')
+  const ingredients = (Array.isArray(v.ingredients) ? v.ingredients : []).filter(isObj).filter((i) => isStr(i.name) && i.name.trim()).map((i) => ({ name: (i.name as string).slice(0, 60), amount: isStr(i.amount) ? i.amount.slice(0, 30) : '' })).slice(0, 30)
+  const steps = (Array.isArray(v.steps) ? v.steps : []).filter(isStr).map((s) => s.slice(0, 500)).slice(0, 14)
+  const n = isObj(v.nutrition) ? v.nutrition : null
+  const nutrition = n && [n.kcal, n.protein, n.carbs, n.fat].every((x) => num(x, 0, 5000) !== undefined) ? { kcal: n.kcal as number, protein: n.protein as number, carbs: n.carbs as number, fat: n.fat as number } : undefined
+  const minutes = num(v.minutes, 0, 600)
+  return {
+    id: v.date as string,
+    date: v.date as string,
+    title: v.title.slice(0, 100),
+    reason: isStr(v.reason) ? v.reason.slice(0, 300) : '',
+    portions: num(v.portions, 1, 24) ?? 2,
+    minutes: minutes ?? null,
+    ingredients,
+    steps,
+    ...(nutrition ? { nutrition } : {}),
+    updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
+  }
+}
+
 export function parseBackup(json: unknown): Backup {
   if (!isObj(json) || json.app !== 'studieassistent') return fail('filen kommer inte från appen')
   if (![1, 2, 3, 4, 5, 6, 7, 8].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
@@ -232,6 +253,7 @@ export function parseBackup(json: unknown): Backup {
   const meals = Array.isArray(json.meals) ? json.meals.map(parseMeal) : []
   const water = Array.isArray(json.water) ? json.water.map(parseWater) : []
   const workouts = Array.isArray(json.workouts) ? json.workouts.map(parseWorkout) : []
+  const mealPlan = Array.isArray(json.mealPlan) ? json.mealPlan.map(parseDinner) : []
   const pantry = Array.isArray(json.pantry) ? json.pantry.map(parsePantry) : []
   const shopping = Array.isArray(json.shopping) ? json.shopping.map(parseShopping) : []
   const reminders = Array.isArray(json.reminders) ? json.reminders.map(parseReminder) : []
@@ -255,5 +277,6 @@ export function parseBackup(json: unknown): Backup {
     meals,
     water,
     workouts,
+    mealPlan,
   }
 }

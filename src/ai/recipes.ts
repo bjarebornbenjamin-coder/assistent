@@ -95,6 +95,14 @@ function enough(have: string | undefined, need: string): Ingredient['status'] {
   return h.value >= n.value ? 'pantry' : 'pantry-low'
 }
 
+/** Jämför ingredienserna mot lagret: finns hemma, kanske för lite, basvara eller saknas. */
+export function withPantryStatus(list: { name: string; amount: string }[], pantry: PantryItem[]): Ingredient[] {
+  return list.map(({ name, amount }) => {
+    const hit = pantry.find((p) => match(p.name, name))
+    return hit ? { name, amount, status: enough(hit.amount, amount), pantryName: hit.name } : { name, amount, status: isStaple(name) ? 'staple' : 'missing' }
+  })
+}
+
 const intIn = (v: unknown, min: number, max: number): number | null =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? Math.round(v) : null
 
