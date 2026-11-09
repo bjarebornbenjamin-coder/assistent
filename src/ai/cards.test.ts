@@ -60,3 +60,13 @@ describe('applyCard: kost', () => {
     expect((await db.water.get('2026-11-10'))?.ml).toBe(750)
   })
 })
+
+describe('applyCard: flera händelser', () => {
+  it('lägger in alla händelser med nya id:n', async () => {
+    await applyCard({ type: 'events_add', events: [{ title: 'Gym', date: '2026-11-11', start: '17:00', end: '18:00', note: '' }, { title: 'Löpning', date: '2026-11-13', note: '5 km' }] })
+    const events = await db.events.toArray()
+    expect(events.map((e) => e.title).sort()).toEqual(['Gym', 'Löpning'])
+    expect(new Set(events.map((e) => e.id)).size).toBe(2)
+    expect(events.find((e) => e.title === 'Löpning')).toMatchObject({ date: '2026-11-13', note: '5 km' })
+  })
+})

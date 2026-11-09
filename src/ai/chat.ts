@@ -22,6 +22,14 @@ interface ToolCall {
 
 export class ChatError extends Error {}
 
+function trainingPrompt(): string {
+  return [
+    'Träning: när användaren frågar när hen ska träna, gymma eller springa, eller vill ha ett träningsschema: anropa ALLTID plan_workouts. Planera aldrig träningsdagar själv utifrån vilka dagar som är lediga i schemat: en ledig dag betyder inte att man ska träna den.',
+    'Om det inte framgår hur många pass av varje sort och över hur många dagar: fråga kort, eller anta något rimligt (t.ex. 3 gympass och 2 löppass över 7 dagar) och säg uttryckligen vad du antog.',
+    'Förklara planen kort och varför dagarna valts (vila mellan lika pass, aldrig 3 dagar i rad, olika pass olika dagar, efter skolan, hänsyn till prov). Nämn varningar från verktyget. Erbjud att lägga in passen i kalendern med propose_events (titel t.ex. "Gym" eller "Löpning", med tider från planen). Ge inga medicinska råd.',
+  ].join('\n')
+}
+
 function foodPrompt(ctx: ToolContext): string {
   const f = ctx.settings.food
   const n = ctx.settings.nutrition
@@ -45,6 +53,7 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
     'Hämta alltid schema, packlista och händelser med verktygen och gissa aldrig. Räkna ut datum själv ("imorgon", "på fredag") och skicka dem som YYYY-MM-DD.',
     'Du kan inte lägga in, ändra, ta bort eller skicka något direkt: propose_*-verktygen och draft_email visar bara ett förslag som användaren själv bekräftar eller skickar. Säg tydligt att det är ett förslag/utkast som väntar på användaren, inte att det är gjort.',
     foodPrompt(ctx),
+    trainingPrompt(),
     'Om en uppgift saknas (t.ex. vilken Anna som avses eller vad mejlet ska handla om), fråga istället för att hitta på.',
   ].join('\n')
 }

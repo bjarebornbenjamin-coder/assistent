@@ -48,3 +48,6 @@ Fas 3 görs inte utan att fråga först.
 - [x] 6.4 Kost: mål och grafer
 - [x] 6.5 Kost: AI-uppskattning av makron, och "jag åt detta" från recept
 - [x] 6.6 Chatten: kost och vatten
+
+## Fas 7 – Träningsplanering
+- [x] 7.1 Träningsplanerare (spridning, vila, olika pass olika dagar) som verktyg i chatten, med inläggning i kalendern

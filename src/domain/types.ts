@@ -172,6 +172,7 @@ export interface AiConfig {
 
 export type ChatCard =
   | { type: 'event'; event: Omit<CalendarEvent, 'id' | 'updatedAt'> }
+  | { type: 'events_add'; events: Omit<CalendarEvent, 'id' | 'updatedAt'>[] }
   | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline'> }
   | { type: 'event_update'; id: string; before: string; afterText: string; after: Omit<CalendarEvent, 'id' | 'updatedAt'> }
   | { type: 'meal_add'; meal: Pick<Meal, 'date' | 'name' | 'protein' | 'carbs' | 'fat'> & Partial<Pick<Meal, 'time' | 'kcal'>> }

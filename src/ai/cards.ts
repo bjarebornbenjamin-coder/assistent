@@ -23,6 +23,14 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
         confirmLabel: 'Lägg in',
         doneText: 'Inlagd i kalendern.',
       }
+    case 'events_add':
+      return {
+        kicker: `Förslag: ${card.events.length} händelser`,
+        title: card.events.map((e) => e.title).join(', ').slice(0, 80),
+        lines: card.events.map((e) => `${dayLabel(e.date)} · ${eventTime(e)} · ${e.title}`),
+        confirmLabel: `Lägg in ${card.events.length}`,
+        doneText: 'Inlagda i kalendern.',
+      }
     case 'task': {
       const subject = subjects.find((s) => s.id === card.task.subjectId)?.name
       return {
@@ -75,6 +83,9 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
   switch (card.type) {
     case 'event':
       await saveEvent({ ...card.event, id: newId(), updatedAt: '' })
+      return 'done'
+    case 'events_add':
+      for (const e of card.events) await saveEvent({ ...e, id: newId(), updatedAt: '' })
       return 'done'
     case 'task':
       await saveTask({ ...card.task, id: newId(), done: false, updatedAt: '' })

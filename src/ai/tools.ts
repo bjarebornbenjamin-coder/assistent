@@ -3,6 +3,7 @@ import { WEEKDAYS_LONG, addDays, daysBetween, weekdayOf } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
 import { daysLeft, foodKey } from '../domain/food'
+import { TRAINING_RULES, planWorkouts } from '../domain/training'
 import { goalKcal, lastDays, mealKcal, mealsOn } from '../domain/nutrition'
 import { occursOn } from '../domain/reminders'
 import { tasksOn } from '../domain/tasks'
@@ -199,6 +200,41 @@ export const TOOL_DEFINITIONS = [
     name: 'propose_water',
     description: 'Föreslå att lägga till vatten användaren druckit (ml). Läggs INTE till förrän användaren bekräftat. Ett glas är glassMl från användarens inställningar.',
     parameters: { type: 'object', properties: { ml: { type: 'number' }, date }, required: ['ml'] },
+  },
+  {
+    name: 'plan_workouts',
+    description:
+      'Planera träningspass (gym, löpning, m.m.) på de dagar som passar bäst. Följer träningsregler: aldrig 3 dagar i rad, högst ett pass per dag (olika pass olika dagar), vila mellan lika pass, jämn spridning, efter skolan, och hänsyn till lektioner, händelser, prov och redan inlagda träningspass. Använd ALLTID denna för frågor om när man ska träna. Planera aldrig träningsdagar själv.',
+    parameters: {
+      type: 'object',
+      properties: {
+        sessions: {
+          type: 'array',
+          description: 'Önskade pass, t.ex. [{"type":"gym","count":3},{"type":"löpning","count":2}]',
+          items: { type: 'object', properties: { type: { type: 'string' }, count: { type: 'integer' }, minutes: { type: 'integer', description: 'Längd per pass, valfritt' } }, required: ['type', 'count'] },
+        },
+        from: { ...date, description: 'Första dag att planera från (standard i morgon)' },
+        days: { type: 'integer', description: 'Antal dagar att planera över, 3–14 (standard 7)' },
+        avoid_weekdays: { type: 'array', items: { type: 'integer' }, description: 'Veckodagar att undvika, 1=måndag … 7=söndag' },
+        preferred_time: { type: 'string', enum: ['morning', 'afternoon', 'evening'] },
+      },
+      required: ['sessions'],
+    },
+  },
+  {
+    name: 'propose_events',
+    description:
+      'Föreslå flera kalenderhändelser på en gång (t.ex. träningspass från plan_workouts). De läggs INTE in förrän användaren bekräftat. Max 14. Utelämna start för heldag.',
+    parameters: {
+      type: 'object',
+      properties: {
+        events: {
+          type: 'array',
+          items: { type: 'object', properties: { title: { type: 'string' }, date, start: { type: 'string' }, end: { type: 'string' }, note: { type: 'string' } }, required: ['title', 'date'] },
+        },
+      },
+      required: ['events'],
+    },
   },
   {
     name: 'draft_email',
@@ -523,6 +559,73 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       return {
         result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Inget är tillagt än.' },
         card: { type: 'water_add', date, ml },
+      }
+    }
+    case 'plan_workouts': {
+      const today = ctx.today ?? toISODate(new Date())
+      const from = str(args.from) || addDays(today, 1)
+      if (!DATE.test(from)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const days = args.days === undefined ? 7 : Number(args.days)
+      if (!Number.isInteger(days) || days < 3 || days > 14) return err('days måste vara 3–14.')
+      if (!Array.isArray(args.sessions) || args.sessions.length === 0 || args.sessions.length > 5) return err('Ange 1–5 sorters pass i sessions.')
+      const sessions = []
+      let total = 0
+      for (const raw of args.sessions) {
+        const r = (raw ?? {}) as Record<string, unknown>
+        const type = str(r.type).slice(0, 30)
+        const count = Number(r.count)
+        const minutes = r.minutes === undefined ? undefined : Number(r.minutes)
+        if (!type || !Number.isInteger(count) || count < 1 || count > 7) return err('Varje pass-sort behöver type och count 1–7.')
+        if (minutes !== undefined && (!Number.isInteger(minutes) || minutes < 15 || minutes > 240)) return err('minutes måste vara 15–240.')
+        total += count
+        sessions.push({ type, count, ...(minutes !== undefined ? { minutes } : {}) })
+      }
+      if (total > 14) return err('Max 14 pass totalt.')
+      const avoid = Array.isArray(args.avoid_weekdays) ? args.avoid_weekdays.filter((d): d is number => Number.isInteger(d) && d >= 1 && d <= 7) : []
+      const pt = args.preferred_time
+      const plan = planWorkouts({
+        from,
+        days,
+        sessions,
+        lessons: ctx.lessons,
+        events: ctx.events,
+        tasks: ctx.tasks,
+        settings: ctx.settings,
+        avoidWeekdays: avoid,
+        preferredTime: pt === 'morning' || pt === 'afternoon' || pt === 'evening' ? pt : undefined,
+      })
+      return {
+        result: {
+          from,
+          days,
+          plan: plan.sessions,
+          restDays: plan.restDays.map((d) => `${WEEKDAYS_LONG[weekdayOf(d) - 1]} ${d}`),
+          alreadyPlanned: plan.existing,
+          warnings: plan.warnings,
+          rulesUsed: TRAINING_RULES,
+          next: 'Presentera planen kort med varför dagarna valts. Erbjud att lägga in passen i kalendern med propose_events.',
+        },
+      }
+    }
+    case 'propose_events': {
+      if (!Array.isArray(args.events) || args.events.length === 0) return err('Inga händelser angavs.')
+      if (args.events.length > 14) return err('Max 14 händelser på en gång.')
+      const events: Omit<CalendarEvent, 'id' | 'updatedAt'>[] = []
+      for (const raw of args.events) {
+        const r = (raw ?? {}) as Record<string, unknown>
+        const title = str(r.title).slice(0, 100)
+        const d = str(r.date)
+        const start = str(r.start)
+        const end = str(r.end)
+        if (!title) return err('Titel saknas på en händelse.')
+        if (!DATE.test(d)) return err(`Ogiltigt datum för "${title}", använd YYYY-MM-DD.`)
+        if (start && !TIME.test(start)) return err(`Ogiltig starttid för "${title}", använd HH:mm.`)
+        if (end && (!start || !TIME.test(end) || end <= start)) return err(`Ogiltig sluttid för "${title}".`)
+        events.push({ title, date: d, ...(start ? { start } : {}), ...(end ? { end } : {}), note: str(r.note).slice(0, 300) })
+      }
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Inget är inlagt än.' },
+        card: { type: 'events_add', events },
       }
     }
     case 'find_contact': {

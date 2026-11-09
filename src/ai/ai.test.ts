@@ -257,3 +257,43 @@ describe('kost i chatten', () => {
     expect(p).toMatch(/inga medicinska råd/)
   })
 })
+
+describe('träningsplanering i chatten', () => {
+  type Plan = { plan: { date: string; type: string; start: string; why: string }[]; restDays: string[]; warnings: string[]; rulesUsed: string[]; next: string }
+  const free = { ...ctx, events: [], tasks: [], today: '2026-11-10' } // ons 11/11 och framåt är helt lediga
+  const gap = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000)
+
+  it('plan_workouts sprider tre gympass, aldrig dag efter dag (användarens fall)', () => {
+    const r = runTool('plan_workouts', { sessions: [{ type: 'gym', count: 3 }] }, free).result as Plan
+    expect(r.plan).toHaveLength(3)
+    const dates = r.plan.map((p) => p.date)
+    expect(Math.min(gap(dates[0], dates[1]), gap(dates[1], dates[2]))).toBeGreaterThanOrEqual(2)
+    expect(r.rulesUsed.length).toBeGreaterThan(3)
+    expect(r.next).toMatch(/propose_events/)
+    expect(r.warnings).toEqual([])
+  })
+  it('gym + löpning: olika dagar, standardstart är i morgon, "springa" blir löpning', () => {
+    const r = runTool('plan_workouts', { sessions: [{ type: 'gym', count: 2 }, { type: 'springa', count: 2 }] }, free).result as Plan
+    expect(new Set(r.plan.map((p) => p.date)).size).toBe(4)
+    expect(r.plan.every((p) => p.date >= '2026-11-11')).toBe(true)
+    expect(r.plan.filter((p) => p.type === 'löpning')).toHaveLength(2)
+  })
+  it('validerar indata', () => {
+    const bad = [{ sessions: [] }, { sessions: [{ type: 'gym', count: 0 }] }, { sessions: [{ type: '', count: 2 }] }, { sessions: [{ type: 'gym', count: 2, minutes: 5 }] }, { sessions: [{ type: 'gym', count: 2 }], days: 2 }, { sessions: [{ type: 'gym', count: 2 }], from: 'imorgon' }, { sessions: Array.from({ length: 3 }, () => ({ type: 'gym', count: 7 })) }, { sessions: 'gym' }]
+    for (const a of bad) expect(runTool('plan_workouts', a, free).result).toHaveProperty('error')
+  })
+  it('propose_events ger ett samlat kort och validerar varje händelse', () => {
+    const r = runTool('propose_events', { events: [{ title: 'Gym', date: '2026-11-11', start: '17:00', end: '18:00' }, { title: 'Löpning', date: '2026-11-13', start: '16:30', end: '17:15', note: '5 km' }] }, free)
+    expect(r.card).toEqual({ type: 'events_add', events: [{ title: 'Gym', date: '2026-11-11', start: '17:00', end: '18:00', note: '' }, { title: 'Löpning', date: '2026-11-13', start: '16:30', end: '17:15', note: '5 km' }] })
+    for (const events of [[], [{ title: '', date: '2026-11-11' }], [{ title: 'x', date: 'fredag' }], [{ title: 'x', date: '2026-11-11', start: '25:00' }], [{ title: 'x', date: '2026-11-11', end: '10:00' }], Array.from({ length: 15 }, () => ({ title: 'x', date: '2026-11-11' }))]) {
+      expect(runTool('propose_events', { events }, free).result).toHaveProperty('error')
+    }
+  })
+  it('systemprompten kräver plan_workouts och förbjuder att planera själv', async () => {
+    const { systemPrompt } = await import('./chat')
+    const p = systemPrompt(new Date('2026-11-10T12:00:00'), ctx)
+    expect(p).toMatch(/ALLTID plan_workouts/)
+    expect(p).toMatch(/en ledig dag betyder inte att man ska träna/)
+    expect(p).toMatch(/propose_events/)
+  })
+})

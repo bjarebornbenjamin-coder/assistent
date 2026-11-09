@@ -80,6 +80,10 @@ Chatten kan svara på "hur ligger jag till idag?" och föreslå att logga en må
 
 Färgerna i graferna (blå, orange, turkos för makron; violett för vatten) är validerade för färgblindhet i både ljust och mörkt läge. Recepten innehåller mått för valt antal portioner, ingredienslista med status och detaljerade steg.
 
+### Träningsplanering
+
+Fråga chatten "när ska jag gymma och springa?". Assistenten använder en planerare (inte gissningar) som följer träningsregler: högst två träningsdagar i rad, högst ett pass per dag (gym och löpning hamnar på olika dagar), minst en vilodag mellan lika pass, jämn spridning, pass efter skolan och inte över händelser, och dagen före prov eller deadlines undviks. Träningspass som redan finns i kalendern (titlar som "Gym", "Löpning", "Yoga") räknas med, även de närmaste dagarna före perioden. Går önskemålet inte att uppfylla utan att bryta reglerna får du en varning och en plan med färre pass. Passen kan läggas in i kalendern med ett bekräftelsekort.
+
 ## Importera schema från bild
 
 Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren och skickas via `/api/chat` till OpenAI (vald modell måste klara bilder, t.ex. gpt-4o-mini). Resultatet visas som förslag som du kan ändra, avmarkera och kontrollera mot krockar och dubbletter innan något sparas. Bilden sparas inte.
