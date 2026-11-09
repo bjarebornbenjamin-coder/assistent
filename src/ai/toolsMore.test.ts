@@ -95,6 +95,7 @@ describe('systemprompt', () => {
     expect(p).toMatch(/läsa och ändra allt i appen/)
     expect(p).toMatch(/get_nutrition för idag och get_overview för idag/)
     expect(p).toMatch(/träning idag/)
+    expect(p).toMatch(/ETABLERADE, kända rätter/)
     expect(systemPrompt(new Date(), { ...ctx, settings: { ...ctx.settings, memories: [] } })).toContain('Inget sparat i minnet än.')
   })
   it('tillåter fler steg per fråga (minst 8 verktygsrundor)', async () => {

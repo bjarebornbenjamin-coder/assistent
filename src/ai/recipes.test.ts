@@ -18,6 +18,9 @@ describe('recipeUserContent', () => {
     expect(RECIPE_PROMPT).toMatch(/ugnstemperatur/)
     expect(RECIPE_PROMPT).toMatch(/hur man ser att det är klart/)
     expect(RECIPE_PROMPT).toMatch(/PER PORTION/)
+    expect(RECIPE_PROMPT).toMatch(/ETABLERADE rätter/)
+    expect(RECIPE_PROMPT).toMatch(/Hitta ALDRIG på egna kombinationer/)
+    expect(RECIPE_PROMPT).toMatch(/max 6 per recept/)
   })
 })
 
