@@ -26,6 +26,8 @@ export interface WorkoutPlan {
   restDays: ISODate[]
   /** Träningspass som redan finns i kalendern och som planen tagit hänsyn till. */
   existing: { date: ISODate; type: string; title: string }[]
+  /** Träningspass de närmaste dagarna före perioden (påverkar vila och följder). */
+  recent: { date: ISODate; type: string; title: string }[]
   warnings: string[]
 }
 
@@ -38,6 +40,8 @@ export interface PlanInput {
   tasks: Task[]
   settings: Pick<Settings, 'cycleLength' | 'cycleAnchor'>
   avoidWeekdays?: number[]
+  /** Om planen börjar idag: tidigaste starttid (nu), HH:mm. */
+  earliestToday?: string
   preferredTime?: 'morning' | 'afternoon' | 'evening'
 }
 
@@ -103,6 +107,7 @@ function findSlot(date: ISODate, minutes: number, input: PlanInput): { start: nu
     if (!busy.some((b) => start < b.end && b.start < start + minutes)) return { start, end: start + minutes, afterSchool: null }
   }
   if (schoolDay && pref === 'morning') from = Math.max(lessonEnd + 45, 16 * 60)
+  if (input.earliestToday && date === input.from) from = Math.max(from, toMin(input.earliestToday) + 30)
   for (let start = Math.ceil(from / 15) * 15; start + minutes <= 21 * 60; start += 15) {
     if (!busy.some((b) => start < b.end && b.start < start + minutes)) return { start, end: start + minutes, afterSchool: schoolDay ? lessonEnd : null }
   }
@@ -159,6 +164,7 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
 
   // Befintliga träningspass: i perioden och tre dagar före (för att inte bli 3 i rad över gränsen).
   const existing: { date: ISODate; type: string; title: string }[] = []
+  const recent: { date: ISODate; type: string; title: string }[] = []
   const trainedType = new Map<ISODate, string>()
   for (let i = -3; i < input.days; i++) {
     const d = addDays(input.from, i)
@@ -167,6 +173,7 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
       if (type && !trainedType.has(d)) {
         trainedType.set(d, type)
         if (i >= 0) existing.push({ date: d, type, title: e.title })
+        else recent.push({ date: d, type, title: e.title })
       }
     }
   }
@@ -180,7 +187,7 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
   const candidates = dates.map((_, i) => i).filter((i) => slots[i] !== null)
 
   let n = requested.length
-  if (n === 0) return { sessions: [], restDays: dates.filter((d) => !trainedType.has(d)), existing, warnings: ['Inga pass att planera.'] }
+  if (n === 0) return { sessions: [], restDays: dates.filter((d) => !trainedType.has(d)), existing, recent, warnings: ['Inga pass att planera.'] }
 
   const trainedIdx = (d: ISODate) => daysBetween(input.from, d)
   const preTrained = [...trainedType.keys()].map(trainedIdx) // index relativt from (kan vara negativa)
@@ -236,7 +243,7 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
   if (n < requested.length) {
     warnings.push(`Det går inte att lägga ${requested.length} pass på ${input.days} dagar utan att bryta träningsreglerna (högst 2 dagar i rad, vila mellan lika pass, lediga luckor). Planen har ${n} pass.`)
   }
-  if (n === 0) return { sessions: [], restDays: dates.filter((d) => !trainedType.has(d)), existing, warnings }
+  if (n === 0) return { sessions: [], restDays: dates.filter((d) => !trainedType.has(d)), existing, recent, warnings }
 
   // Välj vilka pass som ryms: behåll fördelningen mellan sorterna så gott det går.
   const types = (() => {
@@ -279,7 +286,7 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
     evaluate(true)
     if (best) warnings.push('Två pass av samma sort hamnar dag efter dag. Det gick inte att undvika med de här dagarna och passen.')
   }
-  if (!best) return { sessions: [], restDays: dates, existing, warnings: [...warnings, 'Kunde inte hitta en bra plan.'] }
+  if (!best) return { sessions: [], restDays: dates, existing, recent, warnings: [...warnings, 'Kunde inte hitta en bra plan.'] }
 
   const chosen = best as { cost: number; days: number[]; assign: string[] }
   const trained = new Set([...preTrained, ...chosen.days])
@@ -304,6 +311,7 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
     sessions,
     restDays: dates.filter((d) => !plannedDates.has(d) && !trainedType.has(d)),
     existing,
+    recent,
     warnings,
   }
 }

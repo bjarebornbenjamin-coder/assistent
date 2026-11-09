@@ -25,6 +25,8 @@ export interface ToolContext {
   water: WaterDay[]
   /** Dagens datum (sätts av chatten så att svaren följer appens klocka). */
   today?: string
+  /** Klockslaget nu, HH:mm. */
+  nowTime?: string
 }
 
 export interface ToolOutcome {
@@ -331,7 +333,8 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           packing: packingFor(dayLessons, ctx.subjects).flatMap((g) => g.items.map((i) => i.text)),
         }
       })
-      const overdue = ctx.tasks.filter((t) => !t.done && t.deadline < from).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), deadline: t.deadline }))
+      const todayIso = ctx.today ?? toISODate(new Date())
+      const overdue = ctx.tasks.filter((t) => !t.done && t.deadline < todayIso).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), deadline: t.deadline }))
       const empty = days.every((d) => !d.lessons.length && !d.events.length && !d.tasksDue.length && !d.reminders.length) && overdue.length === 0
       return { result: { days, ...(overdue.length ? { overdueTasks: overdue } : {}), ...(empty ? { note: 'Inget inplanerat under perioden.' } : {}) } }
     }
@@ -366,7 +369,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
             deadline: t.deadline,
             subject: ctx.subjects.find((s) => s.id === t.subjectId)?.name,
             done: t.done,
-            overdue: !t.done && t.deadline < from ? true : undefined,
+            overdue: !t.done && t.deadline < (ctx.today ?? toISODate(new Date())) ? true : undefined,
           })),
         },
       }
@@ -566,7 +569,8 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
     }
     case 'plan_workouts': {
       const today = ctx.today ?? toISODate(new Date())
-      const from = str(args.from) || addDays(today, 1)
+      const nowTime = ctx.nowTime ?? '12:00'
+      const from = str(args.from) || (nowTime < '17:00' ? today : addDays(today, 1))
       if (!DATE.test(from)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
       const days = args.days === undefined ? 7 : Number(args.days)
       if (!Number.isInteger(days) || days < 3 || days > 14) return err('days måste vara 3–14.')
@@ -595,6 +599,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
         tasks: ctx.tasks,
         settings: ctx.settings,
         avoidWeekdays: avoid,
+        ...(from === today ? { earliestToday: nowTime } : {}),
         preferredTime: pt === 'morning' || pt === 'afternoon' || pt === 'evening' ? pt : undefined,
       })
       return {
@@ -604,9 +609,11 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           plan: plan.sessions,
           restDays: plan.restDays.map((d) => `${WEEKDAYS_LONG[weekdayOf(d) - 1]} ${d}`),
           alreadyPlanned: plan.existing,
+          recentWorkouts: plan.recent,
+          requested: sessions.reduce((s, x) => s + x.count, 0),
           warnings: plan.warnings,
           rulesUsed: TRAINING_RULES,
-          next: 'Presentera planen kort med varför dagarna valts. Erbjud att lägga in passen i kalendern med propose_events.',
+          next: 'Presentera planen kort med varför dagarna valts. Om planen har färre pass än requested: förklara konkret varför (warnings) och erbjud alternativ (fler dagar, två pass samma dag t.ex. löpning på morgonen och gym på kvällen, eller färre pass). Nämn recentWorkouts om de påverkat planen. Erbjud att lägga in passen med propose_events.',
         },
       }
     }

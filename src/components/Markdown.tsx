@@ -30,9 +30,19 @@ export function Markdown({ text }: { text: string }) {
         ) : b.t === 'h' ? (
           <p key={i}><strong><Inlines nodes={b.inline} /></strong></p>
         ) : b.t === 'ul' ? (
-          <ul key={i}>{b.items.map((it, j) => <li key={j}><Inlines nodes={it} /></li>)}</ul>
+          <ul key={i}>{b.items.map((it, j) => (
+            <li key={j}>
+              <Inlines nodes={it} />
+              {b.subs?.[j] && <ul>{b.subs[j]!.map((sub, k) => <li key={k}><Inlines nodes={sub} /></li>)}</ul>}
+            </li>
+          ))}</ul>
         ) : (
-          <ol key={i}>{b.items.map((it, j) => <li key={j}><Inlines nodes={it} /></li>)}</ol>
+          <ol key={i} start={b.start}>{b.items.map((it, j) => (
+            <li key={j}>
+              <Inlines nodes={it} />
+              {b.subs?.[j] && <ul>{b.subs[j]!.map((sub, k) => <li key={k}><Inlines nodes={sub} /></li>)}</ul>}
+            </li>
+          ))}</ol>
         ),
       )}
     </div>

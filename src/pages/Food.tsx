@@ -231,10 +231,12 @@ function RecipesTab() {
           <h3 className="recipe-h">Ingredienser</h3>
           <ul className="ingredients">
             {r.ingredients.map((i) => (
-              <li key={i.name} className={i.status === 'missing' ? 'missing' : ''}>
+              <li key={i.name} className={i.status === 'missing' || i.status === 'pantry-low' ? 'missing' : ''}>
                 <span>{i.amount ? `${i.amount} ` : ''}{i.name}</span>
                 <span className="sub">
                   {i.status === 'pantry' && (expiring.has(i.pantryName ?? '') ? 'har hemma, snart ute' : 'har hemma')}
+                  {i.status === 'pantry-low' && 'har hemma, kanske för lite'}
+                  {i.status === 'pantry-check' && 'har hemma, kolla mängden'}
                   {i.status === 'staple' && 'basvara'}
                   {i.status === 'missing' && 'saknas'}
                 </span>

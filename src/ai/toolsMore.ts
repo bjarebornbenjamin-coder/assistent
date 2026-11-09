@@ -34,7 +34,7 @@ export const MORE_TOOL_DEFINITIONS = [
   { name: 'list_reminders', description: 'Lista användarens fristående påminnelser (titel, tid, upprepning, på/av).', parameters: { type: 'object', properties: {} } },
   {
     name: 'propose_reminder',
-    description: 'Föreslå en ny påminnelse. repeat: "once" (kräver date), "daily", eller "weekdays" (kräver days, 1=måndag … 7=söndag; en dag = varje vecka). Skapas INTE förrän användaren bekräftat.',
+    description: 'Föreslå en ny påminnelse. title kort i imperativ, t.ex. "Ring mormor", "Plugga matte". repeat: "once" (kräver date), "daily", eller "weekdays" (kräver days, 1=måndag … 7=söndag; en dag = varje vecka). Skapas INTE förrän användaren bekräftat.',
     parameters: {
       type: 'object',
       properties: { title: { type: 'string' }, time: { type: 'string', description: 'HH:mm' }, repeat: { type: 'string', enum: ['once', 'daily', 'weekdays'] }, date, days: { type: 'array', items: { type: 'integer' } } },

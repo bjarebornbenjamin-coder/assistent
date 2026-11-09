@@ -273,9 +273,12 @@ describe('träningsplanering i chatten', () => {
     expect(r.warnings).toEqual([])
   })
   it('gym + löpning: olika dagar, standardstart är i morgon, "springa" blir löpning', () => {
-    const r = runTool('plan_workouts', { sessions: [{ type: 'gym', count: 2 }, { type: 'springa', count: 2 }] }, free).result as Plan
+    const r = runTool('plan_workouts', { sessions: [{ type: 'gym', count: 2 }, { type: 'springa', count: 2 }] }, { ...free, nowTime: '19:00' }).result as Plan
     expect(new Set(r.plan.map((p) => p.date)).size).toBe(4)
-    expect(r.plan.every((p) => p.date >= '2026-11-11')).toBe(true)
+    expect(r.plan.every((p) => p.date >= '2026-11-11')).toBe(true) // kväll: börjar i morgon
+    const early = runTool('plan_workouts', { sessions: [{ type: 'gym', count: 3 }] }, { ...free, nowTime: '10:00' }).result as Plan
+    expect(early.plan[0].date).toBe('2026-11-10') // förmiddag: idag räknas med
+    expect(early.plan[0].start >= '10:30').toBe(true) // inte bakåt i tiden
     expect(r.plan.filter((p) => p.type === 'löpning')).toHaveLength(2)
   })
   it('validerar indata', () => {
@@ -295,5 +298,13 @@ describe('träningsplanering i chatten', () => {
     expect(p).toMatch(/ALLTID plan_workouts/)
     expect(p).toMatch(/en ledig dag betyder inte att man ska träna/)
     expect(p).toMatch(/propose_events/)
+  })
+})
+
+describe('försenad räknas från idag', () => {
+  it('en uppgift med deadline idag är inte försenad när man frågar om i morgon', () => {
+    const c = { ...ctx, today: '2026-11-12', tasks: [{ id: 'x', title: 'Sälja ljus', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 'y', title: 'Gammal', deadline: '2026-11-11', done: false, updatedAt: '' }] }
+    const r = runTool('get_overview', { from: '2026-11-13' }, c).result as { overdueTasks?: { title: string }[] }
+    expect(r.overdueTasks?.map((t) => t.title)).toEqual(['Gammal'])
   })
 })

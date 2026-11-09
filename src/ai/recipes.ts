@@ -6,8 +6,11 @@ export interface Ingredient {
   name: string
   /** Mått för receptets portioner, t.ex. "300 g" eller "2 dl". */
   amount: string
-  /** pantry = finns i lagret, staple = basvara som antas finnas, missing = behöver köpas. */
-  status: 'pantry' | 'staple' | 'missing'
+  /**
+   * pantry = finns i lagret (tillräckligt), pantry-low = finns men troligen för lite,
+   * pantry-check = finns men mängden går inte att jämföra, staple = basvara, missing = behöver köpas.
+   */
+  status: 'pantry' | 'pantry-low' | 'pantry-check' | 'staple' | 'missing'
   /** Lagrets namn när status är pantry. */
   pantryName?: string
 }
@@ -51,6 +54,7 @@ export const RECIPE_PROMPT = [
   'equipment: kort lista på kärl och redskap som behövs. prepMinutes och cookMinutes: heltal. tip: ett kort råd om servering eller förvaring, eller tom sträng.',
   'nutrition: din uppskattning PER PORTION som heltal: kcal, protein (g), carbs (g) och fat (g). Utelämna fältet om du inte kan uppskatta det rimligt.',
   'Format: {"recipes":[{"title":"...","portions":2,"prepMinutes":10,"cookMinutes":20,"ingredients":[{"name":"Pasta","amount":"200 g"}],"equipment":["Stor kastrull"],"steps":["Fyll en kastrull med 2 liter vatten och tillsätt 1 msk salt. Låt koka upp på full värme.","..."],"tip":"","nutrition":{"kcal":550,"protein":22,"carbs":80,"fat":14}}]}',
+  'Kontrollera innan du svarar: (a) titeln stämmer med ingredienser och steg (står det "med gräddsås" ska såsen finnas bland ingredienserna och tillagas i stegen), (b) alla mängder räcker för portionerna (en tomatsallad för 4 behöver ca 6–8 tomater, inte 2), (c) näringsvärdet per portion är realistiskt (en broccolisoppa ligger runt 100–200 kcal, inte 250+ om den inte har grädde).',
   'Hitta inte på varor som inte finns i listan och som du inte skriver in som ingrediens.',
 ].join('\n')
 
@@ -69,6 +73,27 @@ const match = (a: string, b: string) => {
   return x === y || (x.length > 2 && y.length > 2 && (x.includes(y) || y.includes(x)))
 }
 const isStaple = (n: string) => STAPLES.some((s) => foodKey(n) === s)
+
+/** Tolkar en mängd som "400 g", "2 dl", "1,5 kg", "3 st" till bas-enhet (g, ml, st). Annars null. */
+export function parseQty(text: string | undefined): { value: number; unit: 'g' | 'ml' | 'st' } | null {
+  if (!text) return null
+  const m = /(\d+(?:[.,]\d+)?)\s*(kg|hg|g|l|dl|cl|ml|msk|tsk|st|stycken|förp)?\b/i.exec(text.trim())
+  if (!m) return null
+  const n = Number(m[1].replace(',', '.'))
+  const u = (m[2] ?? 'st').toLowerCase()
+  const table: Record<string, [number, 'g' | 'ml' | 'st']> = { kg: [1000, 'g'], hg: [100, 'g'], g: [1, 'g'], l: [1000, 'ml'], dl: [100, 'ml'], cl: [10, 'ml'], ml: [1, 'ml'], msk: [15, 'ml'], tsk: [5, 'ml'], st: [1, 'st'], stycken: [1, 'st'] }
+  const t = table[u]
+  return t ? { value: n * t[0], unit: t[1] } : null
+}
+
+/** Räcker det som finns hemma? Jämförs bara när båda mängderna går att tolka i samma enhet. */
+function enough(have: string | undefined, need: string): Ingredient['status'] {
+  const h = parseQty(have)
+  const n = parseQty(need)
+  if (!n) return 'pantry'
+  if (!h || h.unit !== n.unit) return 'pantry-check'
+  return h.value >= n.value ? 'pantry' : 'pantry-low'
+}
 
 const intIn = (v: unknown, min: number, max: number): number | null =>
   typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? Math.round(v) : null
@@ -99,11 +124,11 @@ export function parseRecipes(text: string, pantry: PantryItem[]): Recipe[] {
       if (!name || ingredients.some((x) => foodKey(x.name) === foodKey(name))) continue
       const amount = typeof o.amount === 'string' ? o.amount.trim().slice(0, 30) : ''
       const hit = pantry.find((p) => match(p.name, name))
-      ingredients.push(hit ? { name, amount, status: 'pantry', pantryName: hit.name } : { name, amount, status: isStaple(name) ? 'staple' : 'missing' })
+      ingredients.push(hit ? { name, amount, status: enough(hit.amount, amount), pantryName: hit.name } : { name, amount, status: isStaple(name) ? 'staple' : 'missing' })
     }
     if (!title || steps.length === 0 || ingredients.length === 0) continue
 
-    const uses = [...new Set(ingredients.filter((i) => i.status === 'pantry').map((i) => i.pantryName!))]
+    const uses = [...new Set(ingredients.filter((i) => i.pantryName).map((i) => i.pantryName!))]
     const missing = ingredients.filter((i) => i.status === 'missing').map((i) => ({ name: i.name, amount: i.amount })).slice(0, 10)
     const n = (r.nutrition ?? null) as Record<string, unknown> | null
     const kcal = n ? intIn(n.kcal, 0, 3000) : null

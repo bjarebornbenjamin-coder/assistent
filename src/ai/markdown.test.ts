@@ -31,3 +31,23 @@ describe('markdown', () => {
     ])
   })
 })
+
+describe('listor som modellen skriver', () => {
+  it('tomrader mellan numrerade punkter ger EN lista, inte flera som alla börjar på 1', () => {
+    const b = parseMarkdown('Förslag:\n\n1. Omelett\n\n2. Fil med bär\n\n3. Smörgås')
+    expect(b.map((x) => x.t)).toEqual(['p', 'ol'])
+    expect((b[1] as { items: unknown[] }).items).toHaveLength(3)
+  })
+  it('underpunkter hamnar under sin punkt, och numrering kan börja på annat än 1', () => {
+    const b = parseMarkdown('1. Lektioner\n   - Matte 08:00\n   - Svenska 10:00\n2. Uppgifter\n   - Läxa')
+    const list = b[0] as { t: string; items: unknown[]; subs: unknown[][] }
+    expect(list.t).toBe('ol')
+    expect(list.items).toHaveLength(2)
+    expect(list.subs[0]).toHaveLength(2)
+    expect(list.subs[1]).toHaveLength(1)
+    expect(parseMarkdown('3. tre\n4. fyra')[0]).toMatchObject({ t: 'ol', start: 3 })
+  })
+  it('text efter en lista med tomrad blir ett nytt stycke', () => {
+    expect(parseMarkdown('- a\n- b\n\nSlut.').map((x) => x.t)).toEqual(['ul', 'p'])
+  })
+})

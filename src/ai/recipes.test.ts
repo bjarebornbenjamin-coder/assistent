@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RECIPE_PROMPT, fetchRecipes, parseRecipes, recipeUserContent } from './recipes'
+import { RECIPE_PROMPT, fetchRecipes, parseQty, parseRecipes, recipeUserContent } from './recipes'
 import type { PantryItem } from '../domain/types'
 
 const p = (name: string, expires?: string, amount?: string): PantryItem => ({ id: name, name, expires, amount, addedAt: '2026-11-01', source: 'manual', updatedAt: '' })
@@ -42,7 +42,7 @@ describe('parseRecipes', () => {
     const [r] = parseRecipes(JSON.stringify({ recipes: [recipe()] }), pantry)
     expect(r.ingredients).toEqual([
       { name: 'pasta', amount: '200 g', status: 'pantry', pantryName: 'Pasta' },
-      { name: 'Tomatsås', amount: '3 dl', status: 'pantry', pantryName: 'Tomatsås' },
+      { name: 'Tomatsås', amount: '3 dl', status: 'pantry-check', pantryName: 'Tomatsås' }, // lagret saknar mängd
       { name: 'Basilika', amount: '1 kruka', status: 'missing' },
       { name: 'Salt', amount: '1 tsk', status: 'staple' },
     ])
@@ -83,5 +83,20 @@ describe('fetchRecipes', () => {
     expect(body?.messages[0].content).toBe(RECIPE_PROMPT)
     const bad = (async () => new Response('{}', { status: 429 })) as unknown as typeof fetch
     await expect(fetchRecipes(pantry, { allergies: '', portions: 2 }, '2026-11-10', 'm', {}, bad)).rejects.toThrow()
+  })
+})
+
+describe('mängder mot lagret', () => {
+  it('tolkar vanliga mått', () => {
+    expect(['400 g', '1,5 kg', '2 dl', '1 l', '3 st', '1 msk', 'några skivor', '1 bit', ''].map((t) => parseQty(t))).toEqual([
+      { value: 400, unit: 'g' }, { value: 1500, unit: 'g' }, { value: 200, unit: 'ml' }, { value: 1000, unit: 'ml' }, { value: 3, unit: 'st' }, { value: 15, unit: 'ml' }, null, { value: 1, unit: 'st' }, null,
+    ])
+  })
+  it('markerar för lite och okänd mängd (testarens fall: kött och ost)', () => {
+    const pantry2 = [p('Kött', undefined, 'några skivor'), p('Ost', undefined, '100 g'), p('Mjölk', undefined, '1 l')]
+    const [r] = parseRecipes(JSON.stringify({ recipes: [{ title: 'Köttbullar', ingredients: [{ name: 'Kött', amount: '400 g' }, { name: 'Ost', amount: '200 g' }, { name: 'Mjölk', amount: '2 dl' }], steps: ['x'] }] }), pantry2)
+    expect(r.ingredients.map((i) => [i.name, i.status])).toEqual([['Kött', 'pantry-check'], ['Ost', 'pantry-low'], ['Mjölk', 'pantry']])
+    expect(r.uses).toEqual(['Kött', 'Ost', 'Mjölk'])
+    expect(RECIPE_PROMPT).toMatch(/titeln stämmer med ingredienser och steg/)
   })
 })

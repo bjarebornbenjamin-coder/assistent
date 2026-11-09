@@ -7,7 +7,7 @@ export type Inline =
 export type Block =
   | { t: 'p'; lines: Inline[][] }
   | { t: 'h'; inline: Inline[] }
-  | { t: 'ul' | 'ol'; items: Inline[][] }
+  | { t: 'ul' | 'ol'; items: Inline[][]; start?: number; subs?: (Inline[][] | undefined)[] }
 
 const INLINE = /(\*\*([^*]+?)\*\*|__([^_]+?)__|`([^`]+?)`|\*([^*\s][^*]*?)\*|(?<![A-Za-z0-9])_([^_\s][^_]*?)_(?![A-Za-z0-9]))/g
 
@@ -30,41 +30,64 @@ export function parseMarkdown(src: string): Block[] {
   const blocks: Block[] = []
   const lines = src.replace(/\r\n?/g, '\n').split('\n')
   let para: Inline[][] | null = null
-  let list: { t: 'ul' | 'ol'; items: Inline[][] } | null = null
+  let list: { t: 'ul' | 'ol'; items: Inline[][]; start?: number; subs: (Inline[][] | undefined)[] } | null = null
+  let blankInList = false
 
-  const flush = () => {
+  const flushPara = () => {
     if (para) blocks.push({ t: 'p', lines: para })
-    if (list) blocks.push(list)
     para = null
+  }
+  const flushList = () => {
+    if (list) blocks.push(list.subs.some(Boolean) ? list : { t: list.t, items: list.items, ...(list.start && list.start !== 1 ? { start: list.start } : {}) })
     list = null
+    blankInList = false
   }
 
   for (const raw of lines) {
-    const line = raw.trimEnd()
+    const line = raw.replace(/\s+$/, '')
     if (line.trim() === '') {
-      flush()
+      // En tomrad avslutar stycken, men en lista får fortsätta efter den (modeller lägger ofta tomrader mellan punkter).
+      flushPara()
+      if (list) blankInList = true
+      continue
+    }
+    const indent = (/^\s*/.exec(line)?.[0].length ?? 0)
+    const bullet = /^\s*[-*•]\s+(.*)$/.exec(line)
+    const numbered = /^\s*(\d+)[.)]\s+(.*)$/.exec(line)
+    if ((bullet || numbered) && list && indent >= 2 && list.items.length > 0) {
+      // Underpunkt till föregående punkt.
+      const i = list.items.length - 1
+      list.subs[i] = [...(list.subs[i] ?? []), parseInline(bullet ? bullet[1] : numbered![2])]
+      blankInList = false
       continue
     }
     const heading = /^\s{0,3}#{1,6}\s+(.*)$/.exec(line)
     if (heading) {
-      flush()
+      flushPara()
+      flushList()
       blocks.push({ t: 'h', inline: parseInline(heading[1]) })
       continue
     }
-    const bullet = /^\s*[-*•]\s+(.*)$/.exec(line)
-    const numbered = /^\s*\d+[.)]\s+(.*)$/.exec(line)
-    const item = bullet ?? numbered
-    if (item) {
+    if (bullet || numbered) {
       const kind = bullet ? 'ul' : 'ol'
-      if (para || (list && list.t !== kind)) flush()
-      list ??= { t: kind, items: [] }
-      list.items.push(parseInline(item[1]))
+      flushPara()
+      if (list && list.t !== kind) flushList()
+      if (!list) list = { t: kind, items: [], subs: [], ...(numbered ? { start: Number(numbered[1]) } : {}) }
+      list.items.push(parseInline(bullet ? bullet[1] : numbered![2]))
+      list.subs.push(undefined)
+      blankInList = false
       continue
     }
-    if (list) flush()
+    if (list && blankInList) flushList()
+    else if (list && indent >= 2) {
+      // Fortsättningsrad till en punkt.
+      list.items[list.items.length - 1] = [...list.items[list.items.length - 1], { t: 'text', v: ' ' }, ...parseInline(line.trim())]
+      continue
+    } else if (list) flushList()
     para ??= []
     para.push(parseInline(line.trim()))
   }
-  flush()
+  flushPara()
+  flushList()
   return blocks
 }
