@@ -1,8 +1,8 @@
-import { addDays, parseISODate, toISODate } from './dates'
+import { addDays, parseISODate, toISODate, weekdayOf } from './dates'
 import { packingFor } from './packing'
 import { occursOn } from './reminders'
 import { lessonsOn } from './schedule'
-import type { Lesson, Reminder, Settings, Subject } from './types'
+import type { Lesson, PantryItem, Reminder, Settings, ShoppingItem, Subject } from './types'
 
 export interface PlannedNotification {
   /** Stabilt id så att samma notis inte dubbleras vid omplanering. */
@@ -23,11 +23,12 @@ const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 /** Notiser de närmaste `days` dagarna, enligt inställningarna. Bara sådana som ligger i framtiden. */
 export function planNotifications(
   now: Date,
-  s: Pick<Settings, 'cycleLength' | 'cycleAnchor' | 'notify'>,
+  s: Pick<Settings, 'cycleLength' | 'cycleAnchor' | 'notify'> & Partial<Pick<Settings, 'food'>>,
   lessons: Lesson[],
   subjects: Subject[],
   days = 14,
   reminders: Reminder[] = [],
+  food: { pantry: PantryItem[]; shopping: ShoppingItem[] } = { pantry: [], shopping: [] },
 ): PlannedNotification[] {
   const out: PlannedNotification[] = []
   const today = toISODate(now)
@@ -39,6 +40,38 @@ export function planNotifications(
       const fireAt = at(date, r.time)
       if (occursOn(r, date) && fireAt > now) {
         out.push({ id: `reminder:${r.id}:${date}`, fireAt, title: r.title, body: `Påminnelse kl ${r.time}` })
+      }
+    }
+
+    const f = s.food
+    if (f?.expiry.enabled) {
+      const tomorrow = addDays(date, 1)
+      const soon = food.pantry
+        .filter((p) => p.expires === date || p.expires === tomorrow)
+        .sort((a, b) => (a.expires ?? '').localeCompare(b.expires ?? '') || a.name.localeCompare(b.name, 'sv'))
+      const fireAt = at(date, f.expiry.time)
+      if (soon.length > 0 && fireAt > now) {
+        const names = soon.slice(0, 4).map((p) => `${p.name} (${p.expires === date ? 'idag' : 'imorgon'})`)
+        out.push({
+          id: `expiry:${date}`,
+          fireAt,
+          title: 'Mat som snart går ut',
+          body: names.join(', ') + (soon.length > 4 ? ` +${soon.length - 4} till` : ''),
+        })
+      }
+    }
+
+    if (f?.shopping.enabled && weekdayOf(date) === f.shopping.weekday) {
+      const open = food.shopping.filter((i) => !i.done)
+      const fireAt = at(date, f.shopping.time)
+      if (open.length > 0 && fireAt > now) {
+        const names = open.slice(0, 6).map((i) => i.name)
+        out.push({
+          id: `shopping:${date}`,
+          fireAt,
+          title: `Inköpslistan: ${open.length} ${open.length === 1 ? 'vara' : 'varor'}`,
+          body: names.join(', ') + (open.length > 6 ? ` +${open.length - 6} till` : ''),
+        })
       }
     }
 

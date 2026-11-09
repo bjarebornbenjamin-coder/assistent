@@ -44,3 +44,42 @@ describe('planNotifications', () => {
     expect(ids).toEqual(['evening:2026-11-16'])
   })
 })
+
+describe('mat-notiser', () => {
+  const food = { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } }
+  const settings = { ...s0(), food }
+  function s0() { return { cycleLength: 1, cycleAnchor: '2026-11-02', notify: { evening: false, eveningTime: '20:00', before: false, beforeMinutes: 10 } } }
+  const item = (name: string, expires?: string) => ({ id: name, name, expires, addedAt: '2026-11-01', source: 'manual' as const, updatedAt: '' })
+  const buy = (name: string, done = false) => ({ id: name, name, done, addedAt: '2026-11-01', updatedAt: '' })
+  const now = new Date('2026-11-10T12:00:00') // tisdag
+
+  it('utgångsnotis dagen varan går ut och dagen före, sorterad, och inte för tider som passerat', () => {
+    const plan = planNotifications(now, settings, [], [], 3, [], { pantry: [item('Mjölk', '2026-11-12'), item('Yoghurt', '2026-11-11'), item('Ris', '2027-01-01'), item('Gammal', '2026-11-01')], shopping: [] })
+    const exp = plan.filter((n) => n.id.startsWith('expiry:'))
+    // idag 08:00 har redan passerat, så första är i morgon
+    expect(exp.map((n) => n.id)).toEqual(['expiry:2026-11-11', 'expiry:2026-11-12'])
+    expect(exp[0]).toMatchObject({ title: 'Mat som snart går ut', body: 'Yoghurt (idag), Mjölk (imorgon)' })
+    expect(exp[1].body).toBe('Mjölk (idag)')
+    expect(exp[0].fireAt).toEqual(new Date('2026-11-11T08:00:00'))
+  })
+  it('hoppar över passerad tid idag och avstängd notis', () => {
+    const late = new Date('2026-11-10T09:00:00')
+    expect(planNotifications(late, settings, [], [], 0, [], { pantry: [item('Mjölk', '2026-11-10')], shopping: [] })).toEqual([])
+    const off = { ...settings, food: { ...food, expiry: { ...food.expiry, enabled: false } } }
+    expect(planNotifications(now, off, [], [], 3, [], { pantry: [item('Mjölk', '2026-11-11')], shopping: [] })).toEqual([])
+  })
+  it('inköpsnotis på vald veckodag med antal och namn, bara om listan har något', () => {
+    const shopping = [buy('Mjölk'), buy('Ägg'), buy('Bröd', true)]
+    const plan = planNotifications(now, settings, [], [], 7, [], { pantry: [], shopping })
+    const shop = plan.filter((n) => n.id.startsWith('shopping:'))
+    expect(shop.map((n) => n.id)).toEqual(['shopping:2026-11-13']) // fredag
+    expect(shop[0]).toMatchObject({ title: 'Inköpslistan: 2 varor', body: 'Mjölk, Ägg' })
+    expect(shop[0].fireAt).toEqual(new Date('2026-11-13T16:00:00'))
+    expect(planNotifications(now, settings, [], [], 7, [], { pantry: [], shopping: [buy('Bröd', true)] })).toEqual([])
+    expect(planNotifications(now, settings, [], [], 7, [], { pantry: [], shopping: [buy('Ost')] })[0].title).toBe('Inköpslistan: 1 vara')
+  })
+  it('många varor kortas med "+N till"', () => {
+    const shopping = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((n) => buy(n))
+    expect(planNotifications(now, settings, [], [], 7, [], { pantry: [], shopping })[0].body).toBe('a, b, c, d, e, f +2 till')
+  })
+})

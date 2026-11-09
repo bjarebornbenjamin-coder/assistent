@@ -6,6 +6,7 @@ import { supabase, useSession } from '../sync/supabase'
 import { currentSubscription, pushSupported, subscribeDevice, unsubscribeDevice, vapidKey } from './push'
 
 const BEFORE_OPTIONS = [0, 5, 10, 15, 30]
+const WEEKDAY_NAMES = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag']
 
 export function NotifySection() {
   const settings = useSettings()
@@ -23,6 +24,7 @@ export function NotifySection() {
 
   if (!settings) return null
   const n = settings.notify
+  const food = settings.food
 
   const head = <h2>Notiser</h2>
   if (!pushSupported()) {
@@ -87,6 +89,39 @@ export function NotifySection() {
             {BEFORE_OPTIONS.map((m) => <option key={m} value={m}>{m === 0 ? 'Vid start' : `${m} minuter före`}</option>)}
           </select>
         </label>
+      )}
+
+      <div className="checks" style={{ marginBottom: 8 }}>
+        <label>
+          <input type="checkbox" checked={food.expiry.enabled} onChange={(e) => saveSettings({ food: { ...food, expiry: { ...food.expiry, enabled: e.target.checked } } })} />
+          Notis när mat snart går ut
+        </label>
+      </div>
+      {food.expiry.enabled && (
+        <label className="field">
+          <span>Tid för utgångsnotis</span>
+          <input type="time" value={food.expiry.time} onChange={(e) => e.target.value && saveSettings({ food: { ...food, expiry: { ...food.expiry, time: e.target.value } } })} />
+        </label>
+      )}
+      <div className="checks" style={{ marginBottom: 8 }}>
+        <label>
+          <input type="checkbox" checked={food.shopping.enabled} onChange={(e) => saveSettings({ food: { ...food, shopping: { ...food.shopping, enabled: e.target.checked } } })} />
+          Notis med inköpslistan
+        </label>
+      </div>
+      {food.shopping.enabled && (
+        <div className="two">
+          <label className="field">
+            <span>Dag</span>
+            <select value={food.shopping.weekday} onChange={(e) => saveSettings({ food: { ...food, shopping: { ...food.shopping, weekday: Number(e.target.value) } } })}>
+              {WEEKDAY_NAMES.map((d, i) => <option key={d} value={i + 1}>{d[0].toUpperCase() + d.slice(1)}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>Tid</span>
+            <input type="time" value={food.shopping.time} onChange={(e) => e.target.value && saveSettings({ food: { ...food, shopping: { ...food.shopping, time: e.target.value } } })} />
+          </label>
+        </div>
       )}
 
       <p className="muted">

@@ -57,9 +57,15 @@ Kräver att synken (Supabase) är påslagen. Appen räknar ut vilka notiser du s
 4. Något måste anropa `/api/push-dispatch` varje minut. Enklast: kör `supabase/cron.sql` (pg_cron + pg_net) efter att du bytt ut adressen och hemligheten. Vercels gratisnivå tillåter bara ett schemalagt jobb per dygn, så det duger inte.
 5. Appen → Inställningar → Notiser → **Slå på notiser på den här enheten** → **Skicka testnotis**.
 
+Mat-notiser (Inställningar → Notiser): "Mat som snart går ut" (varor som går ut idag eller imorgon, vid vald tid) och inköpslistan en vald veckodag. Båda planeras av appen utifrån lager och lista som de ser ut när du senast öppnade appen, så ändringar du gör i appen uppdaterar planen.
+
 Fristående påminnelser (Hem → Alla påminnelser) skickas på samma sätt, med valfri tid och upprepning (en gång, varje dag, valda veckodagar). De räknas in i samma 14-dagarsplan.
 
 Begränsningar: iPhone kräver att appen är installerad på hemskärmen (iOS 16.4+). Notiserna planeras 14 dagar framåt, så appen behöver öppnas minst varannan vecka. Ändrar du schema eller packlistor på en enhet uppdateras planen när appen är öppen där.
+
+## Mat (lager, inköpslista, recept)
+
+Fliken Mat har tre delar: Lager (med bäst före-datum), Inköpslista och Recept. Kvitto och kylskåp skannas via samma bildavläsning som schemat (`/api/chat`, vision-modell krävs, t.ex. gpt-4o-mini). Allt du ser från skanningar är förslag som du granskar innan något sparas. Kvittots bäst före-datum är AI:ns uppskattning. Recepten skapas av AI:n och sparas inte; kontrollera allergier och att varorna är hela.
 
 ## Importera schema från bild
 

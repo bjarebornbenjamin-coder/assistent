@@ -23,8 +23,8 @@ export function useNotificationSync(): void {
     async function plan() {
       if (stopped || !navigator.onLine) return
       if (Notification.permission !== 'granted' || !(await currentSubscription())) return
-      const [settings, lessons, subjects, reminders] = await Promise.all([getSettings(), db.lessons.toArray(), db.subjects.toArray(), db.reminders.toArray()])
-      const planned = planNotifications(new Date(), settings, lessons, subjects, 14, reminders)
+      const [settings, lessons, subjects, reminders, pantry, shopping] = await Promise.all([getSettings(), db.lessons.toArray(), db.subjects.toArray(), db.reminders.toArray(), db.pantry.toArray(), db.shopping.toArray()])
+      const planned = planNotifications(new Date(), settings, lessons, subjects, 14, reminders, { pantry, shopping })
       const fingerprint = JSON.stringify(planned.map((n) => [n.id, n.fireAt.getTime(), n.title, n.body]))
       if (fingerprint === last) return
       try {
@@ -40,7 +40,7 @@ export function useNotificationSync(): void {
     }
 
     schedule()
-    const sub = liveQuery(() => Promise.all([db.settings.toArray(), db.lessons.toArray(), db.subjects.toArray(), db.reminders.toArray()])).subscribe({ next: schedule, error: () => {} })
+    const sub = liveQuery(() => Promise.all([db.settings.toArray(), db.lessons.toArray(), db.subjects.toArray(), db.reminders.toArray(), db.pantry.toArray(), db.shopping.toArray()])).subscribe({ next: schedule, error: () => {} })
     window.addEventListener('push-changed', schedule)
     window.addEventListener('online', schedule)
     document.addEventListener('visibilitychange', schedule)
