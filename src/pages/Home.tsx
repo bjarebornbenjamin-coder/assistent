@@ -20,6 +20,15 @@ function dayName(date: string, today: string): string {
   return WEEKDAYS_LONG[weekdayOf(date) - 1]
 }
 
+function HomeHeader() {
+  return (
+    <div className="chat-head">
+      <h1>Hem</h1>
+      <Link to="/installningar" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Inställningar</Link>
+    </div>
+  )
+}
+
 export function Home() {
   const settings = useSettings()
   const lessons = useLessons()
@@ -46,7 +55,7 @@ export function Home() {
   if (lessons.length === 0 && events.length === 0 && tasks.length === 0 && reminders.length === 0) {
     return (
       <>
-        <h1>Hem</h1>
+        <HomeHeader />
         <p className="empty">
           Du har inget schema än. <Link to="/schema">Lägg in din första lektion</Link>.
         </p>
@@ -56,7 +65,7 @@ export function Home() {
 
   return (
     <>
-      <h1>Hem</h1>
+      <HomeHeader />
 
       <h2>Nästa lektion</h2>
       {next ? (

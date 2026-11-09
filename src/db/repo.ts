@@ -1,21 +1,35 @@
 import { DEFAULT_MODEL } from '../ai/models'
 import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
-import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, Lesson, NotifySettings, Reminder, Settings, Subject, Task } from '../domain/types'
+import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, FoodSettings, Lesson, NotifySettings, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from '../domain/types'
 import { db } from './db'
 
 export const newId = () => crypto.randomUUID()
 
 export const DEFAULT_NOTIFY: NotifySettings = { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }
 
+export const DEFAULT_FOOD: FoodSettings = {
+  allergies: '',
+  portions: 2,
+  shopping: { enabled: true, weekday: 5, time: '16:00' },
+  expiry: { enabled: true, time: '08:00' },
+}
+
 export function defaultSettings(): Settings {
-  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY }
+  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY, food: DEFAULT_FOOD }
 }
 
 /** Äldre sparade inställningar saknar fält som tillkommit senare. */
 export function withDefaults(stored: Settings | undefined): Settings {
   const d = defaultSettings()
-  return stored ? { ...d, ...stored, notify: { ...DEFAULT_NOTIFY, ...(stored.notify ?? {}) } } : d
+  if (!stored) return d
+  const food = stored.food ?? DEFAULT_FOOD
+  return {
+    ...d,
+    ...stored,
+    notify: { ...DEFAULT_NOTIFY, ...(stored.notify ?? {}) },
+    food: { ...DEFAULT_FOOD, ...food, shopping: { ...DEFAULT_FOOD.shopping, ...(food.shopping ?? {}) }, expiry: { ...DEFAULT_FOOD.expiry, ...(food.expiry ?? {}) } },
+  }
 }
 
 export async function getSettings(): Promise<Settings> {
@@ -202,10 +216,26 @@ export async function deleteReminder(id: string): Promise<void> {
   await db.reminders.delete(id)
 }
 
+export async function savePantryItem(item: PantryItem): Promise<void> {
+  await db.pantry.put({ ...item, updatedAt: new Date().toISOString() })
+}
+
+export async function deletePantryItem(id: string): Promise<void> {
+  await db.pantry.delete(id)
+}
+
+export async function saveShoppingItem(item: ShoppingItem): Promise<void> {
+  await db.shopping.put({ ...item, updatedAt: new Date().toISOString() })
+}
+
+export async function deleteShoppingItem(id: string): Promise<void> {
+  await db.shopping.delete(id)
+}
+
 export async function exportAll(): Promise<Backup> {
   return {
     app: 'studieassistent',
-    version: 5,
+    version: 6,
     exportedAt: new Date().toISOString(),
     settings: (await db.settings.get('main')) ?? null,
     subjects: await db.subjects.toArray(),
@@ -214,13 +244,15 @@ export async function exportAll(): Promise<Backup> {
     contacts: await db.contacts.toArray(),
     tasks: await db.tasks.toArray(),
     reminders: await db.reminders.toArray(),
+    pantry: await db.pantry.toArray(),
+    shopping: await db.shopping.toArray(),
   }
 }
 
 /** Ersätter all data med innehållet i säkerhetskopian. */
 export async function importAll(backup: Backup): Promise<void> {
-  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders], async () => {
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear()])
+  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders, db.pantry, db.shopping], async () => {
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
     if (backup.settings) await db.settings.put(backup.settings)
     await db.subjects.bulkPut(backup.subjects)
     await db.lessons.bulkPut(backup.lessons)
@@ -228,5 +260,7 @@ export async function importAll(backup: Backup): Promise<void> {
     await db.contacts.bulkPut(backup.contacts)
     await db.tasks.bulkPut(backup.tasks)
     await db.reminders.bulkPut(backup.reminders)
+    await db.pantry.bulkPut(backup.pantry)
+    await db.shopping.bulkPut(backup.shopping)
   })
 }

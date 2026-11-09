@@ -31,3 +31,12 @@ Fas 3 görs inte utan att fråga först.
 
 ## Fas 4 – Tillägg
 - [x] 4.1 Fristående påminnelser (tid, upprepning, notis)
+
+## Fas 5 – Mat
+- [x] 5.1 Mat-flik, Inställningar som länk på Hem, och matlager (manuellt)
+- [ ] 5.2 Inköpslista (manuell, köpta varor flyttas till lagret)
+- [ ] 5.3 Skanna kvitto
+- [ ] 5.4 Skanna kylskåp
+- [ ] 5.5 Receptförslag
+- [ ] 5.6 Påminnelser: utgångsdatum och inköpslista
+- [ ] 5.7 Chatten kopplas till lager, recept och inköpslista

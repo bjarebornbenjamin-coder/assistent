@@ -12,6 +12,16 @@ export interface NotifySettings {
   beforeMinutes: number
 }
 
+export interface FoodSettings {
+  /** Allergier och kostönskemål i fri text, skickas med när recept föreslås. */
+  allergies: string
+  portions: number
+  /** Notis med inköpslistan en viss veckodag (1 = måndag … 7 = söndag). */
+  shopping: { enabled: boolean; weekday: number; time: HHmm }
+  /** Notis när mat snart går ut. */
+  expiry: { enabled: boolean; time: HHmm }
+}
+
 export interface Settings {
   id: 'main'
   /** Antal veckor i cykeln: 1 = samma varje vecka, 2 = A/B, osv. */
@@ -20,6 +30,7 @@ export interface Settings {
   cycleAnchor: ISODate
   theme: Theme
   notify: NotifySettings
+  food: FoodSettings
 }
 
 export interface PackItem {
@@ -71,6 +82,28 @@ export interface Reminder {
   time: HHmm
   repeat: ReminderRepeat
   enabled: boolean
+  updatedAt: string
+}
+
+export interface PantryItem {
+  id: string
+  name: string
+  /** Fri text, t.ex. "2 st" eller "500 g". */
+  amount?: string
+  expires?: ISODate
+  addedAt: ISODate
+  source: 'manual' | 'receipt' | 'fridge' | 'shopping'
+  updatedAt: string
+}
+
+export interface ShoppingItem {
+  id: string
+  name: string
+  amount?: string
+  done: boolean
+  /** Varifrån varan kom, t.ex. receptets namn. */
+  note?: string
+  addedAt: ISODate
   updatedAt: string
 }
 
@@ -126,7 +159,7 @@ export interface ChatMessage {
 
 export interface Backup {
   app: 'studieassistent'
-  version: 5
+  version: 6
   exportedAt: string
   settings: Settings | null
   subjects: Subject[]
@@ -135,4 +168,6 @@ export interface Backup {
   contacts: Contact[]
   tasks: Task[]
   reminders: Reminder[]
+  pantry: PantryItem[]
+  shopping: ShoppingItem[]
 }

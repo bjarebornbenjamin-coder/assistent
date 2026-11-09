@@ -8,7 +8,7 @@ const lesson = (subjectId: string, weeks: number[] | null) => ({
 })
 
 beforeEach(async () => {
-  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear()])
+  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
 })
 
 describe('repo', () => {
@@ -39,7 +39,7 @@ describe('repo', () => {
     await saveLesson(lesson(s.id, [0]))
     await saveSettings({ cycleLength: 2, theme: 'dark' })
     const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear()])
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
     await importAll(backup)
     expect((await getSettings()).theme).toBe('dark')
     expect(await db.subjects.count()).toBe(1)
@@ -50,7 +50,7 @@ describe('repo', () => {
 describe('parseBackup', () => {
   it('avvisar fel filer', () => {
     expect(() => parseBackup({})).toThrow(/inte från appen/)
-    expect(() => parseBackup({ app: 'studieassistent', version: 6 })).toThrow(/version/)
+    expect(() => parseBackup({ app: 'studieassistent', version: 7 })).toThrow(/version/)
     expect(() =>
       parseBackup({ app: 'studieassistent', version: 1, settings: null, subjects: [], lessons: [{ id: 'x', subjectId: 'y', weekday: 1, start: '08:00', end: '09:00', room: '', teacher: '', weeks: null }] }),
     ).toThrow(/ämne som inte finns/)
@@ -164,5 +164,23 @@ describe('chattordning', () => {
       Date.now = orig
     }
     expect((await db.chat.orderBy('createdAt').toArray()).map((m) => m.content)).toEqual(['1', '2', '3', '4'])
+  })
+})
+
+describe('mat i export', () => {
+  it('lager och inköpslista följer med export/import; ogiltigt avvisas; äldre filer får tomma listor', async () => {
+    await db.pantry.put({ id: 'p1', name: 'Mjölk', amount: '1 l', expires: '2026-11-12', addedAt: '2026-11-08', source: 'receipt', updatedAt: '' })
+    await db.shopping.put({ id: 's1', name: 'Ägg', done: false, addedAt: '2026-11-08', updatedAt: '' })
+    const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
+    expect(backup.pantry).toHaveLength(1)
+    expect(backup.shopping).toHaveLength(1)
+    await Promise.all([db.pantry.clear(), db.shopping.clear()])
+    await importAll(backup)
+    expect((await db.pantry.get('p1'))?.expires).toBe('2026-11-12')
+    expect((await db.shopping.get('s1'))?.name).toBe('Ägg')
+    const base = { app: 'studieassistent', version: 6, subjects: [], lessons: [] }
+    expect(() => parseBackup({ ...base, pantry: [{ id: 'x', name: '', addedAt: '2026-11-08' }] })).toThrow(/matvara/)
+    expect(() => parseBackup({ ...base, shopping: [{ id: 'x' }] })).toThrow(/inköpsvara/)
+    expect(parseBackup({ ...base, version: 5 })).toMatchObject({ pantry: [], shopping: [] })
   })
 })

@@ -6,6 +6,7 @@ import { useSyncRunner } from './sync/useSyncRunner'
 import { CalendarPage } from './pages/Calendar'
 import { ChatPage } from './pages/Chat'
 import { ImportSchedulePage } from './pages/ImportSchedule'
+import { FoodPage } from './pages/Food'
 import { Home } from './pages/Home'
 import { RemindersPage } from './pages/Reminders'
 import { SchedulePage } from './pages/Schedule'
@@ -15,11 +16,11 @@ import { TasksPage } from './pages/Tasks'
 
 /** Undersidor som hör till en flik markerar den fliken i menyn. */
 const TABS = [
-  { to: '/', label: 'Hem', also: ['/uppgifter', '/paminnelser'] as string[] },
+  { to: '/', label: 'Hem', also: ['/uppgifter', '/paminnelser', '/installningar'] as string[] },
   { to: '/schema', label: 'Schema', also: ['/amnen'] },
   { to: '/kalender', label: 'Kalender', also: [] },
+  { to: '/mat', label: 'Mat', also: [] },
   { to: '/chatt', label: 'Chatt', also: [] },
-  { to: '/installningar', label: 'Inställningar', also: [] },
 ]
 
 function Nav() {
@@ -62,6 +63,7 @@ export function App() {
             <Route path="/chatt" element={<ChatPage />} />
             <Route path="/amnen" element={<SubjectsPage />} />
             <Route path="/uppgifter" element={<TasksPage />} />
+            <Route path="/mat" element={<FoodPage />} />
             <Route path="/paminnelser" element={<RemindersPage />} />
             <Route path="/installningar" element={<SettingsPage />} />
           </Routes>

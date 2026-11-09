@@ -1,6 +1,6 @@
-import { DEFAULT_NOTIFY } from './repo'
+import { DEFAULT_FOOD, DEFAULT_NOTIFY } from './repo'
 import { isColor } from '../domain/colors'
-import type { Backup, CalendarEvent, Contact, Lesson, Reminder, Task, Settings, Subject } from '../domain/types'
+import type { Backup, CalendarEvent, Contact, Lesson, PantryItem, Reminder, ShoppingItem, Task, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
   throw new Error(`Ogiltig säkerhetskopia: ${msg}`)
@@ -24,7 +24,20 @@ function parseSettings(v: unknown): Settings {
     before: typeof n.before === 'boolean' ? n.before : DEFAULT_NOTIFY.before,
     beforeMinutes: typeof n.beforeMinutes === 'number' && n.beforeMinutes >= 0 && n.beforeMinutes <= 240 ? n.beforeMinutes : DEFAULT_NOTIFY.beforeMinutes,
   }
-  return { id: 'main', cycleLength, cycleAnchor, theme, notify } as Settings
+  const f = isObj(v.food) ? v.food : {}
+  const sh = isObj(f.shopping) ? f.shopping : {}
+  const ex = isObj(f.expiry) ? f.expiry : {}
+  const food = {
+    allergies: isStr(f.allergies) ? f.allergies.slice(0, 500) : DEFAULT_FOOD.allergies,
+    portions: typeof f.portions === 'number' && f.portions >= 1 && f.portions <= 12 ? Math.round(f.portions) : DEFAULT_FOOD.portions,
+    shopping: {
+      enabled: typeof sh.enabled === 'boolean' ? sh.enabled : DEFAULT_FOOD.shopping.enabled,
+      weekday: typeof sh.weekday === 'number' && sh.weekday >= 1 && sh.weekday <= 7 ? sh.weekday : DEFAULT_FOOD.shopping.weekday,
+      time: isTime(sh.time) ? (sh.time as string) : DEFAULT_FOOD.shopping.time,
+    },
+    expiry: { enabled: typeof ex.enabled === 'boolean' ? ex.enabled : DEFAULT_FOOD.expiry.enabled, time: isTime(ex.time) ? (ex.time as string) : DEFAULT_FOOD.expiry.time },
+  }
+  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food } as Settings
 }
 
 function parseSubject(v: unknown): Subject {
@@ -106,13 +119,44 @@ function parseReminder(v: unknown): Reminder {
   return { id: v.id, title: v.title, time: v.time as string, repeat, enabled: v.enabled !== false, updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString() }
 }
 
+const SOURCES = ['manual', 'receipt', 'fridge', 'shopping']
+
+function parsePantry(v: unknown): PantryItem {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.name) || !v.name.trim() || !isDate(v.addedAt)) return fail('matvara')
+  if (v.expires !== undefined && !isDate(v.expires)) fail('bäst före-datum')
+  return {
+    id: v.id,
+    name: v.name,
+    ...(isStr(v.amount) && v.amount ? { amount: v.amount } : {}),
+    ...(v.expires !== undefined ? { expires: v.expires as string } : {}),
+    addedAt: v.addedAt as string,
+    source: SOURCES.includes(v.source as string) ? (v.source as PantryItem['source']) : 'manual',
+    updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
+  }
+}
+
+function parseShopping(v: unknown): ShoppingItem {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.name) || !v.name.trim()) return fail('inköpsvara')
+  return {
+    id: v.id,
+    name: v.name,
+    ...(isStr(v.amount) && v.amount ? { amount: v.amount } : {}),
+    done: v.done === true,
+    ...(isStr(v.note) && v.note ? { note: v.note } : {}),
+    addedAt: isDate(v.addedAt) ? (v.addedAt as string) : new Date().toISOString().slice(0, 10),
+    updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
+  }
+}
+
 export function parseBackup(json: unknown): Backup {
   if (!isObj(json) || json.app !== 'studieassistent') return fail('filen kommer inte från appen')
-  if (![1, 2, 3, 4, 5].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
+  if (![1, 2, 3, 4, 5, 6].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
   if (!Array.isArray(json.subjects) || !Array.isArray(json.lessons)) return fail('data saknas')
   const subjects = json.subjects.map(parseSubject)
   const lessons = json.lessons.map(parseLesson)
   const events = Array.isArray(json.events) ? json.events.map(parseEvent) : [] // version 1 saknar händelser
+  const pantry = Array.isArray(json.pantry) ? json.pantry.map(parsePantry) : []
+  const shopping = Array.isArray(json.shopping) ? json.shopping.map(parseShopping) : []
   const reminders = Array.isArray(json.reminders) ? json.reminders.map(parseReminder) : []
   const tasks = Array.isArray(json.tasks) ? json.tasks.map(parseTask) : []
   const contacts = Array.isArray(json.contacts) ? json.contacts.map(parseContact) : []
@@ -120,7 +164,7 @@ export function parseBackup(json: unknown): Backup {
   if (lessons.some((l) => !ids.has(l.subjectId))) fail('lektion pekar på ett ämne som inte finns')
   return {
     app: 'studieassistent',
-    version: 5,
+    version: 6,
     exportedAt: isStr(json.exportedAt) ? json.exportedAt : new Date().toISOString(),
     settings: json.settings == null ? null : parseSettings(json.settings),
     subjects,
@@ -129,5 +173,7 @@ export function parseBackup(json: unknown): Backup {
     contacts,
     tasks,
     reminders,
+    pantry,
+    shopping,
   }
 }
