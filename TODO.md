@@ -45,6 +45,6 @@ Fas 3 görs inte utan att fråga först.
 - [x] 6.1 Chatten: helhetsbild av en dag eller vecka (lektioner, händelser, uppgifter, påminnelser)
 - [x] 6.2 Recept med mått och detaljerade steg
 - [x] 6.3 Kost: måltider med makron (protein, kolhydrater, fett) och vatten
-- [ ] 6.4 Kost: mål och grafer
+- [x] 6.4 Kost: mål och grafer
 - [ ] 6.5 Kost: AI-uppskattning av makron, och "jag åt detta" från recept
 - [ ] 6.6 Chatten: kost och vatten
