@@ -162,7 +162,7 @@ function RecipesTab() {
   }
 
   async function addMissing(r: Recipe) {
-    const res = await addShoppingItems(r.missing.map((name) => ({ name, note: r.title })))
+    const res = await addShoppingItems(r.missing.map((m) => ({ name: m.name, amount: m.amount, note: r.title })))
     setNotes((n) => ({ ...n, [r.title]: `${res.added} ${res.added === 1 ? 'vara' : 'varor'} lades på inköpslistan${res.skipped ? ` (${res.skipped} fanns redan)` : ''}.` }))
   }
 
@@ -206,21 +206,43 @@ function RecipesTab() {
       {recipes?.map((r) => (
         <div key={r.title} className="card recipe">
           <div className="title">{r.title}</div>
-          <div className="sub">{[r.minutes ? `${r.minutes} min` : null, `${r.portions} portioner`].filter(Boolean).join(' · ')}</div>
-          {r.uses.length > 0 && (
-            <p className="sub" style={{ marginTop: 8 }}>
-              Använder: {r.uses.map((u, i) => <span key={u}>{i > 0 && ', '}{expiring.has(u) ? <strong>{u} (snart ute)</strong> : u}</span>)}
-            </p>
+          <div className="sub">
+            {[
+              `${r.portions} portioner`,
+              r.prepMinutes !== null ? `förberedelse ${r.prepMinutes} min` : null,
+              r.cookMinutes !== null ? `tillagning ${r.cookMinutes} min` : null,
+            ].filter(Boolean).join(' · ')}
+          </div>
+          {r.nutrition && (
+            <div className="sub">
+              Per portion (uppskattat): {r.nutrition.kcal} kcal · protein {r.nutrition.protein} g · kolhydrater {r.nutrition.carbs} g · fett {r.nutrition.fat} g
+            </div>
           )}
-          {r.missing.length > 0 && <p className="sub">Saknas: {r.missing.join(', ')}</p>}
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>Visa steg</summary>
-            <ol style={{ paddingLeft: 22, margin: '8px 0' }}>{r.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+
+          <h3 className="recipe-h">Ingredienser</h3>
+          <ul className="ingredients">
+            {r.ingredients.map((i) => (
+              <li key={i.name} className={i.status === 'missing' ? 'missing' : ''}>
+                <span>{i.amount ? `${i.amount} ` : ''}{i.name}</span>
+                <span className="sub">
+                  {i.status === 'pantry' && (expiring.has(i.pantryName ?? '') ? 'har hemma, snart ute' : 'har hemma')}
+                  {i.status === 'staple' && 'basvara'}
+                  {i.status === 'missing' && 'saknas'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {r.equipment.length > 0 && <p className="sub">Du behöver: {r.equipment.join(', ')}</p>}
+
+          <details style={{ marginTop: 8 }} open>
+            <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>Gör så här ({r.steps.length} steg)</summary>
+            <ol className="steps">{r.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
             {r.tip && <p className="sub">Tips: {r.tip}</p>}
           </details>
+
           {r.missing.length > 0 && (
             <div className="actions" style={{ marginTop: 8 }}>
-              <button type="button" className="btn" onClick={() => addMissing(r)}>Lägg saknade på inköpslistan</button>
+              <button type="button" className="btn" onClick={() => addMissing(r)}>Lägg saknade på inköpslistan ({r.missing.length})</button>
             </div>
           )}
           {notes[r.title] && <p className="muted" role="status">{notes[r.title]}</p>}

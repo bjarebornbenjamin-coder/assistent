@@ -194,3 +194,12 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 
 .card.recipe { padding: 16px; }
 .card.recipe .title { font-size: 18px; }
+
+.recipe-h { font-size: 14px; font-weight: 500; margin: 12px 0 4px; color: var(--muted); }
+.ingredients { list-style: none; padding: 0; margin: 0; }
+.ingredients li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--outline); }
+.ingredients li:last-child { border-bottom: 0; }
+.ingredients li.missing > span:first-child { font-weight: 500; }
+.ingredients .sub { white-space: nowrap; }
+.steps { padding-left: 22px; margin: 8px 0; }
+.steps li { margin-bottom: 10px; }
