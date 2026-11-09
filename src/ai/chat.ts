@@ -38,6 +38,7 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
   return [
     'Du är en personlig assistent för en elev/student i en schema- och kalenderapp. Svara kort och på svenska.',
     `Idag är ${WEEKDAYS_LONG[weekdayOf(today) - 1]} ${today}, klockan ${toHHmm(now)}.${week}`,
+    'För frågor om vad användaren har en dag eller vecka (idag, imorgon, i veckan, på fredag): anropa ALLTID get_overview för datumet eller intervallet. Den innehåller lektioner, händelser, uppgifter med deadline, påminnelser och packlista. Sammanfatta ALLT som finns, även om det bara är en uppgift eller en påminnelse, och nämn försenade uppgifter. Är allt tomt, säg uttryckligen att inget är inplanerat. Svara aldrig med tomt svar.',
     'Hämta alltid schema, packlista och händelser med verktygen och gissa aldrig. Räkna ut datum själv ("imorgon", "på fredag") och skicka dem som YYYY-MM-DD.',
     'Du kan inte lägga in, ändra, ta bort eller skicka något direkt: propose_*-verktygen och draft_email visar bara ett förslag som användaren själv bekräftar eller skickar. Säg tydligt att det är ett förslag/utkast som väntar på användaren, inte att det är gjort.',
     foodPrompt(ctx),
@@ -88,6 +89,7 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
   const cards: ChatCard[] = []
   let model = o.model
   let notice: string | undefined
+  let retriedEmpty = false
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
     let res: Response
@@ -114,7 +116,16 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
     const msg = data.choices?.[0]?.message
     if (!msg) throw new ChatError('Oväntat svar från OpenAI.')
 
-    if (!msg.tool_calls?.length) return { reply: (msg.content ?? '').trim() || '(Tomt svar)', cards, notice }
+    if (!msg.tool_calls?.length) {
+      const text = (msg.content ?? '').trim()
+      if (!text && !retriedEmpty) {
+        // Modellen svarade tomt (t.ex. efter tomma verktygsresultat). Be den svara i text, en gång.
+        retriedEmpty = true
+        messages.push({ role: 'user', content: 'Svara i text på min fråga utifrån det du fått från verktygen. Om inget finns, säg det tydligt.' })
+        continue
+      }
+      return { reply: text || 'Jag fick inget svar den här gången. Försök igen.', cards, notice }
+    }
 
     messages.push({ role: 'assistant', content: msg.content ?? null, tool_calls: msg.tool_calls })
     for (const call of msg.tool_calls) {

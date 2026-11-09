@@ -1,10 +1,12 @@
 import { dayLabel, eventTime, eventsOn } from '../domain/calendar'
-import { WEEKDAYS_LONG, addDays, daysBetween } from '../domain/dates'
+import { WEEKDAYS_LONG, addDays, daysBetween, weekdayOf } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
 import { daysLeft, foodKey } from '../domain/food'
+import { occursOn } from '../domain/reminders'
+import { tasksOn } from '../domain/tasks'
 import { toISODate } from '../domain/dates'
-import type { CalendarEvent, ChatCard, Contact, Lesson, PantryItem, Settings, ShoppingItem, Subject, Task } from '../domain/types'
+import type { CalendarEvent, ChatCard, Contact, Lesson, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from '../domain/types'
 
 export interface ToolContext {
   settings: Settings
@@ -15,6 +17,7 @@ export interface ToolContext {
   tasks: Task[]
   pantry: PantryItem[]
   shopping: ShoppingItem[]
+  reminders: Reminder[]
   /** Dagens datum (sätts av chatten så att svaren följer appens klocka). */
   today?: string
 }
@@ -32,8 +35,14 @@ const date = { type: 'string', description: 'Datum som YYYY-MM-DD' }
 export const TOOL_DEFINITIONS = [
   {
     name: 'get_schedule',
-    description: 'Hämta användarens lektioner (ämne, tid, sal, lärare) för ett visst datum.',
+    description: 'Hämta BARA användarens lektioner (ämne, tid, sal, lärare) för ett visst datum. För frågor om vad användaren har en dag eller vecka: använd get_overview i stället, som även innehåller uppgifter, händelser och påminnelser.',
     parameters: { type: 'object', properties: { date }, required: ['date'] },
+  },
+  {
+    name: 'get_overview',
+    description:
+      'Helhetsbild för en dag eller ett datumintervall: lektioner, kalenderhändelser, uppgifter med deadline, påminnelser och packlista per dag, samt försenade uppgifter. Använd ALLTID denna för frågor som "vad har jag imorgon/idag/i veckan". Max 14 dagar.',
+    parameters: { type: 'object', properties: { from: date, to: { ...date, description: 'Sista datum, samma som from för en enda dag' } }, required: ['from'] },
   },
   {
     name: 'get_packing_list',
@@ -230,6 +239,30 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const d = str(args.date)
       if (!DATE.test(d)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
       return { result: { date: d, lessons: lessonsOn(d, ctx.lessons, ctx.settings).map((l) => lessonView(l, ctx.subjects)) } }
+    }
+    case 'get_overview': {
+      const from = str(args.from)
+      const to = str(args.to) || from
+      if (!DATE.test(from) || !DATE.test(to)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const span = daysBetween(from, to)
+      if (span < 0 || span > 13) return err('Intervallet måste vara 1–14 dagar.')
+      const subjectName = (id?: string) => ctx.subjects.find((x) => x.id === id)?.name
+      const days = Array.from({ length: span + 1 }, (_, i) => {
+        const d = addDays(from, i)
+        const dayLessons = lessonsOn(d, ctx.lessons, ctx.settings)
+        return {
+          date: d,
+          weekday: WEEKDAYS_LONG[weekdayOf(d) - 1],
+          lessons: dayLessons.map((l) => lessonView(l, ctx.subjects)),
+          events: eventsOn(d, ctx.events).map((e) => ({ title: e.title, start: e.start, end: e.end, note: e.note || undefined })),
+          tasksDue: tasksOn(d, ctx.tasks).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), done: t.done })),
+          reminders: ctx.reminders.filter((r) => occursOn(r, d)).sort((a, b) => a.time.localeCompare(b.time)).map((r) => ({ title: r.title, time: r.time })),
+          packing: packingFor(dayLessons, ctx.subjects).flatMap((g) => g.items.map((i) => i.text)),
+        }
+      })
+      const overdue = ctx.tasks.filter((t) => !t.done && t.deadline < from).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), deadline: t.deadline }))
+      const empty = days.every((d) => !d.lessons.length && !d.events.length && !d.tasksDue.length && !d.reminders.length) && overdue.length === 0
+      return { result: { days, ...(overdue.length ? { overdueTasks: overdue } : {}), ...(empty ? { note: 'Inget inplanerat under perioden.' } : {}) } }
     }
     case 'get_packing_list': {
       const d = str(args.date)

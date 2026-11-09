@@ -40,3 +40,11 @@ Fas 3 görs inte utan att fråga först.
 - [x] 5.5 Receptförslag
 - [x] 5.6 Påminnelser: utgångsdatum och inköpslista
 - [x] 5.7 Chatten kopplas till lager, recept och inköpslista
+
+## Fas 6 – Chatt, recept och kost
+- [x] 6.1 Chatten: helhetsbild av en dag eller vecka (lektioner, händelser, uppgifter, påminnelser)
+- [ ] 6.2 Recept med mått och detaljerade steg
+- [ ] 6.3 Kost: måltider med makron (protein, kolhydrater, fett) och vatten
+- [ ] 6.4 Kost: mål och grafer
+- [ ] 6.5 Kost: AI-uppskattning av makron, och "jag åt detta" från recept
+- [ ] 6.6 Chatten: kost och vatten

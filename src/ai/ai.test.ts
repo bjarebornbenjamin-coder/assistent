@@ -14,6 +14,7 @@ const ctx: ToolContext = {
   ],
   shopping: [{ id: 's1', name: 'Ägg', done: false, addedAt: '2026-11-01', updatedAt: '' }, { id: 's2', name: 'Bröd', done: true, addedAt: '2026-11-01', updatedAt: '' }],
   today: '2026-11-10',
+  reminders: [{ id: 'r1', title: 'Ta medicin', time: '07:30', repeat: { kind: 'weekdays', days: [2] }, enabled: true, updatedAt: '' }],
   tasks: [{ id: 't1', title: 'Läs kapitel 3', subjectId: 'ma', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 't2', title: 'Gammal', deadline: '2026-11-01', done: false, updatedAt: '' }, { id: 't3', title: 'Klar', deadline: '2026-11-12', done: true, updatedAt: '' }],
   contacts: [
     { id: '1', name: 'Anna Berg', email: 'anna@example.com' },
@@ -162,5 +163,52 @@ describe('matinstruktioner till modellen', () => {
     expect(base).not.toContain('Allergier/kostönskemål')
     const withAllergy = systemPrompt(new Date('2026-11-10T12:00:00'), { ...ctx, settings: { ...ctx.settings, food: { ...ctx.settings.food, allergies: 'nötter' } } })
     expect(withAllergy).toContain('Allergier/kostönskemål som du måste respektera: nötter.')
+  })
+})
+
+describe('get_overview (helhetsbild)', () => {
+  type Day = { date: string; weekday: string; lessons: unknown[]; events: unknown[]; tasksDue: { title: string; subject?: string }[]; reminders: { title: string; time: string }[]; packing: string[] }
+  it('tar med uppgifter och påminnelser även när det inte finns några lektioner (användarens fall)', () => {
+    // 2026-11-12 är en torsdag: ingen lektion, men uppgiften "Läs kapitel 3" har deadline då (och klar uppgift ska vara med som klar)
+    const r = runTool('get_overview', { from: '2026-11-12' }, ctx).result as { days: Day[]; overdueTasks?: unknown[]; note?: string }
+    expect(r.days).toHaveLength(1)
+    expect(r.days[0]).toMatchObject({ date: '2026-11-12', weekday: 'torsdag', lessons: [] })
+    expect(r.days[0].tasksDue.map((t) => [t.title, t.subject])).toEqual([['Läs kapitel 3', 'Matte'], ['Klar', undefined]])
+    expect(r.note).toBeUndefined()
+    expect(r.overdueTasks).toEqual([{ title: 'Gammal', subject: undefined, deadline: '2026-11-01' }])
+  })
+  it('dag med lektion, händelse och packlista; veckodagspåminnelse bara på rätt dag', () => {
+    const r = runTool('get_overview', { from: '2026-11-09', to: '2026-11-10' }, ctx).result as { days: Day[] }
+    expect(r.days[0]).toMatchObject({ weekday: 'måndag', packing: ['miniräknare'], reminders: [] })
+    expect(r.days[0].lessons).toMatchObject([{ subject: 'Matte', start: '08:00' }])
+    expect(r.days[1]).toMatchObject({ weekday: 'tisdag', events: [{ title: 'Prov', start: '09:00' }], reminders: [{ title: 'Ta medicin', time: '07:30' }] })
+  })
+  it('helt tom period ger en tydlig notering, ogiltigt intervall ger fel', () => {
+    const r = runTool('get_overview', { from: '2026-12-20' }, { ...ctx, tasks: [] }).result as { note?: string }
+    expect(r.note).toBe('Inget inplanerat under perioden.')
+    expect((runTool('get_overview', { from: '2026-12-20' }, ctx).result as { note?: string }).note).toBeUndefined() // försenad uppgift finns
+    expect(runTool('get_overview', { from: 'imorgon' }, ctx).result).toHaveProperty('error')
+    expect(runTool('get_overview', { from: '2026-11-01', to: '2026-12-31' }, ctx).result).toHaveProperty('error')
+    expect(runTool('get_overview', { from: '2026-11-05', to: '2026-11-01' }, ctx).result).toHaveProperty('error')
+  })
+})
+
+describe('tomt svar från modellen', () => {
+  it('ber om ett textsvar en gång, och ger annars ett begripligt meddelande', async () => {
+    const answers = [{ choices: [{ message: { content: '' } }] }, { choices: [{ message: { content: 'Du har en uppgift imorgon.' } }] }]
+    const seen: { messages: { role: string; content: string }[] }[] = []
+    const fetchFn = (async (_u: string, init: RequestInit) => {
+      seen.push(JSON.parse(init.body as string))
+      return new Response(JSON.stringify(answers.shift()))
+    }) as unknown as typeof fetch
+    const r = await runChat({ ...base, userText: 'Vad har jag imorgon?', fetchFn })
+    expect(r.reply).toBe('Du har en uppgift imorgon.')
+    expect(seen[1].messages.at(-1)?.content).toMatch(/Svara i text/)
+    const alwaysEmpty = (async () => new Response(JSON.stringify({ choices: [{ message: { content: '' } }] }))) as unknown as typeof fetch
+    expect((await runChat({ ...base, userText: 'hej', fetchFn: alwaysEmpty })).reply).toMatch(/inget svar/)
+  })
+  it('systemprompten kräver get_overview för dag- och veckofrågor', async () => {
+    const { systemPrompt } = await import('./chat')
+    expect(systemPrompt(new Date('2026-11-10T12:00:00'), ctx)).toMatch(/ALLTID get_overview/)
   })
 })

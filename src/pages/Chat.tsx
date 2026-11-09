@@ -9,7 +9,12 @@ import { Markdown } from '../components/Markdown'
 import type { ChatMessage, Subject } from '../domain/types'
 import { useAiConfig, useChat, useSubjects } from '../hooks'
 
-const QUICK_QUESTIONS = ['Vad har jag imorgon?', 'Vad ska jag packa?', 'Vad händer denna vecka?', 'Vad ska jag äta idag?']
+const QUICK_QUESTIONS = [
+  { label: 'Vad har jag imorgon?', text: 'Vad har jag imorgon? Ta med lektioner, händelser, uppgifter och påminnelser.' },
+  { label: 'Vad ska jag packa?', text: 'Vad ska jag packa?' },
+  { label: 'Vad händer denna vecka?', text: 'Vad händer denna vecka? Ta med lektioner, händelser, uppgifter och påminnelser.' },
+  { label: 'Vad ska jag äta idag?', text: 'Vad ska jag äta idag?' },
+]
 
 export function mailtoUrl(to: string, subject: string, body: string): string {
   return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
@@ -130,7 +135,7 @@ export function ChatPage() {
       <div className="composer-wrap">
       <div className="quick" role="group" aria-label="Snabbfrågor">
         {QUICK_QUESTIONS.map((q) => (
-          <button key={q} type="button" className="chip" disabled={busy} onClick={() => sendText(q)}>{q}</button>
+          <button key={q.label} type="button" className="chip" disabled={busy} onClick={() => sendText(q.text)}>{q.label}</button>
         ))}
       </div>
       <form className="composer" onSubmit={send}>
