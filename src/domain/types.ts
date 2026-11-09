@@ -174,6 +174,8 @@ export type ChatCard =
   | { type: 'event'; event: Omit<CalendarEvent, 'id' | 'updatedAt'> }
   | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline'> }
   | { type: 'event_update'; id: string; before: string; afterText: string; after: Omit<CalendarEvent, 'id' | 'updatedAt'> }
+  | { type: 'meal_add'; meal: Pick<Meal, 'date' | 'name' | 'protein' | 'carbs' | 'fat'> & Partial<Pick<Meal, 'time' | 'kcal'>> }
+  | { type: 'water_add'; date: ISODate; ml: number }
   | { type: 'shopping_add'; items: { name: string; amount?: string }[] }
   | { type: 'pantry_add'; items: { name: string; amount?: string; expires?: ISODate }[] }
   | { type: 'pantry_remove'; ids: string[]; names: string[] }

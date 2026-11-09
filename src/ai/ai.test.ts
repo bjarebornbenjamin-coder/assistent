@@ -14,6 +14,12 @@ const ctx: ToolContext = {
   ],
   shopping: [{ id: 's1', name: 'Ägg', done: false, addedAt: '2026-11-01', updatedAt: '' }, { id: 's2', name: 'Bröd', done: true, addedAt: '2026-11-01', updatedAt: '' }],
   today: '2026-11-10',
+  meals: [
+    { id: 'm1', date: '2026-11-10', time: '08:00', name: 'Gröt', protein: 12, carbs: 60, fat: 8, source: 'manual', updatedAt: '' },
+    { id: 'm2', date: '2026-11-10', time: '12:30', name: 'Kyckling och ris', kcal: 650, protein: 45, carbs: 70, fat: 12, source: 'ai', updatedAt: '' },
+    { id: 'm3', date: '2026-11-09', name: 'Pasta', protein: 20, carbs: 90, fat: 10, source: 'manual', updatedAt: '' },
+  ],
+  water: [{ id: '2026-11-10', date: '2026-11-10', ml: 1250, updatedAt: '' }],
   reminders: [{ id: 'r1', title: 'Ta medicin', time: '07:30', repeat: { kind: 'weekdays', days: [2] }, enabled: true, updatedAt: '' }],
   tasks: [{ id: 't1', title: 'Läs kapitel 3', subjectId: 'ma', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 't2', title: 'Gammal', deadline: '2026-11-01', done: false, updatedAt: '' }, { id: 't3', title: 'Klar', deadline: '2026-11-12', done: true, updatedAt: '' }],
   contacts: [
@@ -210,5 +216,44 @@ describe('tomt svar från modellen', () => {
   it('systemprompten kräver get_overview för dag- och veckofrågor', async () => {
     const { systemPrompt } = await import('./chat')
     expect(systemPrompt(new Date('2026-11-10T12:00:00'), ctx)).toMatch(/ALLTID get_overview/)
+  })
+})
+
+describe('kost i chatten', () => {
+  type Nutri = { goals: { protein: number; waterMl: number; glassMl: number; kcal: number }; days: { date: string; totals: { kcal: number; protein: number }; waterMl: number; meals: { name: string; kcal: number }[] }[]; note?: string }
+  it('get_nutrition ger dagssummor, måltider, vatten och mål', () => {
+    const r = runTool('get_nutrition', { from: '2026-11-09', to: '2026-11-10' }, ctx).result as Nutri
+    expect(r.goals).toMatchObject({ protein: 120, waterMl: 2000, glassMl: 250, kcal: 120 * 4 + 250 * 4 + 70 * 9 })
+    expect(r.days.map((d) => d.date)).toEqual(['2026-11-09', '2026-11-10'])
+    expect(r.days[1]).toMatchObject({ totals: { kcal: 12 * 4 + 60 * 4 + 8 * 9 + 650, protein: 57 }, waterMl: 1250 })
+    expect(r.days[1].meals.map((m) => [m.name, m.kcal])).toEqual([['Gröt', 360], ['Kyckling och ris', 650]])
+    expect(r.days[0]).toMatchObject({ waterMl: 0, totals: { protein: 20 } })
+    expect(r.note).toBeUndefined()
+    expect((runTool('get_nutrition', { from: '2026-12-01' }, ctx).result as Nutri).note).toBe('Inget loggat under perioden.')
+    expect(runTool('get_nutrition', { from: 'idag' }, ctx).result).toHaveProperty('error')
+    expect(runTool('get_nutrition', { from: '2026-11-01', to: '2026-12-31' }, ctx).result).toHaveProperty('error')
+  })
+  it('propose_meal ger ett kort med uppskattningen och validerar värden', () => {
+    const r = runTool('propose_meal', { name: 'Två ägg och bröd', protein: 24, carbs: 30.55, fat: 20, kcal: 430.4 }, ctx)
+    expect(r.card).toEqual({ type: 'meal_add', meal: { date: '2026-11-10', name: 'Två ägg och bröd', protein: 24, carbs: 30.6, fat: 20, kcal: 430 } })
+    expect(JSON.stringify(r.result)).toContain('uppskattning')
+    expect((runTool('propose_meal', { name: 'Lunch', date: '2026-11-09', time: '12:00', protein: 1, carbs: 2, fat: 3 }, ctx).card as { meal: { date: string; time: string } }).meal).toMatchObject({ date: '2026-11-09', time: '12:00' })
+    for (const bad of [{ name: '', protein: 1, carbs: 1, fat: 1 }, { name: 'x', protein: -1, carbs: 1, fat: 1 }, { name: 'x', protein: 'mycket', carbs: 1, fat: 1 }, { name: 'x', protein: 1, carbs: 1, fat: 1, date: 'idag' }, { name: 'x', protein: 1, carbs: 1, fat: 1, time: '25:00' }, { name: 'x', protein: 1, carbs: 1, fat: 1, kcal: 99999 }]) {
+      expect(runTool('propose_meal', bad, ctx).result).toHaveProperty('error')
+    }
+  })
+  it('propose_water validerar mängd och datum', () => {
+    expect(runTool('propose_water', { ml: 500 }, ctx).card).toEqual({ type: 'water_add', date: '2026-11-10', ml: 500 })
+    expect(runTool('propose_water', { ml: 250, date: '2026-11-09' }, ctx).card).toMatchObject({ date: '2026-11-09' })
+    for (const bad of [{ ml: 0 }, { ml: 99999 }, { ml: 'lite' }, { ml: 250, date: 'igår' }]) expect(runTool('propose_water', bad, ctx).result).toHaveProperty('error')
+  })
+  it('systemprompten innehåller målen och kostreglerna', async () => {
+    const { systemPrompt } = await import('./chat')
+    const p = systemPrompt(new Date('2026-11-10T12:00:00'), ctx)
+    expect(p).toContain('protein 120 g, kolhydrater 250 g, fett 70 g')
+    expect(p).toContain('ett glas är 250 ml')
+    expect(p).toContain('get_nutrition')
+    expect(p).toContain('propose_water')
+    expect(p).toMatch(/inga medicinska råd/)
   })
 })

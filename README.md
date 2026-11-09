@@ -69,6 +69,17 @@ Fliken Mat har tre delar: Lager (med bäst före-datum), Inköpslista och Recept
 
 Chatten känner till lager och inköpslista: fråga t.ex. "vad ska jag äta idag?" (snabbfrågeknapp finns), "vad kan jag laga på det som snart går ut?" eller "lägg mjölk och ägg på inköpslistan". Den hämtar lagret, utgår från det som snart går ut och föreslår vad som saknas. Att lägga på listan, lägga i lagret eller ta bort ur lagret sker alltid via ett bekräftelsekort, aldrig direkt.
 
+### Kost (måltider, makron, vatten)
+
+Mat → **Kost** har tre vyer:
+- **Dag:** logga måltider med protein, kolhydrater, fett (gram) och valfria kalorier (annars 4/4/9 kcal per gram), och logga vatten (glas eller egen mängd). Måltider kan fyllas i för hand, uppskattas av AI från en beskrivning ("2 ägg och 2 skivor bröd med smör") eller skapas från ett recept ("Jag åt detta"). AI-värden är uppskattningar, alltid redigerbara.
+- **Utveckling:** snitt, och grafer för 7 eller 30 dagar: kalorier fördelade på makron, protein, kolhydrater, fett och vatten, med dina mål inritade. Varje graf har tooltip (hovra, tryck eller vänster/högerpil) och en tabellvy.
+- **Mål:** dina dagliga mål för protein, kolhydrater, fett, vatten och glasstorlek. De är egna riktvärden, inte medicinska råd.
+
+Chatten kan svara på "hur ligger jag till idag?" och föreslå att logga en måltid eller vatten du berättar om (via bekräftelsekort).
+
+Färgerna i graferna (blå, orange, turkos för makron; violett för vatten) är validerade för färgblindhet i både ljust och mörkt läge. Recepten innehåller mått för valt antal portioner, ingredienslista med status och detaljerade steg.
+
 ## Importera schema från bild
 
 Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren och skickas via `/api/chat` till OpenAI (vald modell måste klara bilder, t.ex. gpt-4o-mini). Resultatet visas som förslag som du kan ändra, avmarkera och kontrollera mot krockar och dubbletter innan något sparas. Bilden sparas inte.

@@ -1,3 +1,4 @@
+import { goalKcal } from '../domain/nutrition'
 import { WEEKDAYS_LONG, toHHmm, toISODate, weekdayOf } from '../domain/dates'
 import type { ChatCard, ChatMessage } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
@@ -23,9 +24,11 @@ export class ChatError extends Error {}
 
 function foodPrompt(ctx: ToolContext): string {
   const f = ctx.settings.food
+  const n = ctx.settings.nutrition
   return [
     'Mat: du kan se användarens matlager med list_pantry och inköpslistan med list_shopping. På frågor som "vad ska jag äta idag?" eller "vad kan jag laga?": hämta först list_pantry och föreslå 1–3 enkla rätter som i första hand använder varor som snart går ut (daysLeft 0–2). Basera inte rätter på utgångna varor (negativt daysLeft); nämn dem istället kort. Anta att salt, peppar, vatten, olja och socker finns. Säg vad som saknas och erbjud att lägga det på inköpslistan med propose_shopping_items. Gissa inte vad användaren har: är lagret tomt, säg det och föreslå att de lägger in varor eller skannar ett kvitto.',
     `Standard är ${f.portions} portioner.${f.allergies.trim() ? ` Allergier/kostönskemål som du måste respektera: ${f.allergies.trim()}.` : ''}`,
+    `Kost: användarens dagliga mål är protein ${n.proteinG} g, kolhydrater ${n.carbsG} g, fett ${n.fatG} g (ca ${goalKcal(n)} kcal) och vatten ${n.waterMl} ml; ett glas är ${n.glassMl} ml. Frågor om hur mycket användaren ätit eller druckit, eller vad som återstår: anropa get_nutrition och räkna ut skillnaden mot målen. På "vad ska jag äta?" kan du ta hänsyn till vad som återstår av dagens mål om get_nutrition visar något loggat. Berättar användaren vad hen ätit: uppskatta näringsvärdena för hela måltiden, säg att det är en uppskattning, och föreslå loggning med propose_meal. Berättar hen att hen druckit vatten ("2 glas"): använd propose_water i ml. Det här är bara riktvärden: ge inga medicinska råd.`,
   ].join('\n')
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ChatError, runChat } from '../ai/chat'
 import { applyCard, cardView } from '../ai/cards'
@@ -14,6 +14,7 @@ const QUICK_QUESTIONS = [
   { label: 'Vad ska jag packa?', text: 'Vad ska jag packa?' },
   { label: 'Vad händer denna vecka?', text: 'Vad händer denna vecka? Ta med lektioner, händelser, uppgifter och påminnelser.' },
   { label: 'Vad ska jag äta idag?', text: 'Vad ska jag äta idag?' },
+  { label: 'Hur ligger jag till idag?', text: 'Hur ligger jag till idag med mina mål för protein, kolhydrater, fett och vatten?' },
 ]
 
 export function mailtoUrl(to: string, subject: string, body: string): string {
@@ -64,6 +65,19 @@ export function ChatPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLDivElement>(null)
+  const [composerH, setComposerH] = useState(190)
+
+  // Mät inmatningsområdet, så att senaste kortet alltid hamnar ovanför det oavsett hur högt det blir.
+  useLayoutEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    const update = () => setComposerH(Math.ceil(el.getBoundingClientRect().height) + 52 + 16)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  })
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
@@ -129,10 +143,10 @@ export function ChatPage() {
             {error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link>
           </p>
         )}
-        <div ref={endRef} className="chat-end" />
+        <div ref={endRef} className="chat-end" style={{ scrollMarginBottom: composerH }} />
       </div>
 
-      <div className="composer-wrap">
+      <div className="composer-wrap" ref={composerRef}>
       <div className="quick" role="group" aria-label="Snabbfrågor">
         {QUICK_QUESTIONS.map((q) => (
           <button key={q.label} type="button" className="chip" disabled={busy} onClick={() => sendText(q.text)}>{q.label}</button>

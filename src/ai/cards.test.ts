@@ -4,7 +4,7 @@ import { saveEvent, saveLesson } from '../db/repo'
 import { applyCard } from './cards'
 
 beforeEach(async () => {
-  await Promise.all([db.events.clear(), db.lessons.clear(), db.subjects.clear(), db.tasks.clear(), db.pantry.clear(), db.shopping.clear()])
+  await Promise.all([db.events.clear(), db.lessons.clear(), db.subjects.clear(), db.tasks.clear(), db.pantry.clear(), db.shopping.clear(), db.meals.clear(), db.water.clear()])
 })
 
 describe('applyCard', () => {
@@ -47,5 +47,16 @@ describe('applyCard: mat', () => {
     expect(await applyCard({ type: 'pantry_remove', ids: [butter.id, 'finns-inte'], names: ['Smör'] })).toBe('done')
     expect((await db.pantry.toArray()).map((p) => p.name)).toEqual(['Ost'])
     expect(await applyCard({ type: 'pantry_remove', ids: [butter.id], names: ['Smör'] })).toBe('missing')
+  })
+})
+
+describe('applyCard: kost', () => {
+  it('loggar måltid som AI-uppskattad och lägger till vatten (flera gånger summeras)', async () => {
+    await applyCard({ type: 'meal_add', meal: { date: '2026-11-10', name: 'Gröt', protein: 12, carbs: 60, fat: 8, time: '08:00' } })
+    const m = (await db.meals.toArray())[0]
+    expect(m).toMatchObject({ name: 'Gröt', source: 'ai', date: '2026-11-10', time: '08:00', protein: 12 })
+    await applyCard({ type: 'water_add', date: '2026-11-10', ml: 500 })
+    await applyCard({ type: 'water_add', date: '2026-11-10', ml: 250 })
+    expect((await db.water.get('2026-11-10'))?.ml).toBe(750)
   })
 })

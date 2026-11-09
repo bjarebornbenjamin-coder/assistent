@@ -1,6 +1,7 @@
 import { db } from '../db/db'
-import { addPantryItems, addShoppingItems, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
+import { addPantryItems, addShoppingItems, addWater, saveMeal, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
+import { mealKcal } from '../domain/nutrition'
 import type { ChatCard, Subject } from '../domain/types'
 
 export interface CardView {
@@ -40,6 +41,18 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return { kicker: 'Förslag: ändra lektion', title: card.before, lines: [`Blir: ${card.afterText}`], confirmLabel: 'Ändra', doneText: 'Lektionen är ändrad.' }
     case 'lesson_delete':
       return { kicker: 'Förslag: ta bort lektion', title: card.summary, lines: [], confirmLabel: 'Ta bort', doneText: 'Lektionen är borttagen.', danger: true }
+    case 'meal_add': {
+      const m = card.meal
+      return {
+        kicker: 'Förslag: logga måltid (uppskattning)',
+        title: m.name,
+        lines: [`${dayLabel(m.date)}${m.time ? ` kl ${m.time}` : ''}`, `${mealKcal(m)} kcal · protein ${m.protein} g · kolhydrater ${m.carbs} g · fett ${m.fat} g`],
+        confirmLabel: 'Logga måltiden',
+        doneText: 'Måltiden är loggad. Du kan ändra värdena under Mat → Kost.',
+      }
+    }
+    case 'water_add':
+      return { kicker: 'Förslag: vatten', title: `+${card.ml} ml vatten`, lines: [dayLabel(card.date)], confirmLabel: 'Lägg till', doneText: 'Vattnet är tillagt.' }
     case 'shopping_add':
       return { kicker: 'Förslag: inköpslistan', title: `Lägg på listan: ${card.items.map((i) => (i.amount ? `${i.name} (${i.amount})` : i.name)).join(', ')}`, lines: [], confirmLabel: 'Lägg på listan', doneText: 'Lagt på inköpslistan.' }
     case 'pantry_add':
@@ -88,6 +101,12 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
     case 'lesson_delete':
       if (!(await db.lessons.get(card.id))) return 'missing'
       await deleteLesson(card.id)
+      return 'done'
+    case 'meal_add':
+      await saveMeal({ ...card.meal, id: newId(), source: 'ai', updatedAt: '' })
+      return 'done'
+    case 'water_add':
+      await addWater(card.date, card.ml)
       return 'done'
     case 'shopping_add':
       await addShoppingItems(card.items)

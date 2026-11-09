@@ -47,4 +47,4 @@ Fas 3 görs inte utan att fråga först.
 - [x] 6.3 Kost: måltider med makron (protein, kolhydrater, fett) och vatten
 - [x] 6.4 Kost: mål och grafer
 - [x] 6.5 Kost: AI-uppskattning av makron, och "jag åt detta" från recept
-- [ ] 6.6 Chatten: kost och vatten
+- [x] 6.6 Chatten: kost och vatten

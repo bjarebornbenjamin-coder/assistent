@@ -3,10 +3,11 @@ import { WEEKDAYS_LONG, addDays, daysBetween, weekdayOf } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
 import { daysLeft, foodKey } from '../domain/food'
+import { goalKcal, lastDays, mealKcal, mealsOn } from '../domain/nutrition'
 import { occursOn } from '../domain/reminders'
 import { tasksOn } from '../domain/tasks'
 import { toISODate } from '../domain/dates'
-import type { CalendarEvent, ChatCard, Contact, Lesson, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from '../domain/types'
+import type { CalendarEvent, ChatCard, Contact, Lesson, Meal, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task, WaterDay } from '../domain/types'
 
 export interface ToolContext {
   settings: Settings
@@ -18,6 +19,8 @@ export interface ToolContext {
   pantry: PantryItem[]
   shopping: ShoppingItem[]
   reminders: Reminder[]
+  meals: Meal[]
+  water: WaterDay[]
   /** Dagens datum (sätts av chatten så att svaren följer appens klocka). */
   today?: string
 }
@@ -167,6 +170,35 @@ export const TOOL_DEFINITIONS = [
     name: 'propose_pantry_remove',
     description: 'Föreslå att varor tas bort ur matlagret (uppätna eller slut), angivna med namn som i list_pantry. Tas INTE bort förrän användaren bekräftat.',
     parameters: { type: 'object', properties: { names: { type: 'array', items: { type: 'string' } } }, required: ['names'] },
+  },
+  {
+    name: 'get_nutrition',
+    description:
+      'Hämta loggade måltider (med protein, kolhydrater, fett, kcal), vatten och användarens mål för ett datumintervall (max 14 dagar), med dagssummor. Använd för frågor om hur mycket användaren ätit eller druckit och vad som återstår mot målen.',
+    parameters: { type: 'object', properties: { from: date, to: { ...date, description: 'Sista datum, samma som from för en dag' } }, required: ['from'] },
+  },
+  {
+    name: 'propose_meal',
+    description:
+      'Föreslå att logga en måltid användaren berättat att hen ätit, med din UPPSKATTNING av näringsvärden (hela måltiden, protein/kolhydrater/fett i gram, kcal valfritt). Loggas INTE förrän användaren bekräftat i appen. date är YYYY-MM-DD (standard idag).',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        date,
+        time: { type: 'string', description: 'HH:mm, valfritt' },
+        protein: { type: 'number' },
+        carbs: { type: 'number' },
+        fat: { type: 'number' },
+        kcal: { type: 'number' },
+      },
+      required: ['name', 'protein', 'carbs', 'fat'],
+    },
+  },
+  {
+    name: 'propose_water',
+    description: 'Föreslå att lägga till vatten användaren druckit (ml). Läggs INTE till förrän användaren bekräftat. Ett glas är glassMl från användarens inställningar.',
+    parameters: { type: 'object', properties: { ml: { type: 'number' }, date }, required: ['ml'] },
   },
   {
     name: 'draft_email',
@@ -441,6 +473,56 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           ...(unknown.length ? { note: `Hittade inte: ${unknown.join(', ')}` } : {}),
         },
         card: { type: 'pantry_remove', ids: found.map((p) => p.id), names: found.map((p) => p.name) },
+      }
+    }
+    case 'get_nutrition': {
+      const from = str(args.from)
+      const to = str(args.to) || from
+      if (!DATE.test(from) || !DATE.test(to)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const span = daysBetween(from, to)
+      if (span < 0 || span > 13) return err('Intervallet måste vara 1–14 dagar.')
+      const goals = ctx.settings.nutrition
+      const days = lastDays(to, span + 1, ctx.meals, ctx.water).map((p) => ({
+        date: p.date,
+        totals: { kcal: p.kcal, protein: p.protein, carbs: p.carbs, fat: p.fat },
+        waterMl: p.waterMl,
+        meals: mealsOn(p.date, ctx.meals).map((m) => ({ name: m.name, time: m.time, kcal: mealKcal(m), protein: m.protein, carbs: m.carbs, fat: m.fat })),
+      }))
+      return {
+        result: {
+          goals: { kcal: goalKcal(goals), protein: goals.proteinG, carbs: goals.carbsG, fat: goals.fatG, waterMl: goals.waterMl, glassMl: goals.glassMl },
+          days,
+          ...(days.every((d) => d.meals.length === 0 && d.waterMl === 0) ? { note: 'Inget loggat under perioden.' } : {}),
+        },
+      }
+    }
+    case 'propose_meal': {
+      const name = str(args.name).slice(0, 100)
+      const today = ctx.today ?? toISODate(new Date())
+      const date = str(args.date) || today
+      const time = str(args.time)
+      const n = (v: unknown, max: number) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max ? Math.round(v * 10) / 10 : null)
+      const protein = n(args.protein, 1000)
+      const carbs = n(args.carbs, 2000)
+      const fat = n(args.fat, 1000)
+      const kcal = args.kcal === undefined ? undefined : n(args.kcal, 10000)
+      if (!name) return err('Namn på måltiden saknas.')
+      if (!DATE.test(date)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      if (time && !TIME.test(time)) return err('Ogiltig tid, använd HH:mm.')
+      if (protein === null || carbs === null || fat === null || kcal === null) return err('Protein, kolhydrater och fett måste vara tal (gram) mellan 0 och rimliga gränser.')
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Inget är loggat än. Säg att näringsvärdena är en uppskattning.' },
+        card: { type: 'meal_add', meal: { date, name, protein, carbs, fat, ...(time ? { time } : {}), ...(kcal !== undefined ? { kcal: Math.round(kcal) } : {}) } },
+      }
+    }
+    case 'propose_water': {
+      const ml = typeof args.ml === 'number' ? Math.round(args.ml) : NaN
+      const date = str(args.date) || (ctx.today ?? toISODate(new Date()))
+      if (!Number.isFinite(ml) || ml < 1 || ml > 5000) return err('Mängden måste vara 1–5000 ml.')
+      if (!DATE.test(date)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      return {
+        result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Inget är tillagt än.' },
+        card: { type: 'water_add', date, ml },
       }
     }
     case 'find_contact': {

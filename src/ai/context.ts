@@ -3,7 +3,7 @@ import { getSettings } from '../db/repo'
 import type { ToolContext } from './tools'
 
 export async function loadToolContext(): Promise<ToolContext> {
-  const [settings, lessons, subjects, events, contacts, tasks, pantry, shopping, reminders] = await Promise.all([
+  const [settings, lessons, subjects, events, contacts, tasks, pantry, shopping, reminders, meals, water] = await Promise.all([
     getSettings(),
     db.lessons.toArray(),
     db.subjects.toArray(),
@@ -13,6 +13,8 @@ export async function loadToolContext(): Promise<ToolContext> {
     db.pantry.toArray(),
     db.shopping.toArray(),
     db.reminders.toArray(),
+    db.meals.toArray(),
+    db.water.toArray(),
   ])
-  return { settings, lessons, subjects, events, contacts, tasks, pantry, shopping, reminders }
+  return { settings, lessons, subjects, events, contacts, tasks, pantry, shopping, reminders, meals, water }
 }
