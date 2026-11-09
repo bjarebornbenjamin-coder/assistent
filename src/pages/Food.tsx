@@ -62,8 +62,8 @@ function PantryTab() {
       })}
       <div className="actions">
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till vara</button>
-        <Link to="/mat/skanna?typ=kvitto" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Skanna kvitto</Link>
-        <Link to="/mat/skanna?typ=kylskap" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Skanna kylskåp</Link>
+        <Link to="/mat/skanna?typ=kvitto" className="btn">Skanna kvitto</Link>
+        <Link to="/mat/skanna?typ=kylskap" className="btn">Skanna kylskåp</Link>
       </div>
       {editing && <PantryForm key={editing === 'new' ? 'new' : editing.id} item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {runningOut && <RunOutDialog item={runningOut} onClose={() => setRunningOut(null)} />}
@@ -204,7 +204,12 @@ function RecipesTab() {
           {busy ? 'Tänker…' : recipes ? 'Föreslå nya recept' : 'Föreslå recept'}
         </button>
       </div>
-      {error && <p className="error" role="alert">{error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link></p>}
+      {error && (
+        <>
+          <p className="error" role="alert">{error}</p>
+          <div className="actions" style={{ marginTop: 0 }}><Link to="/installningar" className="btn">Testa anslutningen</Link></div>
+        </>
+      )}
 
       {recipes?.map((r) => (
         <div key={r.title} className="card recipe">

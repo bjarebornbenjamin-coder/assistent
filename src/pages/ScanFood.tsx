@@ -79,7 +79,12 @@ export function ScanFoodPage() {
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
       </div>
-      {error && <p className="error" role="alert">{error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link></p>}
+      {error && (
+        <>
+          <p className="error" role="alert">{error}</p>
+          <div className="actions" style={{ marginTop: 0 }}><Link to="/installningar" className="btn">Testa anslutningen</Link></div>
+        </>
+      )}
       {preview && <img src={preview} alt={kind === 'receipt' ? 'Ditt kvitto' : 'Ditt foto'} className="import-preview" />}
 
       {rows && (
@@ -113,7 +118,7 @@ export function ScanFoodPage() {
             <button type="button" className="btn primary" disabled={chosen.length === 0} onClick={save}>
               Lägg {chosen.length} {chosen.length === 1 ? 'vara' : 'varor'} i lagret{clearing.length > 0 ? ` (${clearing.length} tas bort från listan)` : ''}
             </button>
-            <Link to="/mat" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Avbryt</Link>
+            <Link to="/mat" className="btn">Avbryt</Link>
           </div>
         </>
       )}

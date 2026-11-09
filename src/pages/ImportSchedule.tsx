@@ -121,7 +121,7 @@ export function ImportSchedulePage() {
             <button type="button" className="btn primary" disabled={chosen.length === 0 || invalid} onClick={save}>
               Importera {chosen.length} lektion{chosen.length === 1 ? '' : 'er'}
             </button>
-            <Link to="/schema" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Avbryt</Link>
+            <Link to="/schema" className="btn">Avbryt</Link>
           </div>
         </>
       )}

@@ -454,3 +454,7 @@ input[type='text'], input[type='time'], input[type='date'], select, textarea { b
   .nav { justify-content: center; }
   .nav a { flex: 0 1 140px; }
 }
+/* Länkar som är handlingar ser ut som knappar. */
+a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+a.btn:visited { color: var(--primary); }
+a.btn.primary:visited { color: var(--on-primary); }

@@ -63,8 +63,9 @@ export function Home() {
       <>
         <HomeHeader />
         <p className="empty">
-          Du har inget schema än. <Link to="/schema">Lägg in din första lektion</Link>.
+          Du har inget schema än.
         </p>
+        <div className="actions"><Link to="/schema" className="btn primary">Lägg in din första lektion</Link></div>
       </>
     )
   }
@@ -94,9 +95,10 @@ export function Home() {
       {!packing ? (
         <p className="empty">Inga kommande lektioner.</p>
       ) : packing.groups.length === 0 ? (
-        <p className="empty">
-          Inga packlistor för {dayName(packing.date, today)}s ämnen. <Link to="/amnen">Skriv en</Link>.
-        </p>
+        <>
+          <p className="empty">Inga packlistor för {dayName(packing.date, today)}s ämnen.</p>
+          <div className="actions" style={{ marginTop: 0 }}><Link to="/amnen" className="btn">Skriv packlistor</Link></div>
+        </>
       ) : (
         <div className="card pack">
           {packing.groups.map((g) => (
@@ -143,7 +145,7 @@ export function Home() {
       )}
       <div className="actions">
         <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
-        <Link to="/uppgifter" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Alla uppgifter</Link>
+        <Link to="/uppgifter" className="btn">Alla uppgifter</Link>
       </div>
 
       <h2>Påminnelser idag</h2>
@@ -160,7 +162,7 @@ export function Home() {
         ))
       )}
       <div className="actions">
-        <Link to="/paminnelser" className="btn" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Alla påminnelser</Link>
+        <Link to="/paminnelser" className="btn">Alla påminnelser</Link>
       </div>
       {editingTask && (
         <TaskForm

@@ -164,9 +164,10 @@ export function ChatPage() {
         })()}
         {busy && <div className="bubble assistant muted thinking" role="status" aria-live="polite">Tänker…</div>}
         {error && (
-          <p className="error" role="alert">
-            {error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link>
-          </p>
+          <>
+            <p className="error" role="alert">{error}</p>
+            <div className="actions" style={{ marginTop: 0 }}><Link to="/installningar" className="btn">Testa anslutningen</Link></div>
+          </>
         )}
         <div ref={endRef} className="chat-end" style={{ scrollMarginBottom: composerH }} />
       </div>
