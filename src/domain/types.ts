@@ -82,6 +82,10 @@ export interface CalendarEvent {
   start?: HHmm
   end?: HHmm
   note: string
+  /** Hämtad från Google Kalender: skrivskyddad i appen, ändras i Google. */
+  source?: 'google'
+  /** Länk till händelsen i Google Kalender. */
+  link?: string
   updatedAt: string
 }
 

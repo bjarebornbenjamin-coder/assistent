@@ -92,6 +92,44 @@ Den har också ett **minne** för preferenser ("jag gillar inte svamp", "jag tr�
 
 På "vad ska jag äta idag?" väger den ihop lagret (det som går ut först, aldrig utgånget), vad som återstår av dagens makromål, och dagens schema (träning, hur full dagen är), och ger mått och steg för det den rekommenderar.
 
+## Plugga inför prov
+
+Kalender → "Planera plugg inför prov": skriv provet, datumet och vad som ingår. Pluggpassen sprids ut på lediga tider (efter skolan, inte över händelser) fram till dagen före provet, ett moment per pass och repetition sist. Du ser förslaget innan något läggs in, och kan ångra. Chatten gör samma sak med `plan_study` ("hjälp mig plugga inför matteprovet på fredag").
+
+## Kalendern: lista och sök
+
+Kalender → Lista visar de kommande 60 dagarna. Sökrutan hittar händelser och uppgifter, även gamla, på titel, anteckning och ämne. Chatten kan söka med `search_calendar` ("när var senaste matteprovet?").
+
+## Uppgifter
+
+Uppgifter kan ha klockslag (t.ex. 23:59) och en anteckning.
+
+## Morgonöversikt
+
+En notis varje morgon (standard 07:00, ändras under Inställningar → Notiser): dagens lektioner, packlista, vad som ska in, försenat, händelser, påminnelser och mat som går ut. Skickas inte på tomma dagar. Kräver push-notiser (se ovan).
+
+## Träningslogg
+
+Hem → Träning. Logga gym (övningar, set, reps, vikt, med förra gångens resultat), löpning (distans, tid, tempo) eller annat. Planerade träningspass i kalendern kan loggas med ett tryck. Loggade pass räknas i träningsplaneringen (aldrig tre dagar i rad). Chatten kan logga ("sprang 5 km på 27 min") och svara på frågor om tidigare pass.
+
+## Veckomeny
+
+Mat → Meny. AI:n planerar 3–7 middagar utifrån lagret, dina mål och preferenser, och hur dagarna ser ut: snabba rätter när du har mycket, proteinrikt när du tränar. Det som saknas för hela veckan slås ihop och kan läggas på inköpslistan med ett tryck. Kan ta upp till en halv minut; serverfunktionen får 60 sekunder (`vercel.json`).
+
+## Google Kalender
+
+Visar händelser från dina Google-kalendrar i appen (30 dagar bakåt, 4 månader framåt). Bara läsning: appen ändrar aldrig i Google, och händelserna kan inte ändras i appen. De syns i kalendern, chatten, morgonöversikten och planeringarna (de räknas som upptagen tid).
+
+Inställning (en gång):
+
+1. Gå till console.cloud.google.com, skapa ett projekt och aktivera **Google Calendar API** (APIs & Services → Library).
+2. APIs & Services → OAuth consent screen: välj External, fyll i appnamn och din e-post, lägg till scopet `.../auth/calendar.readonly` och lägg till dig själv som **test user**.
+3. APIs & Services → Credentials → Create credentials → OAuth client ID → **Web application**. Under Authorized JavaScript origins: din Vercel-adress (t.ex. `https://assistent.vercel.app`) och `http://localhost:5173` för utveckling.
+4. Lägg klient-ID:t som `VITE_GOOGLE_CLIENT_ID` i Vercel (Environment Variables) och gör en ny deploy.
+5. Inställningar → Google Kalender → Koppla.
+
+Googles inloggning i webbläsaren gäller ungefär en timme. Under den tiden hämtas händelserna automatiskt när du öppnar appen; efter det trycker du på "Hämta från Google" i kalendern.
+
 ## Importera schema från bild
 
 Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren och skickas via `/api/chat` till OpenAI (vald modell måste klara bilder, t.ex. gpt-4o-mini). Resultatet visas som förslag som du kan ändra, avmarkera och kontrollera mot krockar och dubbletter innan något sparas. Bilden sparas inte.

@@ -3,6 +3,7 @@ import { useFieldError } from '../hooks'
 import { undoable } from '../lib/undo'
 import { deleteEvent, newId, saveEvent } from '../db/repo'
 import type { CalendarEvent, ISODate } from '../domain/types'
+import { dayLabel, eventTime } from '../domain/calendar'
 
 interface Props {
   event: CalendarEvent | null
@@ -10,7 +11,29 @@ interface Props {
   onClose: () => void
 }
 
-export function EventForm({ event, defaultDate, onClose }: Props) {
+export function EventForm(props: Props) {
+  return props.event?.source === 'google' ? <GoogleEventView event={props.event} onClose={props.onClose} /> : <EditableEventForm {...props} />
+}
+
+/** Händelser från Google går inte att ändra här, bara visa och öppna i Google. */
+function GoogleEventView({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={event.title}>
+        <h1>{event.title}</h1>
+        <p>{dayLabel(event.date)} · {eventTime(event)}</p>
+        {event.note && <p className="muted" style={{ whiteSpace: 'pre-line' }}>{event.note}</p>}
+        <p className="muted">Från Google Kalender. Ändra eller ta bort den där.</p>
+        <div className="actions">
+          {event.link && <a className="btn primary" href={event.link} target="_blank" rel="noreferrer">Öppna i Google Kalender</a>}
+          <button type="button" className="btn" onClick={onClose}>Stäng</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EditableEventForm({ event, defaultDate, onClose }: Props) {
   const [title, setTitle] = useState(event?.title ?? '')
   const [date, setDate] = useState(event?.date ?? defaultDate)
   const [allDay, setAllDay] = useState(event ? event.start === undefined : true)

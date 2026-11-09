@@ -97,6 +97,8 @@ function parseEvent(v: unknown): CalendarEvent {
     ...(hasStart ? { start: v.start as string } : {}),
     ...(v.end !== undefined ? { end: v.end as string } : {}),
     note: isStr(v.note) ? v.note : '',
+    ...(v.source === 'google' ? { source: 'google' as const } : {}),
+    ...(isStr(v.link) && v.link.startsWith('https://') ? { link: v.link } : {}),
     updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
   }
 }

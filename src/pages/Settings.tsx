@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
 import { NotifySection } from '../push/NotifySection'
 import { SyncSection } from '../sync/SyncSection'
+import { GoogleSection } from '../google/GoogleSection'
 import { diagnose, type Diagnosis } from '../ai/diagnose'
 import { setBackgroundImage, setBackgroundVeil, useBackground } from '../lib/background'
 import { imageToDataUrl } from '../lib/image'
@@ -318,6 +319,7 @@ export function SettingsPage() {
       </div>
 
       <SyncSection />
+      <GoogleSection />
       <NotifySection />
       <AiSection />
       <MemorySection />

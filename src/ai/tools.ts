@@ -354,7 +354,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const span = daysBetween(from, to)
       if (span < 0 || span > 62) return err('Intervallet måste vara 0–62 dagar.')
       const events = Array.from({ length: span + 1 }, (_, i) => eventsOn(addDays(from, i), ctx.events)).flat()
-      return { result: { events: events.map((e) => ({ id: e.id, title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined })) } }
+      return { result: { events: events.map((e) => ({ id: e.id, title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined, fromGoogle: e.source === 'google' || undefined })) } }
     }
     case 'list_tasks': {
       const from = str(args.from)
@@ -401,6 +401,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
     case 'propose_update_event': {
       const old = ctx.events.find((e) => e.id === str(args.id))
       if (!old) return err('Hittar ingen händelse med det id:t. Hämta id med list_events.')
+      if (old.source === 'google') return err('Händelsen kommer från Google Kalender och kan bara ändras där.')
       const date = 'date' in args ? str(args.date) : old.date
       const title = 'title' in args ? str(args.title) : old.title
       const note = 'note' in args ? str(args.note) : old.note
@@ -426,6 +427,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
     case 'propose_delete_event': {
       const old = ctx.events.find((e) => e.id === str(args.id))
       if (!old) return err('Hittar ingen händelse med det id:t. Hämta id med list_events.')
+      if (old.source === 'google') return err('Händelsen kommer från Google Kalender och kan bara tas bort där.')
       return {
         result: { status: 'awaiting_user_confirmation', message: 'Borttagningen visas för användaren. Inget är borttaget än.' },
         card: { type: 'event_delete', id: old.id, summary: describeEvent(old) },

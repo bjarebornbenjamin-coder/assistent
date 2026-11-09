@@ -8,6 +8,7 @@ export function EventCard({ event, onClick }: { event: CalendarEvent; onClick?: 
       <div>
         <div className="title">{event.title}</div>
         {event.note && <div className="sub note">{event.note}</div>}
+        {event.source === 'google' && <div className="sub">Google Kalender</div>}
       </div>
     </div>
   )

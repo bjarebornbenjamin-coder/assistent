@@ -5,6 +5,7 @@ import { useSettings } from './hooks'
 import { useApplyBackground } from './lib/background'
 import { useNotificationSync } from './push/useNotificationSync'
 import { useSyncRunner } from './sync/useSyncRunner'
+import { useGoogleAutoSync } from './google/google'
 import { CalendarPage } from './pages/Calendar'
 import { ChatPage } from './pages/Chat'
 import { ImportSchedulePage } from './pages/ImportSchedule'
@@ -57,6 +58,7 @@ export function App() {
   useSyncRunner()
   useApplyBackground()
   useNotificationSync()
+  useGoogleAutoSync()
   const settings = useSettings()
   const theme = settings?.theme
 
