@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addChatMessage, addPantryItems, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addChatMessage, addWater, saveMeal, addPantryItems, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
 })
 
 beforeEach(async () => {
-  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
+  await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear(), db.meals.clear(), db.water.clear()])
 })
 
 describe('repo', () => {
@@ -39,7 +39,7 @@ describe('repo', () => {
     await saveLesson(lesson(s.id, [0]))
     await saveSettings({ cycleLength: 2, theme: 'dark' })
     const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
+    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.chat.clear(), db.aiConfig.clear(), db.packChecks.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear(), db.meals.clear(), db.water.clear()])
     await importAll(backup)
     expect((await getSettings()).theme).toBe('dark')
     expect(await db.subjects.count()).toBe(1)
@@ -50,7 +50,7 @@ describe('repo', () => {
 describe('parseBackup', () => {
   it('avvisar fel filer', () => {
     expect(() => parseBackup({})).toThrow(/inte från appen/)
-    expect(() => parseBackup({ app: 'studieassistent', version: 7 })).toThrow(/version/)
+    expect(() => parseBackup({ app: 'studieassistent', version: 8 })).toThrow(/version/)
     expect(() =>
       parseBackup({ app: 'studieassistent', version: 1, settings: null, subjects: [], lessons: [{ id: 'x', subjectId: 'y', weekday: 1, start: '08:00', end: '09:00', room: '', teacher: '', weeks: null }] }),
     ).toThrow(/ämne som inte finns/)
@@ -174,7 +174,7 @@ describe('mat i export', () => {
     const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
     expect(backup.pantry).toHaveLength(1)
     expect(backup.shopping).toHaveLength(1)
-    await Promise.all([db.pantry.clear(), db.shopping.clear()])
+    await Promise.all([db.pantry.clear(), db.shopping.clear(), db.meals.clear(), db.water.clear()])
     await importAll(backup)
     expect((await db.pantry.get('p1'))?.expires).toBe('2026-11-12')
     expect((await db.shopping.get('s1'))?.name).toBe('Ägg')
@@ -222,12 +222,41 @@ describe('inköpslista', () => {
 
 describe('addPantryItems', () => {
   it('sparar varor med källa och datum, och rensar samma varor från inköpslistan', async () => {
-    await Promise.all([db.pantry.clear(), db.shopping.clear()])
+    await Promise.all([db.pantry.clear(), db.shopping.clear(), db.meals.clear(), db.water.clear()])
     await addShoppingItems([{ name: 'Mjölk' }, { name: 'Ägg' }, { name: 'Bröd' }])
     const r = await addPantryItems([{ name: ' mjölk ', amount: '1 l', expires: '2026-11-17' }, { name: 'Ris' }, { name: '  ' }], 'receipt', { clearFromList: true, today: '2026-11-10' })
     expect(r).toEqual({ added: 2, removedFromList: 1 })
     const items = await db.pantry.toArray()
     expect(items.find((i) => i.name === 'mjölk')).toMatchObject({ amount: '1 l', expires: '2026-11-17', source: 'receipt', addedAt: '2026-11-10' })
     expect((await db.shopping.toArray()).map((i) => i.name).sort()).toEqual(['Bröd', 'Ägg'])
+  })
+})
+
+describe('kost: måltider och vatten', () => {
+  it('vatten läggs ihop per dag, kan inte bli negativt och begränsas uppåt', async () => {
+    await db.water.clear()
+    expect(await addWater('2026-11-10', 250)).toBe(250)
+    expect(await addWater('2026-11-10', 250)).toBe(500)
+    expect(await addWater('2026-11-10', -1000)).toBe(0)
+    expect(await addWater('2026-11-10', 99_999)).toBe(20_000)
+    expect(await db.water.count()).toBe(1)
+  })
+  it('måltider och vatten följer med export/import; ogiltigt avvisas; äldre filer får tomma listor och standardmål', async () => {
+    await Promise.all([db.meals.clear(), db.water.clear()])
+    await saveMeal({ id: 'm1', date: '2026-11-10', time: '12:30', name: 'Kyckling och ris', kcal: 650, protein: 45.5, carbs: 70, fat: 12, source: 'ai', updatedAt: '' })
+    await addWater('2026-11-10', 750)
+    const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
+    expect(backup.meals).toHaveLength(1)
+    expect(backup.water).toEqual([expect.objectContaining({ id: '2026-11-10', ml: 750 })])
+    await Promise.all([db.meals.clear(), db.water.clear()])
+    await importAll(backup)
+    expect(await db.meals.get('m1')).toMatchObject({ protein: 45.5, kcal: 650, source: 'ai', time: '12:30' })
+    const base = { app: 'studieassistent', version: 7, subjects: [], lessons: [] }
+    expect(() => parseBackup({ ...base, meals: [{ id: 'x', date: '2026-11-10', name: 'Mat', protein: -1, carbs: 1, fat: 1 }] })).toThrow(/näringsvärden/)
+    expect(() => parseBackup({ ...base, meals: [{ id: 'x', date: 'idag', name: 'Mat', protein: 1, carbs: 1, fat: 1 }] })).toThrow(/måltid/)
+    expect(() => parseBackup({ ...base, water: [{ id: 'a', date: '2026-11-10', ml: 100 }] })).toThrow(/vattenrad/)
+    const old = parseBackup({ ...base, version: 6 })
+    expect(old).toMatchObject({ meals: [], water: [] })
+    expect(parseBackup({ ...base, settings: { cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system' } }).settings?.nutrition).toEqual({ proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 })
   })
 })

@@ -1,6 +1,6 @@
-import { DEFAULT_FOOD, DEFAULT_NOTIFY } from './repo'
+import { DEFAULT_FOOD, DEFAULT_NOTIFY, DEFAULT_NUTRITION } from './repo'
 import { isColor } from '../domain/colors'
-import type { Backup, CalendarEvent, Contact, Lesson, PantryItem, Reminder, ShoppingItem, Task, Settings, Subject } from '../domain/types'
+import type { Backup, CalendarEvent, Contact, Lesson, Meal, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
   throw new Error(`Ogiltig säkerhetskopia: ${msg}`)
@@ -37,7 +37,16 @@ function parseSettings(v: unknown): Settings {
     },
     expiry: { enabled: typeof ex.enabled === 'boolean' ? ex.enabled : DEFAULT_FOOD.expiry.enabled, time: isTime(ex.time) ? (ex.time as string) : DEFAULT_FOOD.expiry.time },
   }
-  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food } as Settings
+  const nu = isObj(v.nutrition) ? v.nutrition : {}
+  const num = (x: unknown, min: number, max: number, d: number) => (typeof x === 'number' && x >= min && x <= max ? Math.round(x) : d)
+  const nutrition = {
+    proteinG: num(nu.proteinG, 0, 1000, DEFAULT_NUTRITION.proteinG),
+    carbsG: num(nu.carbsG, 0, 2000, DEFAULT_NUTRITION.carbsG),
+    fatG: num(nu.fatG, 0, 1000, DEFAULT_NUTRITION.fatG),
+    waterMl: num(nu.waterMl, 0, 20000, DEFAULT_NUTRITION.waterMl),
+    glassMl: num(nu.glassMl, 50, 2000, DEFAULT_NUTRITION.glassMl),
+  }
+  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food, nutrition } as Settings
 }
 
 function parseSubject(v: unknown): Subject {
@@ -148,13 +157,47 @@ function parseShopping(v: unknown): ShoppingItem {
   }
 }
 
+const grams = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max ? Math.round(v * 10) / 10 : null)
+
+function parseMeal(v: unknown): Meal {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.name) || !v.name.trim() || !isDate(v.date)) return fail('måltid')
+  const protein = grams(v.protein, 1000)
+  const carbs = grams(v.carbs, 2000)
+  const fat = grams(v.fat, 1000)
+  if (protein === null || carbs === null || fat === null) return fail('måltidens näringsvärden')
+  const kcal = v.kcal === undefined ? null : grams(v.kcal, 10000)
+  if (v.kcal !== undefined && kcal === null) fail('måltidens kalorier')
+  if (v.time !== undefined && !isTime(v.time)) fail('måltidens tid')
+  return {
+    id: v.id,
+    date: v.date as string,
+    ...(v.time !== undefined ? { time: v.time as string } : {}),
+    name: v.name,
+    ...(kcal !== null ? { kcal } : {}),
+    protein,
+    carbs,
+    fat,
+    source: v.source === 'ai' || v.source === 'recipe' ? v.source : 'manual',
+    updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
+  }
+}
+
+function parseWater(v: unknown): WaterDay {
+  if (!isObj(v) || !isDate(v.date) || v.id !== v.date) return fail('vattenrad')
+  const ml = grams(v.ml, 20000)
+  if (ml === null) return fail('vattenmängd')
+  return { id: v.date as string, date: v.date as string, ml: Math.round(ml), updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString() }
+}
+
 export function parseBackup(json: unknown): Backup {
   if (!isObj(json) || json.app !== 'studieassistent') return fail('filen kommer inte från appen')
-  if (![1, 2, 3, 4, 5, 6].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
+  if (![1, 2, 3, 4, 5, 6, 7].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
   if (!Array.isArray(json.subjects) || !Array.isArray(json.lessons)) return fail('data saknas')
   const subjects = json.subjects.map(parseSubject)
   const lessons = json.lessons.map(parseLesson)
   const events = Array.isArray(json.events) ? json.events.map(parseEvent) : [] // version 1 saknar händelser
+  const meals = Array.isArray(json.meals) ? json.meals.map(parseMeal) : []
+  const water = Array.isArray(json.water) ? json.water.map(parseWater) : []
   const pantry = Array.isArray(json.pantry) ? json.pantry.map(parsePantry) : []
   const shopping = Array.isArray(json.shopping) ? json.shopping.map(parseShopping) : []
   const reminders = Array.isArray(json.reminders) ? json.reminders.map(parseReminder) : []
@@ -164,7 +207,7 @@ export function parseBackup(json: unknown): Backup {
   if (lessons.some((l) => !ids.has(l.subjectId))) fail('lektion pekar på ett ämne som inte finns')
   return {
     app: 'studieassistent',
-    version: 6,
+    version: 7,
     exportedAt: isStr(json.exportedAt) ? json.exportedAt : new Date().toISOString(),
     settings: json.settings == null ? null : parseSettings(json.settings),
     subjects,
@@ -175,5 +218,7 @@ export function parseBackup(json: unknown): Backup {
     reminders,
     pantry,
     shopping,
+    meals,
+    water,
   }
 }

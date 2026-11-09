@@ -203,3 +203,7 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 .ingredients .sub { white-space: nowrap; }
 .steps { padding-left: 22px; margin: 8px 0; }
 .steps li { margin-bottom: 10px; }
+
+.macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.big { font-size: 24px; font-weight: 400; line-height: 1.2; }
+.card.meal { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }

@@ -2,7 +2,7 @@ import { DEFAULT_MODEL } from '../ai/models'
 import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
 import { foodKey } from '../domain/food'
-import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, FoodSettings, Lesson, NotifySettings, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from '../domain/types'
+import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, FoodSettings, Lesson, Meal, NotifySettings, NutritionSettings, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from '../domain/types'
 import { db } from './db'
 
 export const newId = () => crypto.randomUUID()
@@ -16,8 +16,10 @@ export const DEFAULT_FOOD: FoodSettings = {
   expiry: { enabled: true, time: '08:00' },
 }
 
+export const DEFAULT_NUTRITION: NutritionSettings = { proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 }
+
 export function defaultSettings(): Settings {
-  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY, food: DEFAULT_FOOD }
+  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY, food: DEFAULT_FOOD, nutrition: DEFAULT_NUTRITION }
 }
 
 /** Äldre sparade inställningar saknar fält som tillkommit senare. */
@@ -29,6 +31,7 @@ export function withDefaults(stored: Settings | undefined): Settings {
     ...d,
     ...stored,
     notify: { ...DEFAULT_NOTIFY, ...(stored.notify ?? {}) },
+    nutrition: { ...DEFAULT_NUTRITION, ...(stored.nutrition ?? {}) },
     food: { ...DEFAULT_FOOD, ...food, shopping: { ...DEFAULT_FOOD.shopping, ...(food.shopping ?? {}) }, expiry: { ...DEFAULT_FOOD.expiry, ...(food.expiry ?? {}) } },
   }
 }
@@ -339,10 +342,28 @@ export async function runOut(pantryId: string, addToList: boolean): Promise<void
   await db.pantry.delete(pantryId)
 }
 
+export async function saveMeal(meal: Meal): Promise<void> {
+  await db.meals.put({ ...meal, updatedAt: new Date().toISOString() })
+}
+
+export async function deleteMeal(id: string): Promise<void> {
+  await db.meals.delete(id)
+}
+
+/** Ändrar dagens vatten (kan inte bli negativt). Returnerar nya summan. */
+export async function addWater(date: string, deltaMl: number): Promise<number> {
+  return db.transaction('rw', db.water, async () => {
+    const current = (await db.water.get(date))?.ml ?? 0
+    const ml = Math.max(0, Math.min(20_000, Math.round(current + deltaMl)))
+    await db.water.put({ id: date, date, ml, updatedAt: new Date().toISOString() })
+    return ml
+  })
+}
+
 export async function exportAll(): Promise<Backup> {
   return {
     app: 'studieassistent',
-    version: 6,
+    version: 7,
     exportedAt: new Date().toISOString(),
     settings: (await db.settings.get('main')) ?? null,
     subjects: await db.subjects.toArray(),
@@ -353,13 +374,15 @@ export async function exportAll(): Promise<Backup> {
     reminders: await db.reminders.toArray(),
     pantry: await db.pantry.toArray(),
     shopping: await db.shopping.toArray(),
+    meals: await db.meals.toArray(),
+    water: await db.water.toArray(),
   }
 }
 
 /** Ersätter all data med innehållet i säkerhetskopian. */
 export async function importAll(backup: Backup): Promise<void> {
-  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders, db.pantry, db.shopping], async () => {
-    await Promise.all([db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
+  await db.transaction('rw', [db.settings, db.subjects, db.lessons, db.events, db.contacts, db.tasks, db.reminders, db.pantry, db.shopping, db.meals, db.water], async () => {
+    await Promise.all([db.meals.clear(), db.water.clear(), db.settings.clear(), db.subjects.clear(), db.lessons.clear(), db.events.clear(), db.contacts.clear(), db.tasks.clear(), db.reminders.clear(), db.pantry.clear(), db.shopping.clear()])
     if (backup.settings) await db.settings.put(backup.settings)
     await db.subjects.bulkPut(backup.subjects)
     await db.lessons.bulkPut(backup.lessons)
@@ -369,5 +392,7 @@ export async function importAll(backup: Backup): Promise<void> {
     await db.reminders.bulkPut(backup.reminders)
     await db.pantry.bulkPut(backup.pantry)
     await db.shopping.bulkPut(backup.shopping)
+    await db.meals.bulkPut(backup.meals)
+    await db.water.bulkPut(backup.water)
   })
 }

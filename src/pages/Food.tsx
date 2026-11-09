@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { NutritionTab } from './Nutrition'
 import { PantryForm } from '../components/PantryForm'
 import { fetchRecipes, type Recipe } from '../ai/recipes'
 import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveSettings, saveShoppingItem } from '../db/repo'
@@ -9,7 +10,7 @@ import type { PantryItem } from '../domain/types'
 import { useAiConfig, useFieldError, useNow, usePantry, useSettings, useShopping } from '../hooks'
 import { authHeaders } from '../lib/auth'
 
-type Tab = 'lager' | 'inkop' | 'recept'
+type Tab = 'lager' | 'inkop' | 'recept' | 'kost'
 
 function RunOutDialog({ item, onClose }: { item: PantryItem; onClose: () => void }) {
   const done = async (addToList: boolean) => {
@@ -255,7 +256,7 @@ function RecipesTab() {
 export function FoodPage() {
   const [params, setParams] = useSearchParams()
   const v = params.get('v')
-  const tab: Tab = v === 'inkop' ? 'inkop' : v === 'recept' ? 'recept' : 'lager'
+  const tab: Tab = v === 'inkop' ? 'inkop' : v === 'recept' ? 'recept' : v === 'kost' ? 'kost' : 'lager'
   const select = (t: Tab) => setParams(t === 'lager' ? {} : { v: t }, { replace: true })
 
   return (
@@ -263,10 +264,11 @@ export function FoodPage() {
       <h1>Mat</h1>
       <div className="seg" role="group" aria-label="Avsnitt">
         <button type="button" className="tab" aria-pressed={tab === 'lager'} onClick={() => select('lager')}>Lager</button>
-        <button type="button" className="tab" aria-pressed={tab === 'inkop'} onClick={() => select('inkop')}>Inköpslista</button>
+        <button type="button" className="tab" aria-pressed={tab === 'inkop'} onClick={() => select('inkop')}>Inköp</button>
         <button type="button" className="tab" aria-pressed={tab === 'recept'} onClick={() => select('recept')}>Recept</button>
+        <button type="button" className="tab" aria-pressed={tab === 'kost'} onClick={() => select('kost')}>Kost</button>
       </div>
-      {tab === 'lager' ? <PantryTab /> : tab === 'inkop' ? <ShoppingTab /> : <RecipesTab />}
+      {tab === 'lager' ? <PantryTab /> : tab === 'inkop' ? <ShoppingTab /> : tab === 'recept' ? <RecipesTab /> : <NutritionTab />}
     </>
   )
 }

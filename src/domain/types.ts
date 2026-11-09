@@ -22,6 +22,15 @@ export interface FoodSettings {
   expiry: { enabled: boolean; time: HHmm }
 }
 
+export interface NutritionSettings {
+  proteinG: number
+  carbsG: number
+  fatG: number
+  waterMl: number
+  /** Storlek på ett glas vatten för snabbknappen. */
+  glassMl: number
+}
+
 export interface Settings {
   id: 'main'
   /** Antal veckor i cykeln: 1 = samma varje vecka, 2 = A/B, osv. */
@@ -31,6 +40,7 @@ export interface Settings {
   theme: Theme
   notify: NotifySettings
   food: FoodSettings
+  nutrition: NutritionSettings
 }
 
 export interface PackItem {
@@ -107,6 +117,28 @@ export interface ShoppingItem {
   updatedAt: string
 }
 
+export interface Meal {
+  id: string
+  date: ISODate
+  time?: HHmm
+  name: string
+  /** Utelämnas = beräknas från makron (4/4/9 kcal per gram). */
+  kcal?: number
+  protein: number
+  carbs: number
+  fat: number
+  source: 'manual' | 'ai' | 'recipe'
+  updatedAt: string
+}
+
+/** Dagens vatten. id = datum, så en rad per dag. */
+export interface WaterDay {
+  id: ISODate
+  date: ISODate
+  ml: number
+  updatedAt: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -162,7 +194,7 @@ export interface ChatMessage {
 
 export interface Backup {
   app: 'studieassistent'
-  version: 6
+  version: 7
   exportedAt: string
   settings: Settings | null
   subjects: Subject[]
@@ -173,4 +205,6 @@ export interface Backup {
   reminders: Reminder[]
   pantry: PantryItem[]
   shopping: ShoppingItem[]
+  meals: Meal[]
+  water: WaterDay[]
 }
