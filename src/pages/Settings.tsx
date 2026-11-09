@@ -7,7 +7,7 @@ import { setBackgroundImage, setBackgroundVeil, useBackground } from '../lib/bac
 import { imageToDataUrl } from '../lib/image'
 import { authHeaders } from '../lib/auth'
 import { parseBackup } from '../db/backup'
-import { deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
+import { INSTRUCTIONS_MAX, deleteContact, exportAll, importAll, newId, saveAiConfig, saveContact, saveSettings } from '../db/repo'
 import { toISODate } from '../domain/dates'
 import type { Theme } from '../domain/types'
 import { anchorFor, cycleLabel, weekIndex } from '../domain/weekCycle'
@@ -175,6 +175,46 @@ function BackgroundSection() {
   )
 }
 
+function InstructionsSection() {
+  const settings = useSettings()
+  const [draft, setDraft] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  if (!settings) return null
+  const text = draft ?? settings.instructions
+  const changed = draft !== null && draft !== settings.instructions
+  return (
+    <>
+      <h2>Instruktioner till chatten</h2>
+      <p className="muted">Skriv hur du vill att assistenten ska svara, som en egen README. Följs i alla svar och går före appens standardregler.</p>
+      <form
+        onSubmit={async (e: FormEvent) => {
+          e.preventDefault()
+          await saveSettings({ instructions: text.trim().slice(0, INSTRUCTIONS_MAX) })
+          setDraft(null)
+          setSaved(true)
+        }}
+      >
+        <textarea
+          aria-label="Instruktioner till chatten"
+          rows={8}
+          maxLength={INSTRUCTIONS_MAX}
+          placeholder={'t.ex.\n- Svara i punktlistor\n- Jag går i årskurs 2 på gymnasiet, naturprogrammet\n- Föreslå alltid vegetariskt först'}
+          value={text}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            setSaved(false)
+          }}
+        />
+        <div className="actions">
+          <button type="submit" className="btn primary" disabled={!changed}>Spara instruktioner</button>
+          <span className="muted num" style={{ alignSelf: 'center' }}>{text.length} / {INSTRUCTIONS_MAX}</span>
+          {saved && !changed && <span className="muted" role="status" style={{ alignSelf: 'center' }}>Sparat</span>}
+        </div>
+      </form>
+    </>
+  )
+}
+
 function MemorySection() {
   const settings = useSettings()
   const [fact, setFact] = useState('')
@@ -320,6 +360,7 @@ export function SettingsPage() {
       <SyncSection />
       <NotifySection />
       <AiSection />
+      <InstructionsSection />
       <MemorySection />
       <ContactsSection />
 

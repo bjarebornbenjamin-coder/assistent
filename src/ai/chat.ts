@@ -30,6 +30,18 @@ function memoryPrompt(ctx: ToolContext): string {
   ].join('\n')
 }
 
+/** Läggs sist så att användarens egna regler väger tyngst. */
+function instructionsPrompt(ctx: ToolContext): string {
+  const t = ctx.settings.instructions.trim()
+  if (!t) return ''
+  return [
+    'Användarens egna instruktioner till dig (mellan raderna med ---). Följ dem i alla svar; de går före stil- och innehållsreglerna ovan. Undantag: allt som ändrar något blir fortfarande ett förslag som användaren bekräftar, och du hittar aldrig på data.',
+    '---',
+    t,
+    '---',
+  ].join('\n')
+}
+
 function trainingPrompt(): string {
   return [
     'Träning: när användaren frågar när hen ska träna, gymma eller springa, eller vill ha ett träningsschema: anropa ALLTID plan_workouts. Planera aldrig träningsdagar själv utifrån vilka dagar som är lediga i schemat: en ledig dag betyder inte att man ska träna den.',
@@ -66,7 +78,10 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
     'Du kan läsa och ändra allt i appen via verktygen: schema och lektioner, packlistor, kalender, uppgifter, påminnelser, kontakter, matlager, inköpslista, måltider, vatten, mål och träning. Gör det åt användaren med verktygen i stället för att be hen gå till en sida. Allt som ändrar något blir ett förslag som användaren bekräftar; säg det kort, och samla gärna flera förslag i samma svar.',
     'Om en uppgift saknas (t.ex. vilken Anna som avses eller vad mejlet ska handla om), fråga istället för att hitta på.',
     memoryPrompt(ctx),
-  ].join('\n')
+    instructionsPrompt(ctx),
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 interface RunOptions {

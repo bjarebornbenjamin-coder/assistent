@@ -43,6 +43,8 @@ export interface Settings {
   nutrition: NutritionSettings
   /** Saker användaren bett assistenten komma ihåg (preferenser). */
   memories: string[]
+  /** Användarens egna instruktioner till chatten, som en README. */
+  instructions: string
 }
 
 export interface PackItem {

@@ -3,7 +3,7 @@ import { ChatError, runChat } from './chat'
 import { runTool, type ToolContext } from './tools'
 
 const ctx: ToolContext = {
-  settings: { id: 'main', cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system', notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }, food: { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } }, nutrition: { proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 }, memories: [] },
+  settings: { id: 'main', cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system', notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }, food: { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } }, nutrition: { proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 }, memories: [], instructions: '' },
   subjects: [{ id: 'ma', name: 'Matte', packItems: [{ id: '1', text: 'miniräknare' }] }],
   lessons: [{ id: 'l', subjectId: 'ma', weekday: 1, start: '08:00', end: '09:00', room: 'B12', teacher: 'Lena', weeks: null }],
   events: [{ id: 'e', title: 'Prov', date: '2026-11-10', start: '09:00', note: '', updatedAt: '' }],
