@@ -262,6 +262,7 @@ export function SettingsPage() {
     a.download = `studieassistent-${toISODate(new Date())}.json`
     a.click()
     URL.revokeObjectURL(a.href)
+    setMessage({ text: `Säkerhetskopia sparad som ${a.download} (i Hämtade filer).`, error: false })
   }
 
   async function upload(file: File) {

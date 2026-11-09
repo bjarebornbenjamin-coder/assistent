@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { deletePantryItem, newId, savePantryItem } from '../db/repo'
 import { toISODate } from '../domain/dates'
 import type { PantryItem } from '../domain/types'
+import { undoable } from '../lib/undo'
 import { useFieldError } from '../hooks'
 
 interface Props {
@@ -32,7 +33,7 @@ export function PantryForm({ item, onClose }: Props) {
 
   async function remove() {
     if (!item) return
-    await deletePantryItem(item.id)
+    await undoable('Varan är borttagen', ['pantry'], () => deletePantryItem(item.id))
     onClose()
   }
 
@@ -42,7 +43,7 @@ export function PantryForm({ item, onClose }: Props) {
         <h1>{item ? 'Ändra vara' : 'Ny vara i lagret'}</h1>
         <label className="field">
           <span>Vara</span>
-          <input type="text" value={name} onChange={(e) => { setName(e.target.value); touch('name') }} autoFocus />
+          <input type="text" value={name} onChange={(e) => { setName(e.target.value); touch('name') }} autoFocus onFocus={(e) => e.currentTarget.select()} />
         </label>
         <label className="field">
           <span>Mängd (valfritt)</span>

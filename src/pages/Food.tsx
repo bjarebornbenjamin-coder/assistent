@@ -10,12 +10,13 @@ import { expiryLabel, expiryStatus, expiringWithin, sortPantry } from '../domain
 import type { PantryItem } from '../domain/types'
 import { useAiConfig, useFieldError, useNow, usePantry, useSettings, useShopping } from '../hooks'
 import { authHeaders } from '../lib/auth'
+import { undoable } from '../lib/undo'
 
 type Tab = 'lager' | 'inkop' | 'recept' | 'kost'
 
 function RunOutDialog({ item, onClose }: { item: PantryItem; onClose: () => void }) {
   const done = async (addToList: boolean) => {
-    await runOut(item.id, addToList)
+    await undoable(addToList ? `${item.name} är slut och ligger på inköpslistan` : `${item.name} är borttagen`, ['pantry', 'shopping'], () => runOut(item.id, addToList))
     onClose()
   }
   return (
@@ -48,6 +49,11 @@ function PantryTab() {
         {pantry.length === 0 ? 'Lagret är tomt.' : `${pantry.length} varor`}
         {soon > 0 ? ` · ${soon} går ut snart eller har gått ut` : ''}
       </p>
+      <div className="actions" style={{ marginTop: 0, marginBottom: 12 }}>
+        <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till vara</button>
+        <Link to="/mat/skanna?typ=kvitto" className="btn">Skanna kvitto</Link>
+        <Link to="/mat/skanna?typ=kylskap" className="btn">Skanna kylskåp</Link>
+      </div>
       {sorted.map((i) => {
         const status = expiryStatus(i.expires, today)
         return (
@@ -60,11 +66,6 @@ function PantryTab() {
           </div>
         )
       })}
-      <div className="actions">
-        <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till vara</button>
-        <Link to="/mat/skanna?typ=kvitto" className="btn">Skanna kvitto</Link>
-        <Link to="/mat/skanna?typ=kylskap" className="btn">Skanna kylskåp</Link>
-      </div>
       {editing && <PantryForm key={editing === 'new' ? 'new' : editing.id} item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {runningOut && <RunOutDialog item={runningOut} onClose={() => setRunningOut(null)} />}
     </>
@@ -104,7 +105,7 @@ function ShoppingTab() {
         <span className="title">{i.name}{i.amount ? ` · ${i.amount}` : ''}</span>
         {i.note && <span className="sub">{i.note}</span>}
       </div>
-      <button type="button" className="btn" aria-label={`Ta bort ${i.name}`} onClick={() => deleteShoppingItem(i.id)}>Ta bort</button>
+      <button type="button" className="btn" aria-label={`Ta bort ${i.name}`} onClick={() => undoable(`${i.name} är borttagen från listan`, ['shopping'], () => deleteShoppingItem(i.id))}>Ta bort</button>
     </div>
   )
 

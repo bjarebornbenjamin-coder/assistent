@@ -85,6 +85,9 @@ function DayView() {
       </div>
 
       <h2>Måltider</h2>
+      <div className="actions" style={{ marginTop: 0, marginBottom: 12 }}>
+        <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till måltid</button>
+      </div>
       {dayMeals.length === 0 ? <p className="empty">Inga måltider loggade.</p> : dayMeals.map((m) => (
         <button key={m.id} type="button" className="card meal" onClick={() => setEditing(m)}>
           <div className="row">
@@ -96,9 +99,6 @@ function DayView() {
           </div>
         </button>
       ))}
-      <div className="actions">
-        <button type="button" className="btn primary" onClick={() => setEditing('new')}>Lägg till måltid</button>
-      </div>
       {editing && <MealForm key={editing === 'new' ? 'new' : editing.id} meal={editing === 'new' ? null : editing} date={date} onClose={() => setEditing(null)} />}
     </>
   )

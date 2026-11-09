@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { deleteTask, newId, saveTask } from '../db/repo'
 import type { ISODate, Subject, Task } from '../domain/types'
 import { useFieldError } from '../hooks'
+import { undoable } from '../lib/undo'
 
 interface Props {
   task: Task | null
@@ -33,8 +34,8 @@ export function TaskForm({ task, defaultDeadline, subjects, onClose }: Props) {
   }
 
   async function remove() {
-    if (!task || !confirm('Ta bort uppgiften?')) return
-    await deleteTask(task.id)
+    if (!task) return
+    await undoable('Uppgiften är borttagen', ['tasks'], () => deleteTask(task.id))
     onClose()
   }
 
@@ -44,7 +45,7 @@ export function TaskForm({ task, defaultDeadline, subjects, onClose }: Props) {
         <h1>{task ? 'Ändra uppgift' : 'Ny uppgift'}</h1>
         <label className="field">
           <span>Titel</span>
-          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus />
+          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus onFocus={(e) => e.currentTarget.select()} />
         </label>
         <label className="field">
           <span>Ämne (valfritt)</span>

@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { setTaskDone } from '../db/repo'
+import { undoable } from '../lib/undo'
 import { deadlineLabel, isOverdue } from '../domain/tasks'
 import type { Subject, Task } from '../domain/types'
 
@@ -21,7 +22,10 @@ export function TaskRow({ task, subject, today, showDeadline = true, onEdit }: P
         type="checkbox"
         aria-label={`Klar: ${task.title}`}
         checked={task.done}
-        onChange={(e) => setTaskDone(task.id, e.target.checked)}
+        onChange={(e) => {
+          const done = e.target.checked
+          void undoable(done ? `"${task.title}" är klar` : `"${task.title}" är inte klar`, ['tasks'], () => setTaskDone(task.id, done))
+        }}
       />
       <button type="button" className="task-main" onClick={onEdit}>
         <span className="title">{task.title}</span>

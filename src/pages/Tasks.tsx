@@ -22,10 +22,10 @@ export function TasksPage() {
     <>
       <Link to="/" className="back">‹ Tillbaka till Hem</Link>
       <h1>Uppgifter</h1>
-      {open.length === 0 ? <p className="empty">Inga uppgifter att göra.</p> : open.map(row)}
-      <div className="actions">
+      <div className="actions" style={{ marginTop: 0, marginBottom: 12 }}>
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>Ny uppgift</button>
       </div>
+      {open.length === 0 ? <p className="empty">Inga uppgifter att göra.</p> : open.map(row)}
 
       {done.length > 0 && (
         <details style={{ marginTop: 24 }}>

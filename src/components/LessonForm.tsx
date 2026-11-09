@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { undoable } from '../lib/undo'
 import { useFieldError } from '../hooks'
 import { addSubject, deleteLesson, newId, saveLesson } from '../db/repo'
 import { WEEKDAYS_LONG } from '../domain/dates'
@@ -57,8 +58,8 @@ export function LessonForm({ lesson, defaultWeekday, subjects, lessons, cycleLen
   }
 
   async function remove() {
-    if (!lesson || !confirm('Ta bort lektionen?')) return
-    await deleteLesson(lesson.id)
+    if (!lesson) return
+    await undoable('Lektionen är borttagen', ['lessons'], () => deleteLesson(lesson.id))
     onClose()
   }
 

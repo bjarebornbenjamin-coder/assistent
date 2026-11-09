@@ -3,6 +3,7 @@ import { estimateMeal } from '../ai/nutritionEstimate'
 import { deleteMeal, newId, saveMeal } from '../db/repo'
 import { mealKcal } from '../domain/nutrition'
 import type { ISODate, Meal } from '../domain/types'
+import { undoable } from '../lib/undo'
 import { useAiConfig, useFieldError } from '../hooks'
 import { authHeaders } from '../lib/auth'
 
@@ -87,7 +88,7 @@ export function MealForm({ meal, date, draft, onClose }: Props) {
 
   async function remove() {
     if (!meal) return
-    await deleteMeal(meal.id)
+    await undoable('Måltiden är borttagen', ['meals'], () => deleteMeal(meal.id))
     onClose()
   }
 
@@ -104,7 +105,7 @@ export function MealForm({ meal, date, draft, onClose }: Props) {
         <h1>{meal ? 'Ändra måltid' : 'Ny måltid'}</h1>
         <label className="field">
           <span>Vad åt du?</span>
-          <input type="text" value={name} onChange={(e) => { setName(e.target.value); touch('name') }} autoFocus />
+          <input type="text" value={name} onChange={(e) => { setName(e.target.value); touch('name') }} autoFocus onFocus={(e) => e.currentTarget.select()} />
         </label>
         <div className="actions" style={{ marginTop: 0, marginBottom: 12 }}>
           <button type="button" className="btn" disabled={estimating} onClick={estimate}>{estimating ? 'Uppskattar…' : 'Uppskatta näring med AI'}</button>

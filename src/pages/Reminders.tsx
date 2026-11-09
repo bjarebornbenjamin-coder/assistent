@@ -20,6 +20,9 @@ export function RemindersPage() {
       <Link to="/" className="back">‹ Tillbaka till Hem</Link>
       <h1>Påminnelser</h1>
       <p className="muted">Fristående påminnelser skickas som notis. Slå på notiser under Inställningar, och logga in så att servern kan skicka dem.</p>
+      <div className="actions" style={{ marginTop: 0, marginBottom: 12 }}>
+        <button type="button" className="btn primary" onClick={() => setEditing('new')}>Ny påminnelse</button>
+      </div>
       {sorted.length === 0 ? (
         <p className="empty">Inga påminnelser än.</p>
       ) : (
@@ -36,9 +39,6 @@ export function RemindersPage() {
           )
         })
       )}
-      <div className="actions">
-        <button type="button" className="btn primary" onClick={() => setEditing('new')}>Ny påminnelse</button>
-      </div>
       {editing && (
         <ReminderForm
           key={editing === 'new' ? 'new' : editing.id}

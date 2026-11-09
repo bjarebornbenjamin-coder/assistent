@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom'
+import { ToastBar } from './components/ToastBar'
 import { useSettings } from './hooks'
 import { useApplyBackground } from './lib/background'
 import { useNotificationSync } from './push/useNotificationSync'
@@ -24,6 +25,15 @@ const TABS = [
   { to: '/mat', label: 'Mat', also: [] },
   { to: '/chatt', label: 'Chatt', also: [] },
 ]
+
+/** Varje ny sida börjar högst upp (annars följer scrollpositionen med mellan flikar). */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
 
 function Nav() {
   const { pathname } = useLocation()
@@ -56,6 +66,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <main className="shell">
         {!settings ? (
           <p className="loading" role="status" aria-busy="true">Laddar…</p>
@@ -75,6 +86,7 @@ export function App() {
           </Routes>
         )}
       </main>
+      <ToastBar />
       <Nav />
     </BrowserRouter>
   )

@@ -80,9 +80,10 @@ export function ChatPage() {
     return () => ro.disconnect()
   })
 
+  const ready = Boolean(config && messages && subjects)
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages?.length, busy, error])
+  }, [messages?.length, busy, error, ready])
 
   if (!config || !messages || !subjects) return null
 

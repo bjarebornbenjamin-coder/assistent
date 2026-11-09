@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useFieldError } from '../hooks'
+import { undoable } from '../lib/undo'
 import { deleteEvent, newId, saveEvent } from '../db/repo'
 import type { CalendarEvent, ISODate } from '../domain/types'
 
@@ -35,8 +36,8 @@ export function EventForm({ event, defaultDate, onClose }: Props) {
   }
 
   async function remove() {
-    if (!event || !confirm('Ta bort händelsen?')) return
-    await deleteEvent(event.id)
+    if (!event) return
+    await undoable('Händelsen är borttagen', ['events'], () => deleteEvent(event.id))
     onClose()
   }
 
@@ -46,7 +47,7 @@ export function EventForm({ event, defaultDate, onClose }: Props) {
         <h1>{event ? 'Ändra händelse' : 'Ny händelse'}</h1>
         <label className="field">
           <span>Titel</span>
-          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus />
+          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus onFocus={(e) => e.currentTarget.select()} />
         </label>
         <label className="field">
           <span>Datum</span>

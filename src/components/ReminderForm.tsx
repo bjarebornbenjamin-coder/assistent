@@ -3,6 +3,7 @@ import { deleteReminder, newId, saveReminder } from '../db/repo'
 import { WEEKDAYS_SHORT } from '../domain/dates'
 import type { ISODate, Reminder } from '../domain/types'
 import { useFieldError } from '../hooks'
+import { undoable } from '../lib/undo'
 
 type Kind = Reminder['repeat']['kind']
 
@@ -38,8 +39,8 @@ export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
   }
 
   async function remove() {
-    if (!reminder || !confirm('Ta bort påminnelsen?')) return
-    await deleteReminder(reminder.id)
+    if (!reminder) return
+    await undoable('Påminnelsen är borttagen', ['reminders'], () => deleteReminder(reminder.id))
     onClose()
   }
 
@@ -49,7 +50,7 @@ export function ReminderForm({ reminder, defaultDate, onClose }: Props) {
         <h1>{reminder ? 'Ändra påminnelse' : 'Ny påminnelse'}</h1>
         <label className="field">
           <span>Påminn mig om</span>
-          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus />
+          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus onFocus={(e) => e.currentTarget.select()} />
         </label>
         <label className="field">
           <span>Tid</span>
