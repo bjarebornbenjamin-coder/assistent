@@ -8,7 +8,7 @@ import { TOOL_DEFINITIONS, runTool, type ToolContext } from './tools'
 const ctx: ToolContext = {
   settings: {
     id: 'main', cycleLength: 2, cycleAnchor: '2026-11-02', theme: 'system',
-    notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 },
+    notify: { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10, morning: false, morningTime: '07:00' },
     food: { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } },
     nutrition: { proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 },
     memories: ['Gillar inte svamp'],

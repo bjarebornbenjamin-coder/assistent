@@ -9,7 +9,7 @@ const subjects: Subject[] = [
 const lesson = (id: string, subjectId: string, weekday: number, start: string, end: string, room = ''): Lesson => ({ id, subjectId, weekday, start, end, room, teacher: '', weeks: null })
 const lessons = [lesson('a', 'es', 1, '08:20', '09:40', 'A1'), lesson('b', 'ma', 1, '10:00', '11:00'), lesson('c', 'ma', 3, '09:00', '10:00')]
 const base = { cycleLength: 1, cycleAnchor: '2026-11-02' }
-const notify = (o = {}) => ({ evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10, ...o })
+const notify = (o = {}) => ({ evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10, morning: false, morningTime: '07:00', ...o })
 
 describe('planNotifications', () => {
   const now = new Date('2026-11-08T12:00:00') // söndag
@@ -48,7 +48,7 @@ describe('planNotifications', () => {
 describe('mat-notiser', () => {
   const food = { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } }
   const settings = { ...s0(), food }
-  function s0() { return { cycleLength: 1, cycleAnchor: '2026-11-02', notify: { evening: false, eveningTime: '20:00', before: false, beforeMinutes: 10 } } }
+  function s0() { return { cycleLength: 1, cycleAnchor: '2026-11-02', notify: { evening: false, eveningTime: '20:00', before: false, beforeMinutes: 10, morning: false, morningTime: '07:00' } } }
   const item = (name: string, expires?: string) => ({ id: name, name, expires, addedAt: '2026-11-01', source: 'manual' as const, updatedAt: '' })
   const buy = (name: string, done = false) => ({ id: name, name, done, addedAt: '2026-11-01', updatedAt: '' })
   const now = new Date('2026-11-10T12:00:00') // tisdag
@@ -81,5 +81,35 @@ describe('mat-notiser', () => {
   it('många varor kortas med "+N till"', () => {
     const shopping = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((n) => buy(n))
     expect(planNotifications(now, settings, [], [], 7, [], { pantry: [], shopping })[0].body).toBe('a, b, c, d, e, f +2 till')
+  })
+})
+
+describe('morgonöversikt', () => {
+  const now = new Date('2026-11-08T12:00:00') // söndag
+  const s = { ...base, notify: notify({ evening: false, morning: true }) }
+  const tasks = [
+    { id: 't1', title: 'Essä', deadline: '2026-11-09', time: '23:59', done: false, updatedAt: '' },
+    { id: 't2', title: 'Läxa', deadline: '2026-11-07', done: false, updatedAt: '' },
+  ]
+  const events = [{ id: 'e', title: 'Fotboll', date: '2026-11-09', start: '18:00', end: '19:30', note: '', updatedAt: '' }]
+  const pantry = [{ id: 'p', name: 'Mjölk', expires: '2026-11-09', addedAt: '2026-11-01', source: 'manual' as const, updatedAt: '' }]
+
+  it('samlar dagens lektioner, packlista, deadlines, händelser och mat som går ut', () => {
+    const list = planNotifications(now, s, lessons, subjects, 1, [], { pantry, shopping: [] }, { events, tasks })
+    const m = list.find((n) => n.id === 'morning:2026-11-09')!
+    expect(m.fireAt).toEqual(new Date('2026-11-09T07:00:00'))
+    expect(m.title).toBe('Idag: Spanska 08:20, slutar 11:00')
+    expect(m.body.split('\n')).toEqual([
+      'Lektioner: Spanska 08:20, Matte 10:00',
+      'Ta med: bok, dator, penna',
+      'Ska in: Essä 23:59',
+      'Försenat: Läxa',
+      'Händelser: Fotboll 18:00–19:30',
+      'Ät idag: Mjölk (går ut)',
+    ])
+  })
+  it('skickas inte tomma dagar', () => {
+    const ids = planNotifications(now, s, lessons, subjects, 3).map((n) => n.id)
+    expect(ids).toEqual(['morning:2026-11-09', 'morning:2026-11-11'])
   })
 })

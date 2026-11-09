@@ -4,7 +4,7 @@ import { describeRepeat, occursOn, remainingToday } from './reminders'
 import type { Reminder } from './types'
 
 const rem = (id: string, time: string, repeat: Reminder['repeat'], enabled = true): Reminder => ({ id, title: `P ${id}`, time, repeat, enabled, updatedAt: '' })
-const s = { cycleLength: 1, cycleAnchor: '2026-11-02', notify: { evening: false, eveningTime: '20:00', before: false, beforeMinutes: 10 } }
+const s = { cycleLength: 1, cycleAnchor: '2026-11-02', notify: { evening: false, eveningTime: '20:00', before: false, beforeMinutes: 10, morning: false, morningTime: '07:00' } }
 
 describe('påminnelser', () => {
   it('upprepning: en gång, dagligen, valda veckodagar, avstängd', () => {

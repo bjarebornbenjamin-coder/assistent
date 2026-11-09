@@ -7,7 +7,7 @@ import { db } from './db'
 
 export const newId = () => crypto.randomUUID()
 
-export const DEFAULT_NOTIFY: NotifySettings = { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10 }
+export const DEFAULT_NOTIFY: NotifySettings = { evening: true, eveningTime: '20:00', before: false, beforeMinutes: 10, morning: true, morningTime: '07:00' }
 
 export const DEFAULT_FOOD: FoodSettings = {
   allergies: '',

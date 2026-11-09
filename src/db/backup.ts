@@ -23,6 +23,8 @@ function parseSettings(v: unknown): Settings {
     eveningTime: isTime(n.eveningTime) ? (n.eveningTime as string) : DEFAULT_NOTIFY.eveningTime,
     before: typeof n.before === 'boolean' ? n.before : DEFAULT_NOTIFY.before,
     beforeMinutes: typeof n.beforeMinutes === 'number' && n.beforeMinutes >= 0 && n.beforeMinutes <= 240 ? n.beforeMinutes : DEFAULT_NOTIFY.beforeMinutes,
+    morning: typeof n.morning === 'boolean' ? n.morning : DEFAULT_NOTIFY.morning,
+    morningTime: isTime(n.morningTime) ? (n.morningTime as string) : DEFAULT_NOTIFY.morningTime,
   }
   const f = isObj(v.food) ? v.food : {}
   const sh = isObj(f.shopping) ? f.shopping : {}

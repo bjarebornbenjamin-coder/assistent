@@ -2,7 +2,9 @@ import { addDays, parseISODate, toISODate, weekdayOf } from './dates'
 import { packingFor } from './packing'
 import { occursOn } from './reminders'
 import { lessonsOn } from './schedule'
-import type { Lesson, PantryItem, Reminder, Settings, ShoppingItem, Subject } from './types'
+import { eventTime, eventsOn } from './calendar'
+import { tasksOn } from './tasks'
+import type { CalendarEvent, ISODate, Lesson, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from './types'
 
 export interface PlannedNotification {
   /** Stabilt id så att samma notis inte dubbleras vid omplanering. */
@@ -20,6 +22,44 @@ const at = (date: string, time: string): Date => {
 
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
+const list = (items: string[], max: number) => items.slice(0, max).join(', ') + (items.length > max ? ` +${items.length - max} till` : '')
+
+export interface BriefingData {
+  lessons: Lesson[]
+  subjects: Subject[]
+  events: CalendarEvent[]
+  tasks: Task[]
+  reminders: Reminder[]
+  pantry: PantryItem[]
+}
+
+/** Morgonöversikt för en dag, eller null om dagen är tom. En rad per sort så att notisen går att skumma. */
+export function morningBriefing(date: ISODate, s: Pick<Settings, 'cycleLength' | 'cycleAnchor'>, d: BriefingData): { title: string; body: string } | null {
+  const name = (l: Lesson) => d.subjects.find((x) => x.id === l.subjectId)?.name ?? 'Lektion'
+  const lessons = lessonsOn(date, d.lessons, s)
+  const events = eventsOn(date, d.events)
+  const due = tasksOn(date, d.tasks).filter((t) => !t.done)
+  const overdue = d.tasks.filter((t) => !t.done && t.deadline < date)
+  const reminders = d.reminders.filter((r) => occursOn(r, date)).sort((a, b) => a.time.localeCompare(b.time))
+  const expiring = d.pantry.filter((p) => p.expires === date).map((p) => p.name)
+  if (!lessons.length && !events.length && !due.length && !overdue.length && !reminders.length && !expiring.length) return null
+
+  const title = lessons.length
+    ? `Idag: ${name(lessons[0])} ${lessons[0].start}${lessons.length > 1 ? `, slutar ${lessons.reduce((m, l) => (l.end > m ? l.end : m), '00:00')}` : ''}`
+    : 'Idag: ingen skola'
+  const pack = packingFor(lessons, d.subjects).flatMap((g) => g.items.map((it) => lowerFirst(it.text.trim())))
+  const lines = [
+    lessons.length > 1 && `Lektioner: ${list(lessons.map((l) => `${name(l)} ${l.start}`), 4)}`,
+    pack.length > 0 && `Ta med: ${list(pack, 5)}`,
+    due.length > 0 && `Ska in: ${list(due.map((t) => (t.time ? `${t.title} ${t.time}` : t.title)), 3)}`,
+    overdue.length > 0 && `Försenat: ${list(overdue.map((t) => t.title), 2)}`,
+    events.length > 0 && `Händelser: ${list(events.map((e) => (e.start ? `${e.title} ${eventTime(e)}` : e.title)), 3)}`,
+    reminders.length > 0 && `Påminnelser: ${list(reminders.map((r) => `${r.title} ${r.time}`), 3)}`,
+    expiring.length > 0 && `Ät idag: ${list(expiring, 3)} (går ut)`,
+  ].filter((x): x is string => Boolean(x))
+  return { title, body: lines.join('\n') || 'Inget mer inplanerat.' }
+}
+
 /** Notiser de närmaste `days` dagarna, enligt inställningarna. Bara sådana som ligger i framtiden. */
 export function planNotifications(
   now: Date,
@@ -29,6 +69,7 @@ export function planNotifications(
   days = 14,
   reminders: Reminder[] = [],
   food: { pantry: PantryItem[]; shopping: ShoppingItem[] } = { pantry: [], shopping: [] },
+  calendar: { events: CalendarEvent[]; tasks: Task[] } = { events: [], tasks: [] },
 ): PlannedNotification[] {
   const out: PlannedNotification[] = []
   const today = toISODate(now)
@@ -41,6 +82,12 @@ export function planNotifications(
       if (occursOn(r, date) && fireAt > now) {
         out.push({ id: `reminder:${r.id}:${date}`, fireAt, title: r.title, body: `Påminnelse kl ${r.time}` })
       }
+    }
+
+    if (s.notify.morning) {
+      const fireAt = at(date, s.notify.morningTime)
+      const brief = fireAt > now ? morningBriefing(date, s, { lessons, subjects, reminders, pantry: food.pantry, ...calendar }) : null
+      if (brief) out.push({ id: `morning:${date}`, fireAt, ...brief })
     }
 
     const f = s.food

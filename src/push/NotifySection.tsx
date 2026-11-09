@@ -66,6 +66,18 @@ export function NotifySection() {
       {head}
       <div className="checks" style={{ marginBottom: 8 }}>
         <label>
+          <input type="checkbox" checked={n.morning} onChange={(e) => saveSettings({ notify: { ...n, morning: e.target.checked } })} />
+          Morgonöversikt: dagens lektioner, packlista, deadlines, händelser och mat som går ut
+        </label>
+      </div>
+      {n.morning && (
+        <label className="field">
+          <span>Tid för morgonöversikt</span>
+          <input type="time" value={n.morningTime} onChange={(e) => e.target.value && saveSettings({ notify: { ...n, morningTime: e.target.value } })} />
+        </label>
+      )}
+      <div className="checks" style={{ marginBottom: 8 }}>
+        <label>
           <input type="checkbox" checked={n.evening} onChange={(e) => saveSettings({ notify: { ...n, evening: e.target.checked } })} />
           Kvällsnotis med morgondagens lektioner och packlista
         </label>

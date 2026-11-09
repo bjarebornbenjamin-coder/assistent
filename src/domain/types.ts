@@ -10,6 +10,9 @@ export interface NotifySettings {
   /** Notis en stund före varje lektion. */
   before: boolean
   beforeMinutes: number
+  /** Morgonöversikt: dagens lektioner, packlista, deadlines, händelser och mat som går ut. */
+  morning: boolean
+  morningTime: HHmm
 }
 
 export interface FoodSettings {
