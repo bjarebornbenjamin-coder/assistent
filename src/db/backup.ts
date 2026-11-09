@@ -1,6 +1,6 @@
 import { DEFAULT_FOOD, DEFAULT_NOTIFY, DEFAULT_NUTRITION } from './repo'
 import { isColor } from '../domain/colors'
-import type { Backup, CalendarEvent, Contact, Lesson, Meal, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
+import type { Workout, Backup, CalendarEvent, Contact, Lesson, Meal, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
 
 const fail = (msg: string): never => {
   throw new Error(`Ogiltig säkerhetskopia: ${msg}`)
@@ -195,15 +195,43 @@ function parseWater(v: unknown): WaterDay {
   return { id: v.date as string, date: v.date as string, ml: Math.round(ml), updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString() }
 }
 
+const num = (v: unknown, min: number, max: number): number | undefined => (typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max ? v : undefined)
+
+function parseWorkout(v: unknown): Workout {
+  if (!isObj(v) || !isStr(v.id) || !isDate(v.date) || !isStr(v.title) || !v.title.trim() || !isStr(v.type)) return fail('träningspass')
+  const exercises = (Array.isArray(v.exercises) ? v.exercises : []).map((e) => {
+    if (!isObj(e) || !isStr(e.name) || !e.name.trim()) return fail('övning')
+    const sets = num(e.sets, 0, 100)
+    const reps = num(e.reps, 0, 1000)
+    if (sets === undefined || reps === undefined) return fail('övningens set/reps')
+    const weightKg = num(e.weightKg, 0, 1000)
+    return { name: e.name, sets: Math.round(sets), reps: Math.round(reps), ...(weightKg !== undefined ? { weightKg } : {}) }
+  })
+  const minutes = num(v.minutes, 1, 1440)
+  const distanceKm = num(v.distanceKm, 0, 1000)
+  return {
+    id: v.id,
+    date: v.date as string,
+    type: v.type.slice(0, 30),
+    title: v.title.slice(0, 100),
+    ...(minutes !== undefined ? { minutes: Math.round(minutes) } : {}),
+    ...(distanceKm !== undefined ? { distanceKm } : {}),
+    exercises,
+    note: isStr(v.note) ? v.note.slice(0, 2000) : '',
+    updatedAt: isStr(v.updatedAt) ? v.updatedAt : new Date().toISOString(),
+  }
+}
+
 export function parseBackup(json: unknown): Backup {
   if (!isObj(json) || json.app !== 'studieassistent') return fail('filen kommer inte från appen')
-  if (![1, 2, 3, 4, 5, 6, 7].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
+  if (![1, 2, 3, 4, 5, 6, 7, 8].includes(json.version as number)) return fail(`okänd version (${String(json.version)})`)
   if (!Array.isArray(json.subjects) || !Array.isArray(json.lessons)) return fail('data saknas')
   const subjects = json.subjects.map(parseSubject)
   const lessons = json.lessons.map(parseLesson)
   const events = Array.isArray(json.events) ? json.events.map(parseEvent) : [] // version 1 saknar händelser
   const meals = Array.isArray(json.meals) ? json.meals.map(parseMeal) : []
   const water = Array.isArray(json.water) ? json.water.map(parseWater) : []
+  const workouts = Array.isArray(json.workouts) ? json.workouts.map(parseWorkout) : []
   const pantry = Array.isArray(json.pantry) ? json.pantry.map(parsePantry) : []
   const shopping = Array.isArray(json.shopping) ? json.shopping.map(parseShopping) : []
   const reminders = Array.isArray(json.reminders) ? json.reminders.map(parseReminder) : []
@@ -213,7 +241,7 @@ export function parseBackup(json: unknown): Backup {
   if (lessons.some((l) => !ids.has(l.subjectId))) fail('lektion pekar på ett ämne som inte finns')
   return {
     app: 'studieassistent',
-    version: 7,
+    version: 8,
     exportedAt: isStr(json.exportedAt) ? json.exportedAt : new Date().toISOString(),
     settings: json.settings == null ? null : parseSettings(json.settings),
     subjects,
@@ -226,5 +254,6 @@ export function parseBackup(json: unknown): Backup {
     shopping,
     meals,
     water,
+    workouts,
   }
 }

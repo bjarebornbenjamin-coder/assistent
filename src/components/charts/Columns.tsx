@@ -98,7 +98,7 @@ export function Columns({ title, subtitle, columns, labelEvery = 1, goal, format
           className="viz-plot"
           tabIndex={0}
           role="group"
-          aria-label={`${title}. Använd vänster- och högerpil för att läsa varje dag.`}
+          aria-label={`${title}. Använd vänster- och högerpil för att läsa varje stapel.`}
           onPointerMove={onPointer}
           onPointerDown={onPointer}
           onPointerLeave={() => setActive(null)}

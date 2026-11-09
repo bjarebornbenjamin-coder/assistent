@@ -494,3 +494,13 @@ input.switch:checked::after { left: 19px; width: 14px; background: var(--on-prim
 input.search { width: 100%; min-height: 44px; padding: 10px 14px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--outline-strong); border-radius: 24px; margin: 4px 0 8px; }
 input.search:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .section-note { margin: 20px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+fieldset.exercises { border: 0; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; justify-items: start; }
+fieldset.exercises legend { font-size: 13px; color: var(--muted); margin-bottom: 4px; padding: 0; }
+.ex-row { width: 100%; display: grid; gap: 6px; padding: 10px; border-radius: 12px; background: var(--surface-2, var(--surface)); }
+.ex-nums { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 8px; align-items: end; }
+.ex-nums label span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.ex-nums input { min-width: 0; text-align: center; font-variant-numeric: tabular-nums; }
+.ex-row .sub { margin: 0; }
+.card.row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stat-line { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
+.stat-line strong { font-size: 22px; font-weight: 500; }

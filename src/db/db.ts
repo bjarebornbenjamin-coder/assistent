@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { AiConfig, CalendarEvent, ChatMessage, Contact, Lesson, Meal, PackChecks, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
+import type { Workout, AiConfig, CalendarEvent, ChatMessage, Contact, Lesson, Meal, PackChecks, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
 
 export class AppDB extends Dexie {
   settings!: Table<Settings, string>
@@ -16,6 +16,7 @@ export class AppDB extends Dexie {
   shopping!: Table<ShoppingItem, string>
   meals!: Table<Meal, string>
   water!: Table<WaterDay, string>
+  workouts!: Table<Workout, string>
   /** Lokala, osynkade inställningar per enhet (t.ex. bakgrundsbild). */
   local!: Table<{ key: string; value: string; updatedAt: string }, string>
   /** Synk: innehållets hash vid senaste synk, per post. */
@@ -38,6 +39,7 @@ export class AppDB extends Dexie {
     this.version(8).stores({ pantry: 'id, expires', shopping: 'id' })
     this.version(9).stores({ meals: 'id, date', water: 'id' })
     this.version(10).stores({ local: 'key' })
+    this.version(11).stores({ workouts: 'id, date' })
   }
 }
 

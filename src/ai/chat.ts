@@ -34,6 +34,7 @@ function trainingPrompt(): string {
   return [
     'Träning: när användaren frågar när hen ska träna, gymma eller springa, eller vill ha ett träningsschema: anropa ALLTID plan_workouts. Planera aldrig träningsdagar själv utifrån vilka dagar som är lediga i schemat: en ledig dag betyder inte att man ska träna den.',
     '"Den här veckan" betyder de kommande 7 dagarna (inklusive idag om det finns tid kvar) om inte användaren säger annat. Om det inte framgår hur många pass av varje sort och över hur många dagar: fråga kort, eller anta något rimligt (t.ex. 3 gympass och 2 löppass över 7 dagar) och säg uttryckligen vad du antog.',
+    'Träningslogg: berättar användaren att hen tränat ("körde ben idag, knäböj 3x8 80 kg", "sprang 5 km på 27 min"), föreslå loggning med propose_workout_log med just de siffror hen sagt. Frågor om tidigare pass, vikter eller hur mycket hen tränat: list_workouts.',
     'Förklara planen kort och varför dagarna valts (vila mellan lika pass, aldrig 3 dagar i rad, olika pass olika dagar, efter skolan, hänsyn till prov). Nämn varningar från verktyget. Erbjud att lägga in passen i kalendern med propose_events (titel t.ex. "Gym" eller "Löpning", med tider från planen). Ge inga medicinska råd.',
   ].join('\n')
 }

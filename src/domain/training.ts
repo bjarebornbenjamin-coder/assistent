@@ -40,6 +40,8 @@ export interface PlanInput {
   tasks: Task[]
   settings: Pick<Settings, 'cycleLength' | 'cycleAnchor'>
   avoidWeekdays?: number[]
+  /** Loggade (genomförda) pass; räknas som träningsdagar precis som pass i kalendern. */
+  logged?: { date: ISODate; type: string; title: string }[]
   /** Om planen börjar idag: tidigaste starttid (nu), HH:mm. */
   earliestToday?: string
   preferredTime?: 'morning' | 'afternoon' | 'evening'
@@ -170,8 +172,9 @@ export function planWorkouts(input: PlanInput): WorkoutPlan {
   const trainedType = new Map<ISODate, string>()
   for (let i = -3; i < input.days; i++) {
     const d = addDays(input.from, i)
-    for (const e of eventsOn(d, input.events)) {
-      const type = workoutTypeOf(e.title)
+    const fromLog = (input.logged ?? []).filter((w) => w.date === d).map((w) => ({ title: w.title, type: normalizeType(w.type) }))
+    for (const e of [...fromLog, ...eventsOn(d, input.events).map((x) => ({ title: x.title, type: workoutTypeOf(x.title) }))]) {
+      const type = e.type
       if (type && !trainedType.has(d)) {
         trainedType.set(d, type)
         if (i >= 0) existing.push({ date: d, type, title: e.title })

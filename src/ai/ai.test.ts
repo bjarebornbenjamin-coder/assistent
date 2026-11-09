@@ -20,6 +20,7 @@ const ctx: ToolContext = {
     { id: 'm3', date: '2026-11-09', name: 'Pasta', protein: 20, carbs: 90, fat: 10, source: 'manual', updatedAt: '' },
   ],
   water: [{ id: '2026-11-10', date: '2026-11-10', ml: 1250, updatedAt: '' }],
+  workouts: [],
   reminders: [{ id: 'r1', title: 'Ta medicin', time: '07:30', repeat: { kind: 'weekdays', days: [2] }, enabled: true, updatedAt: '' }],
   tasks: [{ id: 't1', title: 'Läs kapitel 3', subjectId: 'ma', deadline: '2026-11-12', done: false, updatedAt: '' }, { id: 't2', title: 'Gammal', deadline: '2026-11-01', done: false, updatedAt: '' }, { id: 't3', title: 'Klar', deadline: '2026-11-12', done: true, updatedAt: '' }],
   contacts: [

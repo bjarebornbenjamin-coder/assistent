@@ -17,10 +17,11 @@ import { SettingsPage } from './pages/Settings'
 import { StudyPlanPage } from './pages/StudyPlan'
 import { SubjectsPage } from './pages/Subjects'
 import { TasksPage } from './pages/Tasks'
+import { TrainingPage } from './pages/Training'
 
 /** Undersidor som hör till en flik markerar den fliken i menyn. */
 const TABS = [
-  { to: '/', label: 'Hem', also: ['/uppgifter', '/paminnelser', '/installningar'] as string[] },
+  { to: '/', label: 'Hem', also: ['/uppgifter', '/paminnelser', '/installningar', '/traning'] as string[] },
   { to: '/schema', label: 'Schema', also: ['/amnen'] },
   { to: '/kalender', label: 'Kalender', also: ['/plugg'] },
   { to: '/mat', label: 'Mat', also: [] },
@@ -81,6 +82,7 @@ export function App() {
             <Route path="/chatt" element={<ChatPage />} />
             <Route path="/amnen" element={<SubjectsPage />} />
             <Route path="/uppgifter" element={<TasksPage />} />
+            <Route path="/traning" element={<TrainingPage />} />
             <Route path="/mat" element={<FoodPage />} />
             <Route path="/mat/skanna" element={<ScanFoodPage />} />
             <Route path="/paminnelser" element={<RemindersPage />} />

@@ -9,7 +9,7 @@ import { goalKcal, lastDays, mealKcal, mealsOn } from '../domain/nutrition'
 import { occursOn } from '../domain/reminders'
 import { tasksOn } from '../domain/tasks'
 import { toISODate } from '../domain/dates'
-import type { CalendarEvent, ChatCard, Contact, Lesson, Meal, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task, WaterDay } from '../domain/types'
+import type { Workout, CalendarEvent, ChatCard, Contact, Lesson, Meal, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task, WaterDay } from '../domain/types'
 
 export interface ToolContext {
   settings: Settings
@@ -23,6 +23,7 @@ export interface ToolContext {
   reminders: Reminder[]
   meals: Meal[]
   water: WaterDay[]
+  workouts: Workout[]
   /** Dagens datum (sätts av chatten så att svaren följer appens klocka). */
   today?: string
   /** Klockslaget nu, HH:mm. */
@@ -331,6 +332,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           tasksDue: tasksOn(d, ctx.tasks).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), done: t.done, time: t.time, note: t.note })),
           reminders: ctx.reminders.filter((r) => occursOn(r, d)).sort((a, b) => a.time.localeCompare(b.time)).map((r) => ({ title: r.title, time: r.time })),
           packing: packingFor(dayLessons, ctx.subjects).flatMap((g) => g.items.map((i) => i.text)),
+          workoutsDone: ctx.workouts.filter((w) => w.date === d).map((w) => w.title),
         }
       })
       const todayIso = ctx.today ?? toISODate(new Date())
@@ -602,6 +604,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
         lessons: ctx.lessons,
         events: ctx.events,
         tasks: ctx.tasks,
+        logged: ctx.workouts,
         settings: ctx.settings,
         avoidWeekdays: avoid,
         ...(from === today ? { earliestToday: nowTime } : {}),

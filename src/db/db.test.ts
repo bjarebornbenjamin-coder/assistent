@@ -50,7 +50,7 @@ describe('repo', () => {
 describe('parseBackup', () => {
   it('avvisar fel filer', () => {
     expect(() => parseBackup({})).toThrow(/inte från appen/)
-    expect(() => parseBackup({ app: 'studieassistent', version: 8 })).toThrow(/version/)
+    expect(() => parseBackup({ app: 'studieassistent', version: 9 })).toThrow(/version/)
     expect(() =>
       parseBackup({ app: 'studieassistent', version: 1, settings: null, subjects: [], lessons: [{ id: 'x', subjectId: 'y', weekday: 1, start: '08:00', end: '09:00', room: '', teacher: '', weeks: null }] }),
     ).toThrow(/ämne som inte finns/)

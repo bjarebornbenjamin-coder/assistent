@@ -1,9 +1,10 @@
 import { db } from '../db/db'
-import { addPantryItems, addShoppingItems, addWater, saveMeal, changePackItems, deleteReminder, deleteShoppingItem, deleteTask, getSettings, saveContact, savePantryItem, saveReminder, saveSettings, saveShoppingItem, addSubject, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
+import { addPantryItems, addShoppingItems, addWater, saveMeal, changePackItems, deleteReminder, deleteShoppingItem, deleteTask, getSettings, saveContact, savePantryItem, saveReminder, saveSettings, saveShoppingItem, addSubject, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask, saveWorkout } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
 import { parseISODate } from '../domain/dates'
 const shortDate = (d: string) => parseISODate(d).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
 import { mealKcal } from '../domain/nutrition'
+import { setLabel, workoutSummary } from '../domain/workouts'
 import { foodKey } from '../domain/food'
 import { describeRepeat } from '../domain/reminders'
 import { WEEKDAYS_LONG } from '../domain/dates'
@@ -128,6 +129,16 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return { kicker: 'Förslag: matlagret', title: `Lägg i lagret: ${card.items.map((i) => (i.amount ? `${i.name} (${i.amount})` : i.name)).join(', ')}`, lines: [], confirmLabel: 'Lägg i lagret', doneText: 'Lagt i matlagret.' }
     case 'pantry_remove':
       return { kicker: 'Förslag: matlagret', title: `Ta bort ur lagret: ${card.names.join(', ')}`, lines: [], confirmLabel: 'Ta bort', doneText: 'Borttaget ur lagret.', danger: true }
+    case 'workout_add': {
+      const w = card.workout
+      return {
+        kicker: 'Förslag: logga träningspass',
+        title: w.title,
+        lines: [[shortDate(w.date), workoutSummary(w)].filter(Boolean).join(' · '), ...w.exercises.map((e) => `${e.name}: ${setLabel(e)}`), ...(w.note ? [w.note] : [])],
+        confirmLabel: 'Logga',
+        doneText: 'Passet är loggat.',
+      }
+    }
     case 'email':
       return {
         kicker: 'Utkast, inte skickat',
@@ -266,6 +277,9 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
       await db.pantry.bulkDelete(existing.map((p) => p!.id))
       return 'done'
     }
+    case 'workout_add':
+      await saveWorkout({ ...card.workout, id: newId(), updatedAt: '' })
+      return 'done'
     case 'email':
       return 'done'
   }

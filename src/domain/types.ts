@@ -144,6 +144,27 @@ export interface WaterDay {
   updatedAt: string
 }
 
+export interface WorkoutExercise {
+  name: string
+  sets: number
+  reps: number
+  weightKg?: number
+}
+
+/** Ett genomfört träningspass. */
+export interface Workout {
+  id: string
+  date: ISODate
+  /** "gym", "löpning" eller annat (fri text). */
+  type: string
+  title: string
+  minutes?: number
+  distanceKm?: number
+  exercises: WorkoutExercise[]
+  note: string
+  updatedAt: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -203,6 +224,7 @@ export type ChatCard =
   | { type: 'event_delete'; id: string; summary: string }
   | { type: 'lesson_update'; id: string; before: string; afterText: string; after: Pick<Lesson, 'weekday' | 'start' | 'end' | 'room' | 'teacher'> }
   | { type: 'lesson_delete'; id: string; summary: string }
+  | { type: 'workout_add'; workout: Omit<Workout, 'id' | 'updatedAt'> }
   | { type: 'email'; to: string; toName?: string; subject: string; body: string }
 
 export interface ChatMessage {
@@ -217,7 +239,7 @@ export interface ChatMessage {
 
 export interface Backup {
   app: 'studieassistent'
-  version: 7
+  version: 8
   exportedAt: string
   settings: Settings | null
   subjects: Subject[]
@@ -230,4 +252,5 @@ export interface Backup {
   shopping: ShoppingItem[]
   meals: Meal[]
   water: WaterDay[]
+  workouts: Workout[]
 }

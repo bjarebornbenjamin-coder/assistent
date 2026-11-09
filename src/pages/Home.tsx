@@ -9,11 +9,12 @@ import { remainingToday } from '../domain/reminders'
 import { upcomingTasks } from '../domain/tasks'
 import { mealsOn, totalsOf } from '../domain/nutrition'
 import type { Task } from '../domain/types'
-import { toHHmm, toISODate } from '../domain/dates'
+import { addDays, toHHmm, toISODate } from '../domain/dates'
 import { setPackChecked } from '../db/repo'
 import { itemKey, packingTarget } from '../domain/packing'
 import { describeNext, findConflicts, lessonsOn, nextLesson, relativeDay } from '../domain/schedule'
-import { useEvents, useLessons, useMeals, usePackChecks, useReminders, useTasks, useWater, useNow, useSettings, useSubjects } from '../hooks'
+import { useEvents, useLessons, useMeals, usePackChecks, useReminders, useTasks, useWater, useWorkouts, useNow, useSettings, useSubjects } from '../hooks'
+import { unloggedPlanned, weeklyCounts } from '../domain/workouts'
 
 function dayName(date: string, today: string): string {
   return relativeDay(date, today).replace(/^på /, '')
@@ -43,11 +44,12 @@ export function Home() {
   const reminders = useReminders()
   const meals = useMeals()
   const water = useWater()
+  const workouts = useWorkouts()
   const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
   const now = useNow()
   const packing0 = settings && lessons && subjects ? packingTarget(now, lessons, subjects, settings) : null
   const checks = usePackChecks(packing0?.date)
-  if (!settings || !lessons || !subjects || !events || !tasks || !reminders || !meals || !water) return null
+  if (!settings || !lessons || !subjects || !events || !tasks || !reminders || !meals || !water || !workouts) return null
 
   const today = toISODate(now)
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
@@ -168,6 +170,19 @@ export function Home() {
             <span><strong>{t.kcal}</strong> kcal</span>
             <span>protein <strong>{n(t.protein)}</strong>/{g.proteinG} g</span>
             <span>vatten <strong>{n(ml / 1000)}</strong>/{n(g.waterMl / 1000)} l</span>
+          </Link>
+        )
+      })()}
+
+      <h2>Träning</h2>
+      {(() => {
+        const week = weeklyCounts(workouts, today, 1)[0]
+        const toLog = unloggedPlanned(events, workouts, addDays(today, -2), today).length
+        return (
+          <Link to="/traning" className="card kost-row">
+            <span><strong>{week.count}</strong> pass den här veckan</span>
+            {week.minutes > 0 && <span><strong>{week.minutes}</strong> min</span>}
+            {toLog > 0 && <span>{toLog} planerat att logga</span>}
           </Link>
         )
       })()}

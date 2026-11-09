@@ -3,6 +3,9 @@ import { describeRepeat } from '../domain/reminders'
 import { WEEKDAYS_LONG, toISODate } from '../domain/dates'
 import { agenda } from '../domain/calendar'
 import { planStudy } from '../domain/study'
+import { normalizeType } from '../domain/training'
+import { byNewest, exerciseHistory, pace } from '../domain/workouts'
+import type { WorkoutExercise } from '../domain/types'
 import type { ChatCard, Reminder } from '../domain/types'
 import type { ToolContext, ToolOutcome } from './tools'
 
@@ -35,6 +38,28 @@ const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('sv-SE
 const reminderSummary = (r: Pick<Reminder, 'title' | 'time' | 'repeat'>) => `${r.title}, ${r.time}, ${describeRepeat(r.repeat)}`
 
 export const MORE_TOOL_DEFINITIONS = [
+  {
+    name: 'list_workouts',
+    description: 'Träningsloggen: genomförda pass mellan två datum (max 92 dagar), med övningar, vikter, distans och tid, plus senaste resultatet per övning. För frågor som "vad tog jag i bänk senast?" eller "hur mycket har jag tränat?".',
+    parameters: { type: 'object', properties: { from: date, to: date }, required: ['from', 'to'] },
+  },
+  {
+    name: 'propose_workout_log',
+    description: 'Föreslå att logga ett genomfört träningspass. type: "gym", "löpning" eller annat. exercises för gym: [{name, sets, reps, weight_kg}]. Hitta inte på siffror som användaren inte sagt.',
+    parameters: {
+      type: 'object',
+      properties: {
+        date,
+        type: { type: 'string' },
+        title: { type: 'string', description: 'T.ex. "Gym ben" eller "Löpning"' },
+        minutes: { type: 'integer' },
+        distance_km: { type: 'number' },
+        exercises: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, sets: { type: 'integer' }, reps: { type: 'integer' }, weight_kg: { type: 'number' } }, required: ['name', 'sets', 'reps'] } },
+        note: { type: 'string' },
+      },
+      required: ['date', 'type'],
+    },
+  },
   {
     name: 'plan_study',
     description: 'Planera pluggpass inför ett prov: sprider ut pass på lediga tider efter skolan fram till dagen före provet, ett moment per pass och repetition sist. Använd ALLTID denna när användaren vill plugga inför ett prov; planera aldrig pluggdagar själv.',
@@ -116,6 +141,51 @@ export const MORE_TOOL_DEFINITIONS = [
 
 export function runMoreTool(name: string, args: Record<string, unknown>, ctx: ToolContext): ToolOutcome | null {
   switch (name) {
+    case 'list_workouts': {
+      const from = str(args.from)
+      const to = str(args.to)
+      if (!DATE.test(from) || !DATE.test(to) || to < from) return err('Ogiltigt datumintervall, använd YYYY-MM-DD.')
+      const list = ctx.workouts.filter((w) => w.date >= from && w.date <= to).sort(byNewest).slice(0, 60)
+      return {
+        result: {
+          workouts: list.map((w) => ({
+            date: w.date,
+            type: w.type,
+            title: w.title,
+            minutes: w.minutes,
+            distanceKm: w.distanceKm,
+            pace: w.minutes && w.distanceKm ? pace(w.minutes, w.distanceKm) : undefined,
+            exercises: w.exercises.length ? w.exercises : undefined,
+            note: w.note || undefined,
+          })),
+          latestPerExercise: exerciseHistory(ctx.workouts).slice(0, 30),
+          ...(list.length === 0 ? { note: 'Inga loggade pass under perioden.' } : {}),
+        },
+      }
+    }
+
+    case 'propose_workout_log': {
+      const d = str(args.date)
+      if (!DATE.test(d)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
+      const type = normalizeType(str(args.type)).slice(0, 30)
+      const minutes = args.minutes === undefined ? undefined : Number(args.minutes)
+      if (minutes !== undefined && (!Number.isInteger(minutes) || minutes < 1 || minutes > 600)) return err('minutes måste vara 1–600.')
+      const km = args.distance_km === undefined ? undefined : Number(args.distance_km)
+      if (km !== undefined && (!Number.isFinite(km) || km <= 0 || km > 300)) return err('distance_km måste vara ett positivt tal.')
+      const exercises: WorkoutExercise[] = []
+      for (const raw of Array.isArray(args.exercises) ? args.exercises.slice(0, 20) : []) {
+        const r = (raw ?? {}) as Record<string, unknown>
+        const sets = Number(r.sets)
+        const reps = Number(r.reps)
+        const kg = r.weight_kg === undefined ? undefined : Number(r.weight_kg)
+        if (!str(r.name) || !Number.isInteger(sets) || sets < 1 || sets > 50 || !Number.isInteger(reps) || reps < 1 || reps > 500) return err('Varje övning behöver namn, sets och reps.')
+        if (kg !== undefined && (!Number.isFinite(kg) || kg < 0 || kg > 1000)) return err('Ogiltig vikt.')
+        exercises.push({ name: str(r.name).slice(0, 60), sets, reps, ...(kg ? { weightKg: kg } : {}) })
+      }
+      const title = str(args.title).slice(0, 100) || (type === 'gym' ? 'Gym' : type === 'löpning' ? 'Löpning' : type.charAt(0).toUpperCase() + type.slice(1))
+      return proposed({ type: 'workout_add', workout: { date: d, type, title, ...(minutes ? { minutes } : {}), ...(km ? { distanceKm: km } : {}), exercises, note: str(args.note).slice(0, 300) } })
+    }
+
     case 'plan_study': {
       const exam = str(args.exam).slice(0, 60)
       const examDate = str(args.date)
