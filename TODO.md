@@ -37,6 +37,6 @@ Fas 3 görs inte utan att fråga först.
 - [x] 5.2 Inköpslista (manuell, köpta varor flyttas till lagret)
 - [x] 5.3 Skanna kvitto
 - [x] 5.4 Skanna kylskåp
-- [ ] 5.5 Receptförslag
+- [x] 5.5 Receptförslag
 - [ ] 5.6 Påminnelser: utgångsdatum och inköpslista
 - [ ] 5.7 Chatten kopplas till lager, recept och inköpslista

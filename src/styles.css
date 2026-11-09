@@ -191,3 +191,6 @@ input[type='date'] { width: 100%; padding: 10px 12px; min-height: 44px; border: 
 .import-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .import-fields input, .import-fields select { min-width: 0; }
 .import-fields > :first-child, .import-fields > .error { grid-column: 1 / -1; }
+
+.card.recipe { padding: 16px; }
+.card.recipe .title { font-size: 18px; }

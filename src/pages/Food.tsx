@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PantryForm } from '../components/PantryForm'
-import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveShoppingItem } from '../db/repo'
+import { fetchRecipes, type Recipe } from '../ai/recipes'
+import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveSettings, saveShoppingItem } from '../db/repo'
 import { toISODate } from '../domain/dates'
 import { expiryLabel, expiryStatus, expiringWithin, sortPantry } from '../domain/food'
 import type { PantryItem } from '../domain/types'
-import { useFieldError, useNow, usePantry, useShopping } from '../hooks'
+import { useAiConfig, useFieldError, useNow, usePantry, useSettings, useShopping } from '../hooks'
+import { authHeaders } from '../lib/auth'
 
-type Tab = 'lager' | 'inkop'
+type Tab = 'lager' | 'inkop' | 'recept'
 
 function RunOutDialog({ item, onClose }: { item: PantryItem; onClose: () => void }) {
   const done = async (addToList: boolean) => {
@@ -131,9 +133,107 @@ function ShoppingTab() {
   )
 }
 
+function RecipesTab() {
+  const pantry = usePantry()
+  const settings = useSettings()
+  const config = useAiConfig()
+  const today = toISODate(useNow())
+  const [recipes, setRecipes] = useState<Recipe[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notes, setNotes] = useState<Record<string, string>>({})
+  const [allergies, setAllergies] = useState<string | null>(null)
+  if (!pantry || !settings || !config) return null
+  const food = settings.food
+  const usable = pantry.filter((p) => !p.expires || p.expires >= today)
+
+  async function suggest() {
+    setBusy(true)
+    setError('')
+    setNotes({})
+    try {
+      setRecipes(await fetchRecipes(usable, food, today, config!.model, await authHeaders()))
+    } catch (e) {
+      setRecipes(null)
+      setError(e instanceof Error ? e.message : 'Något gick fel.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function addMissing(r: Recipe) {
+    const res = await addShoppingItems(r.missing.map((name) => ({ name, note: r.title })))
+    setNotes((n) => ({ ...n, [r.title]: `${res.added} ${res.added === 1 ? 'vara' : 'varor'} lades på inköpslistan${res.skipped ? ` (${res.skipped} fanns redan)` : ''}.` }))
+  }
+
+  const expiring = new Set(expiringWithin(pantry, today).map((p) => p.name))
+
+  return (
+    <>
+      <div className="two">
+        <label className="field">
+          <span>Portioner</span>
+          <select value={food.portions} onChange={(e) => saveSettings({ food: { ...food, portions: Number(e.target.value) } })}>
+            {[1, 2, 3, 4, 5, 6, 8].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>Allergier / kost</span>
+          <input
+            type="text"
+            placeholder="t.ex. nötter, vegetariskt"
+            value={allergies ?? food.allergies}
+            onChange={(e) => setAllergies(e.target.value)}
+            onBlur={() => {
+              if (allergies !== null) void saveSettings({ food: { ...food, allergies: allergies.trim() } })
+              setAllergies(null)
+            }}
+          />
+        </label>
+      </div>
+      <p className="muted">
+        {usable.length === 0
+          ? 'Lägg först in varor i lagret.'
+          : `Förslagen utgår från ${usable.length} varor i lagret, med det som snart går ut först. Salt, peppar, vatten, olja och socker antas finnas. Receptet är AI-genererat: kontrollera själv att varorna är hela och passar dina allergier.`}
+      </p>
+      <div className="actions" style={{ marginTop: 8 }}>
+        <button type="button" className="btn primary" disabled={busy || usable.length === 0} onClick={suggest}>
+          {busy ? 'Tänker…' : recipes ? 'Föreslå nya recept' : 'Föreslå recept'}
+        </button>
+      </div>
+      {error && <p className="error" role="alert">{error} <Link to="/installningar">Testa anslutningen i Inställningar.</Link></p>}
+
+      {recipes?.map((r) => (
+        <div key={r.title} className="card recipe">
+          <div className="title">{r.title}</div>
+          <div className="sub">{[r.minutes ? `${r.minutes} min` : null, `${r.portions} portioner`].filter(Boolean).join(' · ')}</div>
+          {r.uses.length > 0 && (
+            <p className="sub" style={{ marginTop: 8 }}>
+              Använder: {r.uses.map((u, i) => <span key={u}>{i > 0 && ', '}{expiring.has(u) ? <strong>{u} (snart ute)</strong> : u}</span>)}
+            </p>
+          )}
+          {r.missing.length > 0 && <p className="sub">Saknas: {r.missing.join(', ')}</p>}
+          <details style={{ marginTop: 8 }}>
+            <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>Visa steg</summary>
+            <ol style={{ paddingLeft: 22, margin: '8px 0' }}>{r.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
+            {r.tip && <p className="sub">Tips: {r.tip}</p>}
+          </details>
+          {r.missing.length > 0 && (
+            <div className="actions" style={{ marginTop: 8 }}>
+              <button type="button" className="btn" onClick={() => addMissing(r)}>Lägg saknade på inköpslistan</button>
+            </div>
+          )}
+          {notes[r.title] && <p className="muted" role="status">{notes[r.title]}</p>}
+        </div>
+      ))}
+    </>
+  )
+}
+
 export function FoodPage() {
   const [params, setParams] = useSearchParams()
-  const tab: Tab = params.get('v') === 'inkop' ? 'inkop' : 'lager'
+  const v = params.get('v')
+  const tab: Tab = v === 'inkop' ? 'inkop' : v === 'recept' ? 'recept' : 'lager'
   const select = (t: Tab) => setParams(t === 'lager' ? {} : { v: t }, { replace: true })
 
   return (
@@ -142,8 +242,9 @@ export function FoodPage() {
       <div className="seg" role="group" aria-label="Avsnitt">
         <button type="button" className="tab" aria-pressed={tab === 'lager'} onClick={() => select('lager')}>Lager</button>
         <button type="button" className="tab" aria-pressed={tab === 'inkop'} onClick={() => select('inkop')}>Inköpslista</button>
+        <button type="button" className="tab" aria-pressed={tab === 'recept'} onClick={() => select('recept')}>Recept</button>
       </div>
-      {tab === 'lager' ? <PantryTab /> : <ShoppingTab />}
+      {tab === 'lager' ? <PantryTab /> : tab === 'inkop' ? <ShoppingTab /> : <RecipesTab />}
     </>
   )
 }
