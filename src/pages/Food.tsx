@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { NutritionTab } from './Nutrition'
+import { MealForm } from '../components/MealForm'
 import { PantryForm } from '../components/PantryForm'
 import { fetchRecipes, type Recipe } from '../ai/recipes'
 import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveSettings, saveShoppingItem } from '../db/repo'
@@ -144,6 +145,7 @@ function RecipesTab() {
   const [error, setError] = useState('')
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [allergies, setAllergies] = useState<string | null>(null)
+  const [eating, setEating] = useState<Recipe | null>(null)
   if (!pantry || !settings || !config) return null
   const food = settings.food
   const usable = pantry.filter((p) => !p.expires || p.expires >= today)
@@ -241,14 +243,22 @@ function RecipesTab() {
             {r.tip && <p className="sub">Tips: {r.tip}</p>}
           </details>
 
-          {r.missing.length > 0 && (
-            <div className="actions" style={{ marginTop: 8 }}>
-              <button type="button" className="btn" onClick={() => addMissing(r)}>Lägg saknade på inköpslistan ({r.missing.length})</button>
-            </div>
-          )}
+          <div className="actions" style={{ marginTop: 8 }}>
+            <button type="button" className="btn primary" onClick={() => setEating(r)}>Jag åt detta (1 portion)</button>
+            {r.missing.length > 0 && <button type="button" className="btn" onClick={() => addMissing(r)}>Lägg saknade på inköpslistan ({r.missing.length})</button>}
+          </div>
           {notes[r.title] && <p className="muted" role="status">{notes[r.title]}</p>}
         </div>
       ))}
+      {eating && (
+        <MealForm
+          key={eating.title}
+          meal={null}
+          date={today}
+          draft={{ name: eating.title, source: 'recipe', ...(eating.nutrition ?? {}) }}
+          onClose={() => setEating(null)}
+        />
+      )}
     </>
   )
 }
