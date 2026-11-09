@@ -1,4 +1,4 @@
-import { DEFAULT_FOOD, DEFAULT_NOTIFY, DEFAULT_NUTRITION, INSTRUCTIONS_MAX } from './repo'
+import { DEFAULT_FOOD, DEFAULT_NOTIFY, DEFAULT_NUTRITION } from './repo'
 import { isColor } from '../domain/colors'
 import type { Backup, CalendarEvent, Contact, Lesson, Meal, PantryItem, Reminder, ShoppingItem, Task, WaterDay, Settings, Subject } from '../domain/types'
 
@@ -47,8 +47,7 @@ function parseSettings(v: unknown): Settings {
     glassMl: num(nu.glassMl, 50, 2000, DEFAULT_NUTRITION.glassMl),
   }
   const memories = Array.isArray(v.memories) ? v.memories.filter((m): m is string => isStr(m) && m.trim() !== '').map((m) => m.trim().slice(0, 200)).slice(0, 30) : []
-  const instructions = isStr(v.instructions) ? v.instructions.trim().slice(0, INSTRUCTIONS_MAX) : ''
-  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food, nutrition, memories, instructions } as Settings
+  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food, nutrition, memories } as Settings
 }
 
 function parseSubject(v: unknown): Subject {

@@ -90,8 +90,6 @@ Chatten kan läsa och ändra allt i appen: schema och lektioner, packlistor, kal
 
 Den har också ett **minne** för preferenser ("jag gillar inte svamp", "jag tränar helst på morgonen"). Chatten föreslår själv att komma ihåg sådant, och du ser och tar bort det under Inställningar → Assistentens minne. Minnet synkas och följer med i exporten.
 
-Under Inställningar → **Instruktioner till chatten** kan du skriva egna regler (upp till 4000 tecken), som en README för assistenten: hur den ska svara, vem du är, vad den ska prioritera. De läggs sist i systemprompten och går före appens stil- och innehållsregler, men ändringar blir fortfarande bekräftelsekort. Synkas och följer med i exporten.
-
 På "vad ska jag äta idag?" väger den ihop lagret (det som går ut först, aldrig utgånget), vad som återstår av dagens makromål, och dagens schema (träning, hur full dagen är), och ger mått och steg för det den rekommenderar.
 
 ## Importera schema från bild

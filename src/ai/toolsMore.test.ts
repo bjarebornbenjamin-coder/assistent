@@ -12,7 +12,6 @@ const ctx: ToolContext = {
     food: { allergies: '', portions: 2, shopping: { enabled: true, weekday: 5, time: '16:00' }, expiry: { enabled: true, time: '08:00' } },
     nutrition: { proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 },
     memories: ['Gillar inte svamp'],
-    instructions: '',
   },
   subjects: [{ id: 'ma', name: 'Matte', packItems: [{ id: 'p1', text: 'Miniräknare' }] }, { id: 'sv', name: 'Svenska', packItems: [] }],
   lessons: [], events: [], contacts: [{ id: 'c1', name: 'Olle', email: 'olle@example.com' }],
@@ -165,13 +164,5 @@ describe('applyCard: nya kort', () => {
     expect((await getSettings()).memories).toEqual([])
     await saveSettings({ memories: ['a'] })
     expect(await applyCard({ type: 'memory_delete', fact: 'b' })).toBe('missing')
-  })
-})
-
-describe('egna instruktioner', () => {
-  it('läggs sist i systemprompten och utelämnas när de är tomma', () => {
-    const withText = systemPrompt(new Date(), { ...ctx, settings: { ...ctx.settings, instructions: 'Svara alltid i punktlistor.' } })
-    expect(withText.trimEnd().endsWith('Svara alltid i punktlistor.\n---')).toBe(true)
-    expect(systemPrompt(new Date(), ctx)).not.toContain('egna instruktioner')
   })
 })
