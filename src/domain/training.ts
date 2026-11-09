@@ -56,6 +56,8 @@ export const TRAINING_RULES = [
 const MAX_CONSECUTIVE = 2
 const WORKOUT = /(gym|träning|styrk|crossfit|hiit|löp|spring|jogg|run|simning|simma|yoga|pilates|cykl|spinning|fotboll|basket|padel|tennis|innebandy)/i
 const EXAM = /(prov|tenta|redovisning|presentation|nationella)/i
+/** Pluggpass ("Plugg Matteprov: …") är inte själva provet. */
+const isExam = (title: string) => EXAM.test(title) && !/^plugg/i.test(title.trim())
 
 /** Är det här ett träningspass i kalendern, och i så fall vilken sort? */
 export function workoutTypeOf(title: string): string | null {
@@ -123,7 +125,7 @@ function dayLoad(date: ISODate, input: PlanInput): number {
   load += Math.min(2, tasksOn(date, input.tasks).filter((t) => !t.done).length)
   // Dagen före prov/deadline: dålig dag att slita på kroppen sent.
   const next = addDays(date, 1)
-  if (eventsOn(next, input.events).some((e) => EXAM.test(e.title))) load += 4
+  if (eventsOn(next, input.events).some((e) => isExam(e.title))) load += 4
   load += Math.min(2, tasksOn(next, input.tasks).filter((t) => !t.done).length) * 1.5
   const wd = weekdayOf(date)
   if (wd >= 6 && lessonEnd === 0) load -= 1 // ledig helgdag är bra träningsdag

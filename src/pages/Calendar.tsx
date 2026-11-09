@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { EventCard } from '../components/EventCard'
 import { EventForm } from '../components/EventForm'
 import { TaskForm } from '../components/TaskForm'
@@ -149,6 +150,7 @@ export function CalendarPage() {
 
       <div className="actions">
         <button type="button" className="btn primary" onClick={() => setEditing('new')}>Ny händelse</button>
+        <Link to="/plugg" className="btn">Planera plugg inför prov</Link>
       </div>
 
       {editingTask && (

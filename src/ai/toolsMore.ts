@@ -2,6 +2,7 @@ import { foodKey } from '../domain/food'
 import { describeRepeat } from '../domain/reminders'
 import { WEEKDAYS_LONG, toISODate } from '../domain/dates'
 import { agenda } from '../domain/calendar'
+import { planStudy } from '../domain/study'
 import type { ChatCard, Reminder } from '../domain/types'
 import type { ToolContext, ToolOutcome } from './tools'
 
@@ -34,6 +35,21 @@ const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('sv-SE
 const reminderSummary = (r: Pick<Reminder, 'title' | 'time' | 'repeat'>) => `${r.title}, ${r.time}, ${describeRepeat(r.repeat)}`
 
 export const MORE_TOOL_DEFINITIONS = [
+  {
+    name: 'plan_study',
+    description: 'Planera pluggpass inför ett prov: sprider ut pass på lediga tider efter skolan fram till dagen före provet, ett moment per pass och repetition sist. Använd ALLTID denna när användaren vill plugga inför ett prov; planera aldrig pluggdagar själv.',
+    parameters: {
+      type: 'object',
+      properties: {
+        exam: { type: 'string', description: 'Provets namn, t.ex. "Matteprov kap 3"' },
+        date: { ...date, description: 'Provets datum' },
+        topics: { type: 'array', items: { type: 'string' }, description: 'Moment som ingår, valfritt' },
+        sessions: { type: 'integer', description: 'Antal pass, 1–14, valfritt' },
+        minutes: { type: 'integer', description: 'Minuter per pass, 15–180 (standard 45)' },
+      },
+      required: ['exam', 'date'],
+    },
+  },
   {
     name: 'search_calendar',
     description: 'Sök bland alla kalenderhändelser och uppgifter, även gamla, på ord i titel, anteckning eller ämne (t.ex. "matteprov", "fysik labb"). För frågor som "när var/är provet i X?". Kommande träffar först, sedan tidigare.',
@@ -100,6 +116,28 @@ export const MORE_TOOL_DEFINITIONS = [
 
 export function runMoreTool(name: string, args: Record<string, unknown>, ctx: ToolContext): ToolOutcome | null {
   switch (name) {
+    case 'plan_study': {
+      const exam = str(args.exam).slice(0, 60)
+      const examDate = str(args.date)
+      const today = ctx.today ?? toISODate(new Date())
+      if (!exam) return err('Ange vilket prov det gäller.')
+      if (!DATE.test(examDate) || examDate <= today) return err('Provets datum måste vara efter idag, som YYYY-MM-DD.')
+      const sessions = args.sessions === undefined ? undefined : Number(args.sessions)
+      if (sessions !== undefined && (!Number.isInteger(sessions) || sessions < 1 || sessions > 14)) return err('sessions måste vara 1–14.')
+      const minutes = args.minutes === undefined ? 45 : Number(args.minutes)
+      if (!Number.isInteger(minutes) || minutes < 15 || minutes > 180) return err('minutes måste vara 15–180.')
+      const plan = planStudy({ exam, examDate, topics: strings(args.topics, 14), from: today, nowTime: ctx.nowTime, sessions, minutes, lessons: ctx.lessons, events: ctx.events, settings: ctx.settings })
+      const examInCalendar = ctx.events.some((e) => e.date === examDate && foodKey(e.title).includes(foodKey(exam)))
+      return {
+        result: {
+          plan: plan.sessions.map(({ title, ...s }) => ({ ...s, eventTitle: title })),
+          warnings: plan.warnings,
+          examInCalendar,
+          next: `Presentera passen kort (dag, tid, vad). Erbjud att lägga in dem med propose_events (titel = eventTitle, note "Inför ${exam}")${examInCalendar ? '' : ', och själva provet som en heldagshändelse samma gång'}.`,
+        },
+      }
+    }
+
     case 'search_calendar': {
       const q = str(args.query).slice(0, 80)
       if (!q) return err('Ange vad du söker efter.')

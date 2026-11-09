@@ -14,6 +14,7 @@ import { RemindersPage } from './pages/Reminders'
 import { ScanFoodPage } from './pages/ScanFood'
 import { SchedulePage } from './pages/Schedule'
 import { SettingsPage } from './pages/Settings'
+import { StudyPlanPage } from './pages/StudyPlan'
 import { SubjectsPage } from './pages/Subjects'
 import { TasksPage } from './pages/Tasks'
 
@@ -21,7 +22,7 @@ import { TasksPage } from './pages/Tasks'
 const TABS = [
   { to: '/', label: 'Hem', also: ['/uppgifter', '/paminnelser', '/installningar'] as string[] },
   { to: '/schema', label: 'Schema', also: ['/amnen'] },
-  { to: '/kalender', label: 'Kalender', also: [] },
+  { to: '/kalender', label: 'Kalender', also: ['/plugg'] },
   { to: '/mat', label: 'Mat', also: [] },
   { to: '/chatt', label: 'Chatt', also: [] },
 ]
@@ -76,6 +77,7 @@ export function App() {
             <Route path="/schema" element={<SchedulePage />} />
             <Route path="/schema/importera" element={<ImportSchedulePage />} />
             <Route path="/kalender" element={<CalendarPage />} />
+            <Route path="/plugg" element={<StudyPlanPage />} />
             <Route path="/chatt" element={<ChatPage />} />
             <Route path="/amnen" element={<SubjectsPage />} />
             <Route path="/uppgifter" element={<TasksPage />} />

@@ -166,3 +166,12 @@ describe('applyCard: nya kort', () => {
     expect(await applyCard({ type: 'memory_delete', fact: 'b' })).toBe('missing')
   })
 })
+
+describe('plan_study', () => {
+  it('ger en plan och påminner om att lägga in provet', () => {
+    const out = runTool('plan_study', { exam: 'Matteprov', date: '2026-11-20', topics: ['Derivata', 'Integraler'] }, { ...ctx, today: '2026-11-10', nowTime: '12:00' }).result as { plan: { eventTitle: string }[]; examInCalendar: boolean }
+    expect(out.plan.map((p) => p.eventTitle)).toEqual(['Plugg Matteprov: Derivata', 'Plugg Matteprov: Integraler', 'Plugg Matteprov: Repetition av allt och gamla prov'])
+    expect(out.examInCalendar).toBe(false)
+    expect(runTool('plan_study', { exam: 'X', date: '2026-11-10' }, { ...ctx, today: '2026-11-10' }).result).toHaveProperty('error')
+  })
+})

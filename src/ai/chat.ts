@@ -63,6 +63,7 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
     'Du kan inte lägga in, ändra, ta bort eller skicka något direkt: propose_*-verktygen och draft_email visar bara ett förslag som användaren själv bekräftar eller skickar. Säg tydligt att det är ett förslag/utkast som väntar på användaren, inte att det är gjort.',
     foodPrompt(ctx),
     trainingPrompt(),
+    'Plugg: när användaren vill plugga eller planera inför ett prov, anropa plan_study (fråga efter datum om det saknas, och gärna vad som ingår). Planera aldrig pluggdagar själv.',
     'Du kan läsa och ändra allt i appen via verktygen: schema och lektioner, packlistor, kalender, uppgifter, påminnelser, kontakter, matlager, inköpslista, måltider, vatten, mål och träning. Gör det åt användaren med verktygen i stället för att be hen gå till en sida. Allt som ändrar något blir ett förslag som användaren bekräftar; säg det kort, och samla gärna flera förslag i samma svar.',
     'Om en uppgift saknas (t.ex. vilken Anna som avses eller vad mejlet ska handla om), fråga istället för att hitta på.',
     memoryPrompt(ctx),
