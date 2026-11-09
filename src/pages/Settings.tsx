@@ -125,6 +125,39 @@ function AiSection() {
   )
 }
 
+function MemorySection() {
+  const settings = useSettings()
+  const [fact, setFact] = useState('')
+  if (!settings) return null
+  const memories = settings.memories
+  return (
+    <>
+      <h2>Assistentens minne</h2>
+      <p className="muted">Saker assistenten tar hänsyn till i alla svar. Be chatten komma ihåg något ("jag gillar inte svamp"), eller skriv in det här.</p>
+      {memories.length === 0 && <p className="empty">Inget sparat.</p>}
+      {memories.map((m) => (
+        <div className="item" key={m}>
+          <span style={{ flex: 1, alignSelf: 'center' }}>{m}</span>
+          <button type="button" className="btn danger" aria-label={`Glöm: ${m}`} onClick={() => saveSettings({ memories: memories.filter((x) => x !== m) })}>Glöm</button>
+        </div>
+      ))}
+      <form
+        className="item"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault()
+          const f = fact.trim().slice(0, 200)
+          if (!f || memories.includes(f) || memories.length >= 30) return
+          void saveSettings({ memories: [...memories, f] })
+          setFact('')
+        }}
+      >
+        <input type="text" aria-label="Något att komma ihåg" placeholder="t.ex. Jag tränar helst på morgonen" value={fact} onChange={(e) => setFact(e.target.value)} />
+        <button type="submit" className="btn">Lägg till</button>
+      </form>
+    </>
+  )
+}
+
 function ContactsSection() {
   const contacts = useContacts()
   const [name, setName] = useState('')
@@ -234,6 +267,7 @@ export function SettingsPage() {
       <SyncSection />
       <NotifySection />
       <AiSection />
+      <MemorySection />
       <ContactsSection />
 
       <h2>Säkerhetskopia</h2>

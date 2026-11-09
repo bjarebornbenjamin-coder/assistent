@@ -260,3 +260,13 @@ describe('kost: måltider och vatten', () => {
     expect(parseBackup({ ...base, settings: { cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system' } }).settings?.nutrition).toEqual({ proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 })
   })
 })
+
+describe('minne i export', () => {
+  it('följer med export/import och rensas från skräp', async () => {
+    await saveSettings({ memories: ['Gillar inte svamp', 'Tränar helst på morgonen'] })
+    const backup = parseBackup(JSON.parse(JSON.stringify(await exportAll())))
+    expect(backup.settings?.memories).toEqual(['Gillar inte svamp', 'Tränar helst på morgonen'])
+    const dirty = parseBackup({ app: 'studieassistent', version: 7, subjects: [], lessons: [], settings: { cycleLength: 1, cycleAnchor: '2026-11-02', theme: 'system', memories: [' a ', 3, '', 'b'] } })
+    expect(dirty.settings?.memories).toEqual(['a', 'b'])
+  })
+})

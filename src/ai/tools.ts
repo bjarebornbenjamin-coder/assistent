@@ -3,6 +3,7 @@ import { WEEKDAYS_LONG, addDays, daysBetween, weekdayOf } from '../domain/dates'
 import { packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
 import { daysLeft, foodKey } from '../domain/food'
+import { MORE_TOOL_DEFINITIONS, runMoreTool } from './toolsMore'
 import { TRAINING_RULES, planWorkouts } from '../domain/training'
 import { goalKcal, lastDays, mealKcal, mealsOn } from '../domain/nutrition'
 import { occursOn } from '../domain/reminders'
@@ -36,7 +37,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 const date = { type: 'string', description: 'Datum som YYYY-MM-DD' }
 
-export const TOOL_DEFINITIONS = [
+const BASE_TOOL_DEFINITIONS = [
   {
     name: 'get_schedule',
     description: 'Hämta BARA användarens lektioner (ämne, tid, sal, lärare) för ett visst datum. För frågor om vad användaren har en dag eller vecka: använd get_overview i stället, som även innehåller uppgifter, händelser och påminnelser.',
@@ -246,7 +247,9 @@ export const TOOL_DEFINITIONS = [
       required: ['to', 'subject', 'body'],
     },
   },
-].map((f) => ({ type: 'function' as const, function: f }))
+].map((f) => ({ type: 'function' as const, function: f as { name: string; description: string; parameters: unknown } }))
+
+export const TOOL_DEFINITIONS = [...BASE_TOOL_DEFINITIONS, ...MORE_TOOL_DEFINITIONS]
 
 type Args = Record<string, unknown>
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
@@ -666,6 +669,6 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       }
     }
     default:
-      return err(`Okänt verktyg: ${name}`)
+      return runMoreTool(name, args, ctx) ?? err(`Okänt verktyg: ${name}`)
   }
 }

@@ -46,7 +46,8 @@ function parseSettings(v: unknown): Settings {
     waterMl: num(nu.waterMl, 0, 20000, DEFAULT_NUTRITION.waterMl),
     glassMl: num(nu.glassMl, 50, 2000, DEFAULT_NUTRITION.glassMl),
   }
-  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food, nutrition } as Settings
+  const memories = Array.isArray(v.memories) ? v.memories.filter((m): m is string => isStr(m) && m.trim() !== '').map((m) => m.trim().slice(0, 200)).slice(0, 30) : []
+  return { id: 'main', cycleLength, cycleAnchor, theme, notify, food, nutrition, memories } as Settings
 }
 
 function parseSubject(v: unknown): Subject {

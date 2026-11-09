@@ -19,7 +19,7 @@ export const DEFAULT_FOOD: FoodSettings = {
 export const DEFAULT_NUTRITION: NutritionSettings = { proteinG: 120, carbsG: 250, fatG: 70, waterMl: 2000, glassMl: 250 }
 
 export function defaultSettings(): Settings {
-  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY, food: DEFAULT_FOOD, nutrition: DEFAULT_NUTRITION }
+  return { id: 'main', cycleLength: 1, cycleAnchor: mondayOf(toISODate(new Date())), theme: 'system', notify: DEFAULT_NOTIFY, food: DEFAULT_FOOD, nutrition: DEFAULT_NUTRITION, memories: [] }
 }
 
 /** Äldre sparade inställningar saknar fält som tillkommit senare. */
@@ -32,6 +32,7 @@ export function withDefaults(stored: Settings | undefined): Settings {
     ...stored,
     notify: { ...DEFAULT_NOTIFY, ...(stored.notify ?? {}) },
     nutrition: { ...DEFAULT_NUTRITION, ...(stored.nutrition ?? {}) },
+    memories: Array.isArray(stored.memories) ? stored.memories : [],
     food: { ...DEFAULT_FOOD, ...food, shopping: { ...DEFAULT_FOOD.shopping, ...(food.shopping ?? {}) }, expiry: { ...DEFAULT_FOOD.expiry, ...(food.expiry ?? {}) } },
   }
 }

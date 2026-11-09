@@ -63,6 +63,7 @@ export function ChatPage() {
   const subjects = useSubjects()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirmingAll, setConfirmingAll] = useState(false)
   const [error, setError] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
   const composerRef = useRef<HTMLDivElement>(null)
@@ -137,6 +138,30 @@ export function ChatPage() {
             <div key={m.id} className={`bubble ${m.role}`}>{m.role === 'assistant' ? <Markdown text={m.content} /> : m.content}</div>
           ),
         )}
+        {(() => {
+          const pending = messages.filter((m) => m.card && m.card.type !== 'email' && (m.cardStatus ?? 'pending') === 'pending')
+          if (pending.length < 2) return null
+          return (
+            <div className="actions" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={confirmingAll}
+                onClick={async () => {
+                  setConfirmingAll(true)
+                  try {
+                    // I tur och ordning, så att t.ex. ett nytt ämne finns innan nästa förslag behöver det.
+                    for (const m of pending) await setCardStatus(m.id, await applyCard(m.card!))
+                  } finally {
+                    setConfirmingAll(false)
+                  }
+                }}
+              >
+                Bekräfta alla ({pending.length})
+              </button>
+            </div>
+          )
+        })()}
         {busy && <div className="bubble assistant muted">Tänker…</div>}
         {error && (
           <p className="error" role="alert">

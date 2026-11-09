@@ -1,7 +1,10 @@
 import { db } from '../db/db'
-import { addPantryItems, addShoppingItems, addWater, saveMeal, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
+import { addPantryItems, addShoppingItems, addWater, saveMeal, changePackItems, deleteReminder, deleteShoppingItem, deleteTask, getSettings, saveContact, savePantryItem, saveReminder, saveSettings, saveShoppingItem, addSubject, deleteEvent, deleteLesson, newId, saveEvent, saveLesson, saveTask } from '../db/repo'
 import { dayLabel, eventTime } from '../domain/calendar'
 import { mealKcal } from '../domain/nutrition'
+import { foodKey } from '../domain/food'
+import { describeRepeat } from '../domain/reminders'
+import { WEEKDAYS_LONG } from '../domain/dates'
 import type { ChatCard, Subject } from '../domain/types'
 
 export interface CardView {
@@ -23,6 +26,62 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
         confirmLabel: 'Lägg in',
         doneText: 'Inlagd i kalendern.',
       }
+    case 'reminder_add':
+      return { kicker: 'Förslag: ny påminnelse', title: card.reminder.title, lines: [`${card.reminder.time} · ${describeRepeat(card.reminder.repeat)}`], confirmLabel: 'Skapa', doneText: 'Påminnelsen är skapad.' }
+    case 'reminder_delete':
+      return { kicker: 'Förslag: ta bort påminnelse', title: card.summary, lines: [], confirmLabel: 'Ta bort', doneText: 'Påminnelsen är borttagen.', danger: true }
+    case 'task_update':
+      return {
+        kicker: 'Förslag: ändra uppgift',
+        title: card.before,
+        lines: [`Blir: ${card.after.title} (deadline ${card.after.deadline}${card.after.done ? ', klar' : ''})`],
+        confirmLabel: 'Ändra',
+        doneText: 'Uppgiften är ändrad.',
+      }
+    case 'task_delete':
+      return { kicker: 'Förslag: ta bort uppgift', title: card.summary, lines: [], confirmLabel: 'Ta bort', doneText: 'Uppgiften är borttagen.', danger: true }
+    case 'lesson_add': {
+      const l = card.lesson
+      return {
+        kicker: 'Förslag: ny lektion',
+        title: card.subject,
+        lines: [[`${WEEKDAYS_LONG[l.weekday - 1]} ${l.start}–${l.end}`, l.room && `sal ${l.room}`, l.teacher, l.weeks ? `bara vecka ${String.fromCharCode(65 + l.weeks[0])}` : null].filter(Boolean).join(', ')],
+        confirmLabel: 'Lägg in',
+        doneText: 'Lektionen är inlagd i schemat.',
+      }
+    }
+    case 'pack_update':
+      return {
+        kicker: `Förslag: packlista för ${card.subjectName}`,
+        title: [card.add.length && `Lägg till: ${card.add.join(', ')}`, card.remove.length && `Ta bort: ${card.remove.join(', ')}`].filter(Boolean).join(' · '),
+        lines: [],
+        confirmLabel: 'Ändra packlistan',
+        doneText: 'Packlistan är ändrad.',
+      }
+    case 'shopping_update':
+      return {
+        kicker: 'Förslag: inköpslistan',
+        title: [card.bought.length && `Köpt: ${card.bought.join(', ')}`, card.removed.length && `Ta bort: ${card.removed.join(', ')}`].filter(Boolean).join(' · '),
+        lines: [],
+        confirmLabel: 'Uppdatera listan',
+        doneText: 'Inköpslistan är uppdaterad.',
+      }
+    case 'pantry_update':
+      return {
+        kicker: 'Förslag: ändra vara i lagret',
+        title: card.before,
+        lines: [`Blir: ${[card.after.name, card.after.amount, card.after.expires && `bäst före ${card.after.expires}`].filter(Boolean).join(', ')}`],
+        confirmLabel: 'Ändra',
+        doneText: 'Varan är ändrad.',
+      }
+    case 'contact_add':
+      return { kicker: 'Förslag: ny kontakt', title: `${card.contact.name} <${card.contact.email}>`, lines: [], confirmLabel: 'Spara kontakt', doneText: 'Kontakten är sparad.' }
+    case 'prefs_update':
+      return { kicker: 'Förslag: ändra inställningar', title: card.summary.join(' · '), lines: [], confirmLabel: 'Spara', doneText: 'Inställningarna är sparade.' }
+    case 'memory_add':
+      return { kicker: 'Förslag: kom ihåg', title: card.fact, lines: ['Används i framtida svar. Visas och kan tas bort under Inställningar.'], confirmLabel: 'Kom ihåg', doneText: 'Sparat i minnet.' }
+    case 'memory_delete':
+      return { kicker: 'Förslag: glöm', title: card.fact, lines: [], confirmLabel: 'Glöm', doneText: 'Borttaget ur minnet.', danger: true }
     case 'events_add':
       return {
         kicker: `Förslag: ${card.events.length} händelser`,
@@ -84,6 +143,77 @@ export async function applyCard(card: ChatCard): Promise<'done' | 'missing'> {
     case 'event':
       await saveEvent({ ...card.event, id: newId(), updatedAt: '' })
       return 'done'
+    case 'reminder_add':
+      await saveReminder({ ...card.reminder, id: newId(), enabled: true, updatedAt: '' })
+      return 'done'
+    case 'reminder_delete':
+      if (!(await db.reminders.get(card.id))) return 'missing'
+      await deleteReminder(card.id)
+      return 'done'
+    case 'task_update': {
+      const t = await db.tasks.get(card.id)
+      if (!t) return 'missing'
+      await saveTask({ ...t, ...card.after })
+      return 'done'
+    }
+    case 'task_delete':
+      if (!(await db.tasks.get(card.id))) return 'missing'
+      await deleteTask(card.id)
+      return 'done'
+    case 'lesson_add': {
+      const existing = (await db.subjects.toArray()).find((x) => foodKey(x.name) === foodKey(card.subject))
+      const subjectId = existing?.id ?? (await addSubject(card.subject)).id
+      await saveLesson({ ...card.lesson, id: newId(), subjectId })
+      return 'done'
+    }
+    case 'pack_update': {
+      if (!(await db.subjects.get(card.subjectId))) return 'missing'
+      const remove = new Set(card.remove.map(foodKey))
+      await changePackItems(card.subjectId, (items) => {
+        const kept = items.filter((i) => !remove.has(foodKey(i.text)))
+        const have = new Set(kept.map((i) => foodKey(i.text)))
+        return [...kept, ...card.add.filter((a) => !have.has(foodKey(a))).map((text) => ({ id: newId(), text }))]
+      })
+      return 'done'
+    }
+    case 'shopping_update': {
+      const items = (await db.shopping.bulkGet([...card.boughtIds, ...card.removeIds])).filter(Boolean)
+      if (items.length === 0) return 'missing'
+      for (const id of card.boughtIds) {
+        const i = await db.shopping.get(id)
+        if (i) await saveShoppingItem({ ...i, done: true })
+      }
+      for (const id of card.removeIds) await deleteShoppingItem(id)
+      return 'done'
+    }
+    case 'pantry_update': {
+      const p = await db.pantry.get(card.id)
+      if (!p) return 'missing'
+      const { amount: _a, expires: _e, ...rest } = p
+      void _a
+      void _e
+      await savePantryItem({ ...rest, ...card.after })
+      return 'done'
+    }
+    case 'contact_add':
+      await saveContact({ ...card.contact, id: newId() })
+      return 'done'
+    case 'prefs_update': {
+      const s = await getSettings()
+      await saveSettings({ food: { ...s.food, ...card.food }, nutrition: { ...s.nutrition, ...card.nutrition } })
+      return 'done'
+    }
+    case 'memory_add': {
+      const s = await getSettings()
+      if (!s.memories.some((m) => foodKey(m) === foodKey(card.fact))) await saveSettings({ memories: [...s.memories, card.fact].slice(-30) })
+      return 'done'
+    }
+    case 'memory_delete': {
+      const s = await getSettings()
+      if (!s.memories.includes(card.fact)) return 'missing'
+      await saveSettings({ memories: s.memories.filter((m) => m !== card.fact) })
+      return 'done'
+    }
     case 'events_add':
       for (const e of card.events) await saveEvent({ ...e, id: newId(), updatedAt: '' })
       return 'done'

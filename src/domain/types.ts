@@ -41,6 +41,8 @@ export interface Settings {
   notify: NotifySettings
   food: FoodSettings
   nutrition: NutritionSettings
+  /** Saker användaren bett assistenten komma ihåg (preferenser). */
+  memories: string[]
 }
 
 export interface PackItem {
@@ -172,6 +174,18 @@ export interface AiConfig {
 
 export type ChatCard =
   | { type: 'event'; event: Omit<CalendarEvent, 'id' | 'updatedAt'> }
+  | { type: 'reminder_add'; reminder: Omit<Reminder, 'id' | 'updatedAt' | 'enabled'> }
+  | { type: 'reminder_delete'; id: string; summary: string }
+  | { type: 'task_update'; id: string; before: string; after: Pick<Task, 'title' | 'deadline' | 'done'> }
+  | { type: 'task_delete'; id: string; summary: string }
+  | { type: 'lesson_add'; subject: string; lesson: Pick<Lesson, 'weekday' | 'start' | 'end' | 'room' | 'teacher' | 'weeks'> }
+  | { type: 'pack_update'; subjectId: string; subjectName: string; add: string[]; remove: string[] }
+  | { type: 'shopping_update'; boughtIds: string[]; removeIds: string[]; bought: string[]; removed: string[] }
+  | { type: 'pantry_update'; id: string; before: string; after: Pick<PantryItem, 'name'> & Partial<Pick<PantryItem, 'amount' | 'expires'>> }
+  | { type: 'contact_add'; contact: Omit<Contact, 'id'> }
+  | { type: 'prefs_update'; food: Partial<Pick<FoodSettings, 'allergies' | 'portions'>>; nutrition: Partial<NutritionSettings>; summary: string[] }
+  | { type: 'memory_add'; fact: string }
+  | { type: 'memory_delete'; fact: string }
   | { type: 'events_add'; events: Omit<CalendarEvent, 'id' | 'updatedAt'>[] }
   | { type: 'task'; task: Pick<Task, 'title' | 'subjectId' | 'deadline'> }
   | { type: 'event_update'; id: string; before: string; afterText: string; after: Omit<CalendarEvent, 'id' | 'updatedAt'> }

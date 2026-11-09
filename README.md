@@ -84,6 +84,14 @@ Färgerna i graferna (blå, orange, turkos för makron; violett för vatten) är
 
 Fråga chatten "när ska jag gymma och springa?". Assistenten använder en planerare (inte gissningar) som följer träningsregler: högst två träningsdagar i rad, högst ett pass per dag (gym och löpning hamnar på olika dagar), minst en vilodag mellan lika pass, jämn spridning, pass efter skolan och inte över händelser, och dagen före prov eller deadlines undviks. Träningspass som redan finns i kalendern (titlar som "Gym", "Löpning", "Yoga") räknas med, även de närmaste dagarna före perioden. Går önskemålet inte att uppfylla utan att bryta reglerna får du en varning och en plan med färre pass. Passen kan läggas in i kalendern med ett bekräftelsekort.
 
+### Chatten kan göra allt
+
+Chatten kan läsa och ändra allt i appen: schema och lektioner, packlistor, kalender, uppgifter (skapa, bocka av, flytta, ta bort), påminnelser, kontakter, matlager, inköpslista (lägga till, markera köpt), måltider, vatten, mål, allergier och träningsplaner. Allt som ändrar något blir ett bekräftelsekort; när flera förslag väntar finns "Bekräfta alla".
+
+Den har också ett **minne** för preferenser ("jag gillar inte svamp", "jag tränar helst på morgonen"). Chatten föreslår själv att komma ihåg sådant, och du ser och tar bort det under Inställningar → Assistentens minne. Minnet synkas och följer med i exporten.
+
+På "vad ska jag äta idag?" väger den ihop lagret (det som går ut först, aldrig utgånget), vad som återstår av dagens makromål, och dagens schema (träning, hur full dagen är), och ger mått och steg för det den rekommenderar.
+
 ## Importera schema från bild
 
 Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren och skickas via `/api/chat` till OpenAI (vald modell måste klara bilder, t.ex. gpt-4o-mini). Resultatet visas som förslag som du kan ändra, avmarkera och kontrollera mot krockar och dubbletter innan något sparas. Bilden sparas inte.

@@ -6,7 +6,7 @@ import { DEFAULT_MODEL } from './models'
 import { TOOL_DEFINITIONS, runTool, type ToolContext } from './tools'
 
 const API_URL = '/api/chat'
-const MAX_ROUNDS = 6
+const MAX_ROUNDS = 10
 const HISTORY_LIMIT = 20
 
 type ApiMessage =
@@ -22,6 +22,14 @@ interface ToolCall {
 
 export class ChatError extends Error {}
 
+function memoryPrompt(ctx: ToolContext): string {
+  const m = ctx.settings.memories
+  return [
+    'Minne: när användaren berättar en bestående preferens eller ett faktum om sig själv (mat hen inte gillar, när hen helst tränar, mål, vanor), föreslå att komma ihåg det med remember. Spara inte tillfälliga saker.',
+    m.length ? `Saker användaren bett dig komma ihåg (följ dem i alla svar):\n${m.map((x) => `- ${x}`).join('\n')}` : 'Inget sparat i minnet än.',
+  ].join('\n')
+}
+
 function trainingPrompt(): string {
   return [
     'Träning: när användaren frågar när hen ska träna, gymma eller springa, eller vill ha ett träningsschema: anropa ALLTID plan_workouts. Planera aldrig träningsdagar själv utifrån vilka dagar som är lediga i schemat: en ledig dag betyder inte att man ska träna den.',
@@ -34,7 +42,7 @@ function foodPrompt(ctx: ToolContext): string {
   const f = ctx.settings.food
   const n = ctx.settings.nutrition
   return [
-    'Mat: du kan se användarens matlager med list_pantry och inköpslistan med list_shopping. På frågor som "vad ska jag äta idag?" eller "vad kan jag laga?": hämta först list_pantry och föreslå 1–3 enkla rätter som i första hand använder varor som snart går ut (daysLeft 0–2). Basera inte rätter på utgångna varor (negativt daysLeft); nämn dem istället kort. Anta att salt, peppar, vatten, olja och socker finns. Säg vad som saknas och erbjud att lägga det på inköpslistan med propose_shopping_items. Gissa inte vad användaren har: är lagret tomt, säg det och föreslå att de lägger in varor eller skannar ett kvitto.',
+    'Mat: du ser användarens matlager med list_pantry och inköpslistan med list_shopping. På "vad ska jag äta idag/ikväll?" eller "vad kan jag laga?": hämta list_pantry, get_nutrition för idag och get_overview för idag, och väg ihop: (1) använd i första hand varor som snart går ut (daysLeft 0–2), aldrig utgångna (negativt daysLeft; nämn dem kort), (2) passa det som återstår av dagens mål (t.ex. mer protein om mycket återstår), (3) har användaren träning idag, föreslå en proteinrik måltid i rimlig tid före eller efter passet, (4) är dagen full, föreslå något snabbt. Föreslå 1–3 rätter; för den du rekommenderar mest: ingredienser med mått för standardportionerna och korta numrerade steg med tider. Anta att salt, peppar, vatten, olja och socker finns. Säg vad som saknas och erbjud propose_shopping_items. Gissa aldrig vad användaren har: är lagret tomt, säg det och föreslå att lägga in varor eller skanna ett kvitto.',
     `Standard är ${f.portions} portioner.${f.allergies.trim() ? ` Allergier/kostönskemål som du måste respektera: ${f.allergies.trim()}.` : ''}`,
     `Kost: användarens dagliga mål är protein ${n.proteinG} g, kolhydrater ${n.carbsG} g, fett ${n.fatG} g (ca ${goalKcal(n)} kcal) och vatten ${n.waterMl} ml; ett glas är ${n.glassMl} ml. Frågor om hur mycket användaren ätit eller druckit, eller vad som återstår: anropa get_nutrition och räkna ut skillnaden mot målen. På "vad ska jag äta?" kan du ta hänsyn till vad som återstår av dagens mål om get_nutrition visar något loggat. Berättar användaren vad hen ätit: uppskatta näringsvärdena för hela måltiden, säg att det är en uppskattning, och föreslå loggning med propose_meal. Berättar hen att hen druckit vatten ("2 glas"): använd propose_water i ml. Det här är bara riktvärden: ge inga medicinska råd.`,
   ].join('\n')
@@ -54,7 +62,9 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
     'Du kan inte lägga in, ändra, ta bort eller skicka något direkt: propose_*-verktygen och draft_email visar bara ett förslag som användaren själv bekräftar eller skickar. Säg tydligt att det är ett förslag/utkast som väntar på användaren, inte att det är gjort.',
     foodPrompt(ctx),
     trainingPrompt(),
+    'Du kan läsa och ändra allt i appen via verktygen: schema och lektioner, packlistor, kalender, uppgifter, påminnelser, kontakter, matlager, inköpslista, måltider, vatten, mål och träning. Gör det åt användaren med verktygen i stället för att be hen gå till en sida. Allt som ändrar något blir ett förslag som användaren bekräftar; säg det kort, och samla gärna flera förslag i samma svar.',
     'Om en uppgift saknas (t.ex. vilken Anna som avses eller vad mejlet ska handla om), fråga istället för att hitta på.',
+    memoryPrompt(ctx),
   ].join('\n')
 }
 

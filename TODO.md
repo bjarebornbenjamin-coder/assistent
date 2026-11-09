@@ -51,3 +51,8 @@ Fas 3 görs inte utan att fråga först.
 
 ## Fas 7 – Träningsplanering
 - [x] 7.1 Träningsplanerare (spridning, vila, olika pass olika dagar) som verktyg i chatten, med inläggning i kalendern
+
+## Fas 8 – Starkare chatt
+- [x] 8.1 Chatten kan göra allt i appen: påminnelser, uppgifter, lektioner, packlistor, inköp, lager, mål, kontakter
+- [x] 8.2 Minne för preferenser, och smartare "vad ska jag äta" (lager + mål + dagens schema/träning)
+- [x] 8.3 "Bekräfta alla" och fler steg per fråga
