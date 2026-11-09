@@ -1,6 +1,7 @@
 import { foodKey } from '../domain/food'
 import { describeRepeat } from '../domain/reminders'
-import { WEEKDAYS_LONG } from '../domain/dates'
+import { WEEKDAYS_LONG, toISODate } from '../domain/dates'
+import { agenda } from '../domain/calendar'
 import type { ChatCard, Reminder } from '../domain/types'
 import type { ToolContext, ToolOutcome } from './tools'
 
@@ -33,6 +34,11 @@ const short = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString('sv-SE
 const reminderSummary = (r: Pick<Reminder, 'title' | 'time' | 'repeat'>) => `${r.title}, ${r.time}, ${describeRepeat(r.repeat)}`
 
 export const MORE_TOOL_DEFINITIONS = [
+  {
+    name: 'search_calendar',
+    description: 'Sök bland alla kalenderhändelser och uppgifter, även gamla, på ord i titel, anteckning eller ämne (t.ex. "matteprov", "fysik labb"). För frågor som "när var/är provet i X?". Kommande träffar först, sedan tidigare.',
+    parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+  },
   { name: 'list_reminders', description: 'Lista användarens fristående påminnelser (titel, tid, upprepning, på/av).', parameters: { type: 'object', properties: {} } },
   {
     name: 'propose_reminder',
@@ -94,6 +100,23 @@ export const MORE_TOOL_DEFINITIONS = [
 
 export function runMoreTool(name: string, args: Record<string, unknown>, ctx: ToolContext): ToolOutcome | null {
   switch (name) {
+    case 'search_calendar': {
+      const q = str(args.query).slice(0, 80)
+      if (!q) return err('Ange vad du söker efter.')
+      const subjectName = (id?: string) => ctx.subjects.find((s) => s.id === id)?.name
+      const hits = agenda(q, ctx.events, ctx.tasks, ctx.today ?? toISODate(new Date()), { subjectName }).slice(0, 20)
+      return {
+        result: {
+          hits: hits.map((h) =>
+            h.kind === 'event'
+              ? { kind: 'händelse', title: h.event.title, date: h.date, start: h.event.start, end: h.event.end, note: h.event.note || undefined }
+              : { kind: 'uppgift', title: h.task.title, date: h.date, time: h.task.time, subject: subjectName(h.task.subjectId), done: h.task.done },
+          ),
+          ...(hits.length === 0 ? { note: `Inget hittades för "${q}". Prova ett kortare ord.` } : {}),
+        },
+      }
+    }
+
     case 'list_reminders':
       return { result: { reminders: ctx.reminders.map((r) => ({ title: r.title, time: r.time, repeat: describeRepeat(r.repeat), on: r.enabled })) } }
 

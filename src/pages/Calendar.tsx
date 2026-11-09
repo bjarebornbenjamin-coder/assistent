@@ -1,18 +1,18 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { EventCard } from '../components/EventCard'
 import { EventForm } from '../components/EventForm'
 import { TaskForm } from '../components/TaskForm'
 import { TaskRow } from '../components/TaskRow'
 import { tasksOn } from '../domain/tasks'
 import { LessonCard } from '../components/LessonCard'
-import { dayLabel, eventsOn, monthGrid, monthLabel, weekDays } from '../domain/calendar'
+import { agenda, dayLabel, eventsOn, monthGrid, monthLabel, weekDays, type AgendaItem } from '../domain/calendar'
 import { WEEKDAYS_SHORT, addDays, isoWeek, parseISODate, toISODate, weekdayOf } from '../domain/dates'
 import { lessonsOn } from '../domain/schedule'
 import type { CalendarEvent, Task } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
 import { useEvents, useLessons, useNow, useSettings, useSubjects, useTasks } from '../hooks'
 
-type View = 'month' | 'week'
+type View = 'month' | 'week' | 'list'
 
 export function CalendarPage() {
   const settings = useSettings()
@@ -26,6 +26,7 @@ export function CalendarPage() {
   const [focus, setFocus] = useState(today) // datum som vyn är centrerad på
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [query, setQuery] = useState('')
 
   if (!settings || !events || !lessons || !subjects || !tasks) return null
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
@@ -69,19 +70,36 @@ export function CalendarPage() {
     <>
       <h1>Kalender</h1>
 
+      {view !== 'list' && (
       <div className="cal-head">
         <button type="button" className="btn" onClick={() => setFocus(today)}>Idag</button>
         <button type="button" className="btn" aria-label={view === 'month' ? 'Föregående månad' : 'Föregående vecka'} onClick={() => step(-1)}>‹</button>
         <button type="button" className="btn" aria-label={view === 'month' ? 'Nästa månad' : 'Nästa vecka'} onClick={() => step(1)}>›</button>
         <span className="cal-title" aria-live="polite">{title}</span>
       </div>
+      )}
 
       <div className="seg" role="group" aria-label="Vy">
         <button type="button" className="tab" aria-pressed={view === 'month'} onClick={() => showView('month')}>Månad</button>
         <button type="button" className="tab" aria-pressed={view === 'week'} onClick={() => showView('week')}>Vecka</button>
+        <button type="button" className="tab" aria-pressed={view === 'list'} onClick={() => showView('list')}>Lista</button>
       </div>
 
-      {view === 'month' ? (
+      {view === 'list' ? (
+        <AgendaList
+          query={query}
+          onQuery={setQuery}
+          items={agenda(query, events, tasks, today, { subjectName: (id) => subjectById.get(id ?? '')?.name })}
+          today={today}
+          renderItem={(i) =>
+            i.kind === 'event' ? (
+              <EventCard key={i.event.id} event={i.event} onClick={() => setEditing(i.event)} />
+            ) : (
+              <TaskRow key={i.task.id} task={i.task} subject={subjectById.get(i.task.subjectId ?? '')} today={today} showDeadline={false} onEdit={() => setEditingTask(i.task)} />
+            )
+          }
+        />
+      ) : view === 'month' ? (
         <>
           <div className="month" role="grid" aria-label={title}>
             <div className="month-row head" role="row">
@@ -144,6 +162,31 @@ export function CalendarPage() {
           onClose={() => setEditing(null)}
         />
       )}
+    </>
+  )
+}
+
+function AgendaList({ query, onQuery, items, today, renderItem }: { query: string; onQuery: (q: string) => void; items: AgendaItem[]; today: string; renderItem: (i: AgendaItem) => ReactNode }) {
+  const year = today.slice(0, 4)
+  const label = (date: string) => `${dayLabel(date)}${date.slice(0, 4) !== year ? ` ${date.slice(0, 4)}` : ''}`
+  const groups: { date: string; items: AgendaItem[]; pastStart: boolean }[] = []
+  for (const i of items) {
+    const last = groups[groups.length - 1]
+    if (last && last.date === i.date) last.items.push(i)
+    else groups.push({ date: i.date, items: [i], pastStart: i.date < today && (!last || last.date >= today) })
+  }
+  return (
+    <>
+      <input type="search" className="search" aria-label="Sök i kalendern" placeholder="Sök, t.ex. matteprov" value={query} onChange={(e) => onQuery(e.target.value)} />
+      {!query.trim() && <p className="muted">Kommande 60 dagar. Sök för att hitta äldre.</p>}
+      {items.length === 0 && <p className="empty">{query.trim() ? `Inget hittades för "${query.trim()}".` : 'Inget inplanerat.'}</p>}
+      {groups.map((g) => (
+        <section key={g.date} aria-label={label(g.date)}>
+          {g.pastStart && <p className="muted section-note">Tidigare</p>}
+          <h2 className={g.date === today ? 'today-h' : ''}>{label(g.date)}</h2>
+          {g.items.map(renderItem)}
+        </section>
+      ))}
     </>
   )
 }

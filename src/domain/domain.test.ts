@@ -198,3 +198,18 @@ describe('uppgifter med klockslag', async () => {
     expect(upcomingTasks(new Date('2026-11-09T12:00:00'), [t('c'), t('b', '15:00'), t('a', '08:00')]).map((x) => x.id)).toEqual(['a', 'b', 'c'])
   })
 })
+
+describe('agenda och sökning i kalendern', async () => {
+  const { agenda } = await import('./calendar')
+  const ev = (id: string, title: string, date: string, start?: string) => ({ id, title, date, note: '', updatedAt: '', ...(start ? { start } : {}) })
+  const events = [ev('a', 'Matteprov', '2026-10-01'), ev('b', 'Matteprov kap 4', '2026-11-20'), ev('c', 'Fotboll', '2026-11-10', '18:00'), ev('d', 'Bio', '2027-03-01')]
+  const tasks = [{ id: 't', title: 'Labbrapport', subjectId: 'fy', deadline: '2026-11-10', time: '23:59', done: false, updatedAt: '' }]
+  it('utan sökord: kommande 60 dagar i tidsordning', () => {
+    expect(agenda('', events, tasks, '2026-11-09').map((i) => (i.kind === 'event' ? i.event.id : i.task.id))).toEqual(['c', 't', 'b'])
+  })
+  it('söker i titel och ämne, kommande först och sedan tidigare', () => {
+    expect(agenda('MATTEPROV', events, tasks, '2026-11-09').map((i) => i.date)).toEqual(['2026-11-20', '2026-10-01'])
+    expect(agenda('fysik', events, tasks, '2026-11-09', { subjectName: (id) => (id === 'fy' ? 'Fysik' : undefined) })).toHaveLength(1)
+    expect(agenda('matteprov kap', events, tasks, '2026-11-09')).toHaveLength(1)
+  })
+})
