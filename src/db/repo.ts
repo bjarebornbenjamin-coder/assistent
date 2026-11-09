@@ -1,6 +1,7 @@
 import { DEFAULT_MODEL } from '../ai/models'
 import { SUBJECT_COLORS } from '../domain/colors'
 import { mondayOf, toISODate } from '../domain/dates'
+import { foodKey } from '../domain/food'
 import type { AiConfig, Backup, CalendarEvent, ChatMessage, Contact, FoodSettings, Lesson, NotifySettings, PantryItem, Reminder, Settings, ShoppingItem, Subject, Task } from '../domain/types'
 import { db } from './db'
 
@@ -230,6 +231,72 @@ export async function saveShoppingItem(item: ShoppingItem): Promise<void> {
 
 export async function deleteShoppingItem(id: string): Promise<void> {
   await db.shopping.delete(id)
+}
+
+export interface ShoppingDraft {
+  name: string
+  amount?: string
+  note?: string
+}
+
+/** Lägger varor på inköpslistan. Sådant som redan står på listan (ej köpt) hoppas över. */
+export async function addShoppingItems(drafts: ShoppingDraft[], today = toISODate(new Date())): Promise<{ added: number; skipped: number }> {
+  return db.transaction('rw', db.shopping, async () => {
+    const open = new Set((await db.shopping.toArray()).filter((i) => !i.done).map((i) => foodKey(i.name)))
+    let added = 0
+    let skipped = 0
+    for (const d of drafts) {
+      const name = d.name.trim()
+      if (!name || open.has(foodKey(name))) {
+        skipped++
+        continue
+      }
+      open.add(foodKey(name))
+      await db.shopping.add({
+        id: newId(),
+        name,
+        ...(d.amount?.trim() ? { amount: d.amount.trim() } : {}),
+        ...(d.note?.trim() ? { note: d.note.trim() } : {}),
+        done: false,
+        addedAt: today,
+        updatedAt: new Date().toISOString(),
+      })
+      added++
+    }
+    return { added, skipped }
+  })
+}
+
+/** Flyttar avbockade varor från inköpslistan till matlagret. */
+export async function moveBoughtToPantry(today = toISODate(new Date())): Promise<number> {
+  return db.transaction('rw', db.shopping, db.pantry, async () => {
+    const bought = (await db.shopping.toArray()).filter((i) => i.done)
+    for (const i of bought) {
+      await db.pantry.add({
+        id: newId(),
+        name: i.name,
+        ...(i.amount ? { amount: i.amount } : {}),
+        addedAt: today,
+        source: 'shopping',
+        updatedAt: new Date().toISOString(),
+      })
+      await db.shopping.delete(i.id)
+    }
+    return bought.length
+  })
+}
+
+export async function clearBought(): Promise<void> {
+  const ids = (await db.shopping.toArray()).filter((i) => i.done).map((i) => i.id)
+  await db.shopping.bulkDelete(ids)
+}
+
+/** Varan är slut: tas bort ur lagret och läggs, om du vill, på inköpslistan. */
+export async function runOut(pantryId: string, addToList: boolean): Promise<void> {
+  const item = await db.pantry.get(pantryId)
+  if (!item) return
+  if (addToList) await addShoppingItems([{ name: item.name, amount: item.amount }])
+  await db.pantry.delete(pantryId)
 }
 
 export async function exportAll(): Promise<Backup> {

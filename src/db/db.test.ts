@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { parseBackup } from './backup'
 import { db } from './db'
-import { addChatMessage, addSubject, changePackItems, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
+import { addChatMessage, addShoppingItems, addSubject, changePackItems, clearBought, moveBoughtToPantry, runOut, deleteSubject, exportAll, getSettings, importAll, importLessons, newId, purgeLegacyApiKey, saveEvent, saveLesson, setPackChecked, saveSettings, updateSubject } from './repo'
 
 const lesson = (subjectId: string, weeks: number[] | null) => ({
   id: newId(), subjectId, weekday: 1, start: '08:00', end: '09:00', room: 'A1', teacher: 'Lena', weeks,
@@ -182,5 +182,40 @@ describe('mat i export', () => {
     expect(() => parseBackup({ ...base, pantry: [{ id: 'x', name: '', addedAt: '2026-11-08' }] })).toThrow(/matvara/)
     expect(() => parseBackup({ ...base, shopping: [{ id: 'x' }] })).toThrow(/inköpsvara/)
     expect(parseBackup({ ...base, version: 5 })).toMatchObject({ pantry: [], shopping: [] })
+  })
+})
+
+describe('inköpslista', () => {
+  beforeEach(async () => {
+    await Promise.all([db.shopping.clear(), db.pantry.clear()])
+  })
+  it('hoppar över dubbletter (skiftlägesokänsligt) men tillåter igen när varan är köpt', async () => {
+    expect(await addShoppingItems([{ name: 'Mjölk' }, { name: ' mjölk ' }, { name: 'Ägg', amount: '10 st' }, { name: '  ' }])).toEqual({ added: 2, skipped: 2 })
+    const milk = (await db.shopping.toArray()).find((i) => i.name === 'Mjölk')!
+    await db.shopping.update(milk.id, { done: true })
+    expect((await addShoppingItems([{ name: 'mjölk' }])).added).toBe(1) // den köpta räknas inte
+  })
+  it('köpta varor flyttas till lagret, resten ligger kvar', async () => {
+    await addShoppingItems([{ name: 'Mjölk', amount: '1 l' }, { name: 'Ägg' }])
+    const milk = (await db.shopping.toArray()).find((i) => i.name === 'Mjölk')!
+    await db.shopping.update(milk.id, { done: true })
+    expect(await moveBoughtToPantry('2026-11-10')).toBe(1)
+    expect((await db.pantry.toArray())[0]).toMatchObject({ name: 'Mjölk', amount: '1 l', source: 'shopping', addedAt: '2026-11-10' })
+    expect((await db.shopping.toArray()).map((i) => i.name)).toEqual(['Ägg'])
+  })
+  it('rensa köpta och "slut" med eller utan inköpslista', async () => {
+    await addShoppingItems([{ name: 'A' }, { name: 'B' }])
+    const a = (await db.shopping.toArray()).find((i) => i.name === 'A')!
+    await db.shopping.update(a.id, { done: true })
+    await clearBought()
+    expect((await db.shopping.toArray()).map((i) => i.name)).toEqual(['B'])
+    await db.pantry.bulkAdd([
+      { id: 'p1', name: 'Smör', amount: '1 st', addedAt: '2026-11-01', source: 'manual', updatedAt: '' },
+      { id: 'p2', name: 'Ost', addedAt: '2026-11-01', source: 'manual', updatedAt: '' },
+    ])
+    await runOut('p1', true)
+    await runOut('p2', false)
+    expect(await db.pantry.count()).toBe(0)
+    expect((await db.shopping.toArray()).map((i) => i.name).sort()).toEqual(['B', 'Smör'])
   })
 })

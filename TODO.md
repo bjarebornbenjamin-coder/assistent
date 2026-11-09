@@ -34,7 +34,7 @@ Fas 3 görs inte utan att fråga först.
 
 ## Fas 5 – Mat
 - [x] 5.1 Mat-flik, Inställningar som länk på Hem, och matlager (manuellt)
-- [ ] 5.2 Inköpslista (manuell, köpta varor flyttas till lagret)
+- [x] 5.2 Inköpslista (manuell, köpta varor flyttas till lagret)
 - [ ] 5.3 Skanna kvitto
 - [ ] 5.4 Skanna kylskåp
 - [ ] 5.5 Receptförslag
