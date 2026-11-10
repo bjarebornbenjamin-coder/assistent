@@ -5,6 +5,14 @@ import type { ApiRequest, ApiResponse, Env } from './types.js'
  * Kopplar våra rena handlers till Vercels Node-signatur. Oväntade fel blir ett tydligt JSON-svar
  * (och en rad i Vercels loggar) i stället för en tom 500.
  */
+/** Tar bort mellanslag och citattecken runt värden som klistrats in i Vercel. */
+export function cleanEnv(raw: NodeJS.ProcessEnv): Env {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw)) if (typeof v === 'string') out[k] = v.trim().replace(/^["']|["']$/g, '').trim()
+  if (out.SUPABASE_URL) out.SUPABASE_URL = out.SUPABASE_URL.replace(/\/+$/, '')
+  return out as Env
+}
+
 export function adapt(handler: (req: ApiRequest, env: Env) => Promise<ApiResponse>) {
   return async (req: VercelRequest, res: VercelResponse): Promise<void> => {
     try {
@@ -12,7 +20,7 @@ export function adapt(handler: (req: ApiRequest, env: Env) => Promise<ApiRespons
       const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0].trim() ?? req.socket?.remoteAddress ?? ''
       const out = await handler(
         { method: req.method ?? 'GET', headers: req.headers, body: req.body, ip },
-        process.env as unknown as Env,
+        cleanEnv(process.env),
       )
       for (const [k, v] of Object.entries(out.headers ?? {})) res.setHeader(k, v)
       res.status(out.status).json(out.body)

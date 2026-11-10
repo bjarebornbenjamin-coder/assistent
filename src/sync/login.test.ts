@@ -9,3 +9,12 @@ describe('inloggningsfel på svenska', () => {
     expect(loginError('Något annat')).toBe('Något annat')
   })
 })
+
+describe('miljövariabler', async () => {
+  const { cleanEnv } = await import('./supabase')
+  it('tar bort mellanslag, radbrytning och citattecken', () => {
+    expect(cleanEnv(' "sb_publishable_abc" \n')).toBe('sb_publishable_abc')
+    expect(cleanEnv('   ')).toBeUndefined()
+    expect(cleanEnv(undefined)).toBeUndefined()
+  })
+})

@@ -2,8 +2,15 @@ import { createClient, type Session, type SupabaseClient } from '@supabase/supab
 import { useEffect, useState } from 'react'
 import type { OutRow, Remote, RemoteRow } from './engine'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+/** Tar bort mellanslag, radbrytningar och citattecken som lätt följer med när man klistrar in i Vercel. */
+export const cleanEnv = (v: string | undefined) => v?.trim().replace(/^["']|["']$/g, '').trim() || undefined
+
+const url = cleanEnv(import.meta.env.VITE_SUPABASE_URL)?.replace(/\/+$/, '')
+const anon = cleanEnv(import.meta.env.VITE_SUPABASE_ANON_KEY)
+
+/** Början och längd på nyckeln, för att kunna jämföra med Supabase utan att visa hela. */
+export const keyHint = anon ? `${anon.slice(0, 22)}… (${anon.length} tecken)` : 'saknas'
+export const projectHint = url ?? 'saknas'
 
 export const syncConfigured = Boolean(url && anon)
 

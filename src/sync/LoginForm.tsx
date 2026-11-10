@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { supabase } from './supabase'
+import { keyHint, projectHint, supabase } from './supabase'
 
 /** Supabase svarar på engelska; de vanligaste felen översätts. */
 export function loginError(message: string): string {
   const m = message.toLowerCase()
+  if (m.includes('invalid api key') || m.includes('no api key')) {
+    return `Supabase godkänner inte nyckeln i VITE_SUPABASE_ANON_KEY. Appen använder ${keyHint} för ${projectHint}. Jämför med Publishable key i Supabase (Project Settings → API Keys): kopiera den med kopieringsknappen, inte genom att markera texten, lägg in den igen i Vercel och gör Redeploy.`
+  }
   if (m.includes('invalid login credentials')) return 'Fel e-post eller lösenord.'
   if (m.includes('signups not allowed') || m.includes('signup is disabled')) return 'Det går inte att skapa nya konton. Logga in med ditt befintliga konto.'
   if (m.includes('already registered')) return 'Det finns redan ett konto med den e-postadressen. Logga in i stället.'
