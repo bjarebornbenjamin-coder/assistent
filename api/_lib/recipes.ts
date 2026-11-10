@@ -31,7 +31,8 @@ interface Body {
   count: number
 }
 
-const DEFAULT_MODEL = 'gpt-4o-mini-search-preview'
+/** Modeller med webbsökning i Responses API, billigast först. */
+const DEFAULT_MODELS = ['gpt-4.1-mini', 'gpt-4o-mini', 'gpt-5-mini', 'gpt-4.1']
 const PAGE_TIMEOUT_MS = 8_000
 const MAX_PAGE_BYTES = 3_000_000
 
@@ -193,33 +194,74 @@ export function parseCandidates(content: string): { title: string; url: string; 
   }
 }
 
+interface SearchResult {
+  text: string
+  citations: string[]
+}
+
+/** Läser text och källor ur ett svar från Responses API (output → message → output_text). */
+export function readResponse(data: unknown): SearchResult {
+  const out = (data as { output?: unknown })?.output
+  let text = typeof (data as { output_text?: unknown })?.output_text === 'string' ? ((data as { output_text: string }).output_text) : ''
+  const citations: string[] = []
+  for (const item of Array.isArray(out) ? out : []) {
+    const content = (item as { type?: string; content?: unknown })?.type === 'message' ? (item as { content?: unknown }).content : null
+    for (const c of Array.isArray(content) ? content : []) {
+      const part = c as { type?: string; text?: unknown; annotations?: unknown }
+      if (part.type !== 'output_text' || typeof part.text !== 'string') continue
+      if (!text.includes(part.text)) text += (text ? '\n' : '') + part.text
+      for (const a of Array.isArray(part.annotations) ? part.annotations : []) {
+        const url = (a as { type?: string; url?: unknown }).type === 'url_citation' ? (a as { url?: unknown }).url : null
+        if (typeof url === 'string') citations.push(url)
+      }
+    }
+  }
+  return { text, citations }
+}
+
+/**
+ * Modeller och verktygsnamn att prova i tur och ordning. OpenAI byter namn och avvecklar
+ * modeller, så ett fel om modell eller verktyg gör att nästa kombination provas.
+ */
+export function attempts(env: Env): { model: string; tool: string }[] {
+  // En egen modell provas först; gamla sökmodeller (…-search-preview) hoppas över eftersom de är avvecklade.
+  const own = env.RECIPE_SEARCH_MODEL?.trim()
+  const models = [...new Set([...(own && !own.includes('search-preview') ? [own] : []), ...DEFAULT_MODELS])]
+  return models.flatMap((model) => ['web_search', 'web_search_preview'].map((tool) => ({ model, tool })))
+}
+
+async function webSearch(prompt: string, env: Env, fetchFn: FetchFn): Promise<SearchResult | { error: string }> {
+  let last = ''
+  for (const a of attempts(env)) {
+    let res: Response
+    try {
+      res = await fetchFn(`${OPENAI}/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+        body: JSON.stringify({
+          model: a.model,
+          tools: [{ type: a.tool, search_context_size: 'medium', user_location: { type: 'approximate', country: 'SE' } }],
+          input: prompt,
+        }),
+      })
+    } catch {
+      return { error: 'Servern kunde inte nå OpenAI.' }
+    }
+    const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null
+    if (res.ok) return readResponse(data)
+    last = data?.error?.message ?? `fel ${res.status}`
+    // Fel nyckel, slut på kvot eller för många anrop blir inte bättre av en annan modell.
+    if (res.status === 401 || res.status === 429 || res.status >= 500) break
+  }
+  return { error: `Receptsökningen misslyckades: ${last}` }
+}
+
 export async function findRecipes(b: Body, env: Env, fetchFn: FetchFn): Promise<ApiResponse> {
-  let res: Response
-  try {
-    res = await fetchFn(`${OPENAI}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.OPENAI_API_KEY}` },
-      body: JSON.stringify({
-        model: env.RECIPE_SEARCH_MODEL || DEFAULT_MODEL,
-        web_search_options: { search_context_size: 'medium', user_location: { type: 'approximate', approximate: { country: 'SE' } } },
-        messages: [{ role: 'user', content: searchPrompt(b) }],
-      }),
-    })
-  } catch {
-    return errorBody(502, 'Servern kunde inte nå OpenAI.')
-  }
-  const data = (await res.json().catch(() => null)) as {
-    error?: { message?: string }
-    choices?: { message?: { content?: string | null; annotations?: { type?: string; url_citation?: { url?: string } }[] } }[]
-  } | null
-  if (!res.ok) return errorBody(res.status, `Receptsökningen misslyckades: ${data?.error?.message ?? `fel ${res.status}`}`)
-  const msg = data?.choices?.[0]?.message
-  const candidates = parseCandidates(msg?.content ?? '')
+  const found = await webSearch(searchPrompt(b), env, fetchFn)
+  if ('error' in found) return errorBody(502, found.error)
+  const candidates = parseCandidates(found.text)
   // Källor från sökningen används om modellen inte gav några användbara adresser.
-  for (const a of msg?.annotations ?? []) {
-    const url = a.url_citation?.url
-    if (url && !candidates.some((c) => c.url === url)) candidates.push({ title: '', url, why: '' })
-  }
+  for (const url of found.citations) if (!candidates.some((c) => c.url === url)) candidates.push({ title: '', url, why: '' })
 
   const seen = new Set<string>()
   const unique = candidates

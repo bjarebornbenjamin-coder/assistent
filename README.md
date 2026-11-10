@@ -98,7 +98,7 @@ Kalender → "Planera plugg inför prov": skriv provet, datumet och vad som ing�
 
 ## Recept från nätet
 
-Appen skriver inga egna recept. Mat → Recept: välj "Bara det jag har hemma", "Det jag har hemma, handla lite" eller "Handla det som behövs", och skriv gärna ett önskemål. Servern (`/api/recipes`) låter OpenAI:s sökmodell (`gpt-4o-mini-search-preview`, kan bytas med `RECIPE_SEARCH_MODEL` i Vercel) leta upp riktiga receptsidor, hämtar varje sida och läser receptet ur sidans strukturerade data (schema.org/Recipe). Bara sidor som går att läsa som recept visas, så länkarna är aldrig påhittade och ingredienserna i appen är receptsidans. Appen jämför dem med lagret (på namn, så kolla mängderna) och kan lägga det som saknas på inköpslistan.
+Appen skriver inga egna recept. Mat → Recept: välj "Bara det jag har hemma", "Det jag har hemma, handla lite" eller "Handla det som behövs", och skriv gärna ett önskemål. Servern (`/api/recipes`) låter OpenAI leta upp riktiga receptsidor med webbsökning (Responses API och verktyget `web_search`; modellerna gpt-4.1-mini, gpt-4o-mini, gpt-5-mini och gpt-4.1 provas i tur och ordning, eller först den som står i `RECIPE_SEARCH_MODEL` i Vercel), hämtar varje sida och läser receptet ur sidans strukturerade data (schema.org/Recipe). Bara sidor som går att läsa som recept visas, så länkarna är aldrig påhittade och ingredienserna i appen är receptsidans. Appen jämför dem med lagret (på namn, så kolla mängderna) och kan lägga det som saknas på inköpslistan.
 
 Veckomenyn (Mat → Meny) väljer rätter som förut och hämtar sedan ett riktigt recept för varje dag. Chatten använder samma sökning (`find_recipes`) och kan bara länka till adresser som sökningen gav.
 

@@ -27,7 +27,7 @@ export interface Env {
   VAPID_PRIVATE_KEY?: string
   VAPID_SUBJECT?: string
   CRON_SECRET?: string
-  /** Modell med webbsökning för recept (standard gpt-4o-mini-search-preview). */
+  /** Modell för receptsökning med webbsökning (annars provas gpt-4.1-mini, gpt-4o-mini, gpt-5-mini, gpt-4.1). */
   RECIPE_SEARCH_MODEL?: string
 }
 
