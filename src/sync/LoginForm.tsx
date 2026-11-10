@@ -18,40 +18,62 @@ export function loginError(message: string): string {
 }
 
 export function LoginForm({ intro }: { intro?: string }) {
+  const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [show, setShow] = useState(false)
   const [message, setMessage] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
   if (!supabase) return null
   const client = supabase
+  const up = mode === 'up'
 
-  async function auth(kind: 'in' | 'up', e?: FormEvent) {
-    e?.preventDefault()
+  async function submit(e: FormEvent) {
+    e.preventDefault()
     setBusy(true)
     setMessage('')
     setInfo('')
-    const { data, error } =
-      kind === 'in'
-        ? await client.auth.signInWithPassword({ email: email.trim(), password })
-        : await client.auth.signUp({ email: email.trim(), password })
+    const { data, error } = up
+      ? await client.auth.signUp({ email: email.trim(), password })
+      : await client.auth.signInWithPassword({ email: email.trim(), password })
     setBusy(false)
     if (error) return setMessage(loginError(error.message))
-    if (kind === 'up' && !data.session) setInfo('Kontot är skapat. Bekräfta e-postadressen via mejlet och logga sedan in.')
+    if (up && !data.session) setInfo('Kontot är skapat. Bekräfta e-postadressen via mejlet och logga sedan in.')
     else setPassword('')
   }
 
+  const switchMode = (m: 'in' | 'up') => {
+    setMode(m)
+    setMessage('')
+    setInfo('')
+  }
+
   return (
-    <form onSubmit={(e) => auth('in', e)}>
+    <form className="login-form" onSubmit={submit}>
       {intro && <p className="muted">{intro}</p>}
-      <label className="field"><span>E-post</span><input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-      <label className="field"><span>Lösenord</span><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+      <div className="seg" role="group" aria-label="Logga in eller skapa konto">
+        <button type="button" className="tab" aria-pressed={!up} onClick={() => switchMode('in')}>Logga in</button>
+        <button type="button" className="tab" aria-pressed={up} onClick={() => switchMode('up')}>Skapa konto</button>
+      </div>
+      <label className="field">
+        <span>E-post</span>
+        <input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      </label>
+      <label className="field">
+        <span>Lösenord{up ? ' (minst 6 tecken)' : ''}</span>
+        <span className="password-field">
+          <input type={show ? 'text' : 'password'} autoComplete={up ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button type="button" className="btn text" aria-pressed={show} aria-label={show ? 'Dölj lösenordet' : 'Visa lösenordet'} onClick={() => setShow((v) => !v)}>
+            {show ? 'Dölj' : 'Visa'}
+          </button>
+        </span>
+      </label>
       {message && <p className="error" role="alert">{message}</p>}
       {info && <p className="muted" role="status">{info}</p>}
-      <div className="actions">
-        <button type="submit" className="btn primary" disabled={busy || !email || !password}>{busy ? 'Loggar in…' : 'Logga in'}</button>
-        <button type="button" className="btn text" disabled={busy || !email || password.length < 6} onClick={() => auth('up')}>Skapa konto</button>
-      </div>
+      <button type="submit" className="btn primary wide" disabled={busy || !email || (up ? password.length < 6 : !password)}>
+        {busy ? (up ? 'Skapar konto…' : 'Loggar in…') : up ? 'Skapa konto' : 'Logga in'}
+      </button>
     </form>
   )
 }
@@ -60,9 +82,12 @@ export function LoginForm({ intro }: { intro?: string }) {
 export function LoginScreen() {
   return (
     <div className="login">
-      <h1>Logga in</h1>
-      <LoginForm intro="Logga in för att använda din studieassistent. Det du har i appen följer med mellan dina enheter. Du behöver bara logga in en gång per enhet." />
-      <p className="muted small">Första gången: skriv e-post och ett lösenord (minst 6 tecken) och tryck Skapa konto.</p>
+      <div className="eyebrow">Studieassistent</div>
+      <h1>Välkommen</h1>
+      <p className="muted">Schema, kalender, mat och träning på ett ställe. Logga in en gång per enhet, så följer allt med mellan mobil och dator.</p>
+      <div className="card login-card">
+        <LoginForm />
+      </div>
     </div>
   )
 }
