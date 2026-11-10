@@ -49,7 +49,8 @@ export async function unsubscribeDevice(client: SupabaseClient, userId: string):
 
 /** Ersätter alla ännu inte skickade, framtida notiser med den nya planen. */
 export async function uploadNotifications(client: SupabaseClient, userId: string, planned: PlannedNotification[]): Promise<void> {
-  const del = await client.from('notifications').delete().eq('user_id', userId).eq('sent', false).gt('fire_at', new Date().toISOString())
+  // Matplaneraren delar samma Supabase och märker sina notiser med "mat:"; de rörs inte här.
+  const del = await client.from('notifications').delete().eq('user_id', userId).eq('sent', false).gt('fire_at', new Date().toISOString()).not('id', 'like', 'mat:%')
   if (del.error) throw new Error(del.error.message)
   if (planned.length === 0) return
   const { error } = await client.from('notifications').upsert(
