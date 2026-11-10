@@ -323,7 +323,10 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
     case 'get_schedule': {
       const d = str(args.date)
       if (!DATE.test(d)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
-      return { result: { date: d, lessons: lessonsOn(d, ctx.lessons, ctx.settings).map((l) => lessonView(l, ctx.subjects)) } }
+      // Idag får varje lektion ett läge efter klockslaget, så att svaret inte låter som att allt är kvar.
+      const now = d === ctx.today ? ctx.nowTime : undefined
+      const state = (l: Lesson) => (!now ? undefined : l.end <= now ? 'slut' : l.start <= now ? 'pågår' : 'kvar')
+      return { result: { date: d, ...(now ? { now } : {}), lessons: lessonsOn(d, ctx.lessons, ctx.settings).map((l) => ({ ...lessonView(l, ctx.subjects), ...(now ? { state: state(l) } : {}) })) } }
     }
     case 'get_overview': {
       const from = str(args.from)
@@ -332,24 +335,54 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const span = daysBetween(from, to)
       if (span < 0 || span > 13) return err('Intervallet måste vara 1–14 dagar.')
       const subjectName = (id?: string) => ctx.subjects.find((x) => x.id === id)?.name
+      const todayIso = ctx.today ?? toISODate(new Date())
+      const now = ctx.nowTime
       const days = Array.from({ length: span + 1 }, (_, i) => {
         const d = addDays(from, i)
-        const dayLessons = lessonsOn(d, ctx.lessons, ctx.settings)
-        return {
+        const allLessons = lessonsOn(d, ctx.lessons, ctx.settings)
+        const allEvents = eventsOn(d, ctx.events)
+        const base = {
           date: d,
           weekday: WEEKDAYS_LONG[weekdayOf(d) - 1],
-          lessons: dayLessons.map((l) => lessonView(l, ctx.subjects)),
-          events: eventsOn(d, ctx.events).map((e) => ({ title: e.title, start: e.start, end: e.end, note: e.note || undefined })),
           tasksDue: tasksOn(d, ctx.tasks).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), done: t.done, time: t.time, note: t.note })),
-          reminders: ctx.reminders.filter((r) => occursOn(r, d)).sort((a, b) => a.time.localeCompare(b.time)).map((r) => ({ title: r.title, time: r.time })),
-          packing: allPackItems(d, dayLessons, ctx.subjects, ctx.events),
           workoutsDone: ctx.workouts.filter((w) => w.date === d).map((w) => w.title),
         }
+        if (d !== todayIso || !now) {
+          return {
+            ...base,
+            lessons: allLessons.map((l) => lessonView(l, ctx.subjects)),
+            events: allEvents.map((e) => ({ title: e.title, start: e.start, end: e.end, note: e.note || undefined })),
+            reminders: ctx.reminders.filter((r) => occursOn(r, d)).sort((a, b) => a.time.localeCompare(b.time)).map((r) => ({ title: r.title, time: r.time })),
+            packing: allPackItems(d, allLessons, ctx.subjects, ctx.events),
+          }
+        }
+        // Idag: bara det som är kvar efter klockslaget. Det som redan varit räknas bara.
+        const lessonsLeft = allLessons.filter((l) => l.end > now)
+        const eventsLeft = allEvents.filter((e) => !e.start || (e.end ?? e.start) > now)
+        const remindersLeft = ctx.reminders.filter((r) => occursOn(r, d) && r.time > now).sort((a, b) => a.time.localeCompare(b.time))
+        const schoolOver = allLessons.length > 0 && lessonsLeft.length === 0
+        return {
+          ...base,
+          now,
+          lessons: lessonsLeft.map((l) => ({ ...lessonView(l, ctx.subjects), ...(l.start <= now ? { ongoing: true } : {}) })),
+          events: eventsLeft.map((e) => ({ title: e.title, start: e.start, end: e.end, note: e.note || undefined })),
+          reminders: remindersLeft.map((r) => ({ title: r.title, time: r.time })),
+          packing: lessonsLeft.length || eventsLeft.length ? allPackItems(d, lessonsLeft, ctx.subjects, eventsLeft) : [],
+          ...(allLessons.length - lessonsLeft.length > 0 ? { lessonsAlreadyOver: allLessons.length - lessonsLeft.length } : {}),
+          ...(allEvents.length - eventsLeft.length > 0 ? { eventsAlreadyOver: allEvents.length - eventsLeft.length } : {}),
+          ...(schoolOver ? { schoolOver: `Skolan slutade ${allLessons.reduce((m, l) => (l.end > m ? l.end : m), '00:00')}.` } : {}),
+        }
       })
-      const todayIso = ctx.today ?? toISODate(new Date())
       const overdue = ctx.tasks.filter((t) => !t.done && t.deadline < todayIso).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), deadline: t.deadline }))
       const empty = days.every((d) => !d.lessons.length && !d.events.length && !d.tasksDue.length && !d.reminders.length) && overdue.length === 0
-      return { result: { days, ...(overdue.length ? { overdueTasks: overdue } : {}), ...(empty ? { note: 'Inget inplanerat under perioden.' } : {}) } }
+      const todayOnly = span === 0 && from === todayIso && now
+      return {
+        result: {
+          days,
+          ...(overdue.length ? { overdueTasks: overdue } : {}),
+          ...(empty ? { note: todayOnly ? `Inget kvar idag efter klockan ${now}.` : 'Inget inplanerat under perioden.' } : {}),
+        },
+      }
     }
     case 'get_packing_list': {
       const d = str(args.date)

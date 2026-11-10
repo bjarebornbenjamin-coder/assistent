@@ -327,3 +327,37 @@ describe('händelser med packlista från chatten', () => {
     expect(out.card).toMatchObject({ type: 'event', event: { title: 'Fotboll', packItems: ['Fotbollsskor', 'Vattenflaska'] } })
   })
 })
+
+describe('get_overview följer klockan', () => {
+  const tue = (id: string, start: string, end: string) => ({ id, subjectId: 'ma', weekday: 2, start, end, room: '', teacher: '', weeks: null })
+  const c = {
+    ...ctx,
+    today: '2026-11-10',
+    lessons: [tue('a', '08:20', '09:40'), tue('b', '13:00', '15:00')],
+    events: [
+      { id: 'e1', title: 'Tandläkare', date: '2026-11-10', start: '10:00', end: '10:30', note: '', updatedAt: '' },
+      { id: 'e2', title: 'Fotboll', date: '2026-11-10', start: '18:00', end: '19:30', note: '', updatedAt: '' },
+    ],
+    reminders: [{ id: 'r', title: 'Vitaminer', time: '21:30', repeat: { kind: 'daily' as const }, enabled: true, updatedAt: '' }],
+  }
+  type Day = { lessons: { subject?: string; ongoing?: boolean }[]; events: { title: string }[]; reminders: unknown[]; schoolOver?: string; lessonsAlreadyOver?: number; packing: string[] }
+  const day = (nowTime: string) => (runTool('get_overview', { from: '2026-11-10' }, { ...c, nowTime }).result as { days: Day[]; note?: string })
+
+  it('kl 21 är skolan slut och bara kvällens saker är kvar', () => {
+    const r = day('21:00')
+    expect(r.days[0].lessons).toEqual([])
+    expect(r.days[0]).toMatchObject({ schoolOver: 'Skolan slutade 15:00.', lessonsAlreadyOver: 2, events: [], reminders: [{ title: 'Vitaminer', time: '21:30' }], packing: [] })
+  })
+  it('mitt på dagen: pågående lektion markeras, passerade tas bort', () => {
+    const r = day('13:30')
+    expect(r.days[0].lessons).toMatchObject([{ ongoing: true }])
+    expect(r.days[0].events.map((e) => e.title)).toEqual(['Fotboll'])
+  })
+  it('andra dagar påverkas inte av klockan', () => {
+    const r = runTool('get_overview', { from: '2026-11-17' }, { ...c, nowTime: '21:00' }).result as { days: Day[] }
+    expect(r.days[0].lessons).toHaveLength(2)
+  })
+  it('helt tom kväll ger en tydlig notering', () => {
+    expect(runTool('get_overview', { from: '2026-11-10' }, { ...c, nowTime: '23:00', tasks: [] }).result).toMatchObject({ note: 'Inget kvar idag efter klockan 23:00.' })
+  })
+})
