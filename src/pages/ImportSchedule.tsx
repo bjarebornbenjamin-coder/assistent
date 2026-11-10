@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { AiProgress } from '../components/AiProgress'
+import { ImageUpload, Steps } from '../components/ImageUpload'
 import { Link, useNavigate } from 'react-router-dom'
 import { analyzeRows, parseImportResponse, readScheduleImage, type ImportRow } from '../ai/scheduleImport'
 import { importLessons } from '../db/repo'
@@ -65,17 +66,15 @@ export function ImportSchedulePage() {
   return (
     <>
       <Link to="/schema" className="back">‹ Tillbaka till Schema</Link>
-      <h1>Importera schema från bild</h1>
-      <p className="muted">
-        Välj en skärmdump eller ett foto av ditt schema. Bilden skickas via appens server till OpenAI för avläsning och sparas inte. Du får granska och ändra
-        allt innan något sparas.
-      </p>
-      <div className="actions" style={{ marginTop: 8 }}>
-        <button type="button" className="btn primary" disabled={busy} onClick={() => fileRef.current?.click()}>
-          {busy ? 'Läser av…' : rows ? 'Välj en annan bild' : 'Välj bild'}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
-      </div>
+      <h1>Importera schema</h1>
+      <p className="lead">Ta en skärmdump eller ett foto av ditt schema, så läser AI:n av lektionerna åt dig.</p>
+      <ImageUpload title="Välj en bild av schemat" hint="Skärmdump eller foto av hela veckan" button="Välj bild" busy={busy} done={Boolean(rows)} onFile={onFile} />
+      {!rows && !busy && (
+        <>
+          <Steps items={['Välj en bild av schemat', 'Granska och ändra lektionerna', 'Spara dem i schemat']} />
+          <p className="footnote">Bilden skickas till OpenAI för avläsning och sparas inte. Inget sparas förrän du trycker Spara.</p>
+        </>
+      )}
       <AiProgress active={busy} expected={15} label="AI:n läser av bilden" />
       {error && <p className="error" role="alert">{error}</p>}
       {preview && <img src={preview} alt="Ditt schema" className="import-preview" />}

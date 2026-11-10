@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { AiProgress } from '../components/AiProgress'
+import { ImageUpload, Steps } from '../components/ImageUpload'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { matchExisting, parseScanResponse, scanImage, type ScanKind, type ScanRow } from '../ai/foodScan'
 import { addPantryItems } from '../db/repo'
@@ -8,18 +9,22 @@ import { useAiConfig, usePantry, useShopping } from '../hooks'
 import { authHeaders } from '../lib/auth'
 import { imageToDataUrl } from '../lib/image'
 
-const TEXT: Record<ScanKind, { title: string; intro: string; button: string }> = {
+const TEXT: Record<ScanKind, { title: string; lead: string; box: string; hint: string; button: string; tips: string[] }> = {
   receipt: {
     title: 'Skanna kvitto',
-    intro:
-      'Ta ett skarpt, rakt foto av kvittot eller välj en skärmdump av ett e-kvitto. Bilden skickas via appens server till OpenAI och sparas inte. Bäst före-datumen är uppskattningar som du kan ändra. Dölj gärna kortnummer.',
+    lead: 'Fota kvittot, så lägger AI:n in varorna i ditt matlager.',
+    box: 'Välj en bild av kvittot',
+    hint: 'Foto eller skärmdump av ett e-kvitto',
     button: 'Välj kvitto',
+    tips: ['Fota rakt ovanifrån och se till att texten är skarp.', 'Dölj gärna kortnumret.', 'Bäst före-datumen är uppskattningar som du kan ändra.'],
   },
   fridge: {
     title: 'Skanna kylskåp',
-    intro:
-      'Fota kylskåpet, frysen eller skafferiet med öppen dörr. AI:n ser bara det som syns, så saker bakom andra varor missas och mängderna är gissningar. Granska listan innan du sparar. Bilden skickas via appens server till OpenAI och sparas inte.',
+    lead: 'Fota kylskåpet, frysen eller skafferiet, så listar AI:n vad som finns.',
+    box: 'Välj ett foto',
+    hint: 'Med dörren öppen och bra ljus',
     button: 'Välj foto',
+    tips: ['AI:n ser bara det som syns, så saker längst in kan missas.', 'Mängderna är gissningar som du kan ändra.'],
   },
 }
 
@@ -73,13 +78,15 @@ export function ScanFoodPage() {
     <>
       <Link to="/mat" className="back">‹ Tillbaka till Mat</Link>
       <h1>{t.title}</h1>
-      <p className="muted">{t.intro}</p>
-      <div className="actions" style={{ marginTop: 8 }}>
-        <button type="button" className="btn primary" disabled={busy} onClick={() => fileRef.current?.click()}>
-          {busy ? 'Läser av…' : rows ? 'Välj en annan bild' : t.button}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
-      </div>
+      <p className="lead">{t.lead}</p>
+      <ImageUpload title={t.box} hint={t.hint} button={t.button} busy={busy} done={Boolean(rows)} onFile={onFile} />
+      {!rows && !busy && (
+        <>
+          <Steps items={[t.box, 'Granska och ändra varorna', 'Lägg dem i lagret']} />
+          <ul className="tips">{t.tips.map((x) => <li key={x}>{x}</li>)}</ul>
+          <p className="footnote">Bilden skickas till OpenAI för avläsning och sparas inte.</p>
+        </>
+      )}
       <AiProgress active={busy} expected={15} label="AI:n läser av bilden" />
       {error && (
         <>

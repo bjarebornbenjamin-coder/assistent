@@ -11,7 +11,7 @@
   --outline: #c4c7c5;
   --danger: #b3261e;
   --radius: 16px;
-  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -360,7 +360,8 @@ p, .sub, .note { text-wrap: pretty; }
   --danger: #b3261e;
   --accent: var(--primary);
   --accent-soft: #d3e3fd;
-  font-family: 'Google Sans', 'Google Sans Text', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -556,3 +557,13 @@ input[type='password'], input[type='email'] { width: 100%; padding: 10px 12px; m
 .password-field input { padding-right: 48px; }
 .login-buttons { display: grid; gap: 8px; margin-top: 4px; }
 .login-buttons .btn.wide { margin-top: 0; }
+.lead { font-size: 16px; line-height: 24px; color: var(--text); margin: 4px 0 16px; }
+.upload { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 20px; border: 1.5px dashed var(--outline-strong, var(--outline)); border-radius: var(--radius); background: var(--surface); }
+.upload-text { min-width: 0; flex: 1 1 200px; }
+.upload-text .title { font-weight: 500; font-size: 16px; }
+.upload-text .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.how-steps { list-style: none; padding: 0; margin: 16px 0 8px; display: grid; gap: 10px; }
+.how-steps li { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+.how-steps .n { flex: none; width: 26px; height: 26px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: var(--primary-container); color: var(--on-primary-container); font-variant-numeric: tabular-nums; }
+.tips { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 21px; }
+.footnote { font-size: 13px; color: var(--muted); margin: 12px 0 0; }

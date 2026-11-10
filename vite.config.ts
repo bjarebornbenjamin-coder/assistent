@@ -22,7 +22,15 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { navigateFallback: '/index.html', importScripts: ['push-sw.js'] },
+      workbox: {
+        navigateFallback: '/index.html',
+        importScripts: ['push-sw.js'],
+        // Typsnittet sparas så att appen ser likadan ut offline.
+        runtimeCaching: [
+          { urlPattern: /^https:\/\/fonts\.googleapis\.com\//, handler: 'StaleWhileRevalidate', options: { cacheName: 'fonts-css' } },
+          { urlPattern: /^https:\/\/fonts\.gstatic\.com\//, handler: 'CacheFirst', options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 31_536_000 }, cacheableResponse: { statuses: [0, 200] } } },
+        ],
+      },
     }),
   ],
   test: { environment: 'node', setupFiles: ['fake-indexeddb/auto'] },
