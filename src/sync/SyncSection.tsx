@@ -13,7 +13,6 @@ export function SyncSection() {
   if (!syncConfigured || !supabase) {
     return (
       <>
-        <h2>Synk mellan enheter</h2>
         <p className="muted">Synk är inte påslagen på den här installationen. Se README (avsnittet Supabase) för hur du kopplar den.</p>
       </>
     )
@@ -37,7 +36,6 @@ export function SyncSection() {
 
   return (
     <>
-      <h2>Synk mellan enheter</h2>
       {session ? (
         <>
           <p>Inloggad som {session.user.email}.</p>

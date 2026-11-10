@@ -1,4 +1,8 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { syncConfigured, useSession } from '../sync/supabase'
+import { useNotifyStatus } from '../push/useNotifyStatus'
+import { GOOGLE_CLIENT_ID, useGoogleState } from '../google/google'
 import { DEFAULT_MODEL, FALLBACK_MODELS, fetchModels } from '../ai/models'
 import { NotifySection } from '../push/NotifySection'
 import { SyncSection } from '../sync/SyncSection'
@@ -32,46 +36,77 @@ function AiSection() {
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null)
   const { error: passwordError, fail, touch } = useFieldError()
   if (!config) return null
+  const models = [...new Set([config.model, ...(config.models ?? FALLBACK_MODELS)])]
   return (
     <>
-      <h2>AI-assistent</h2>
+      <h2>Modell</h2>
+      <label className="field">
+        <span>Används i chatten och när AI:n läser bilder, gör veckomeny och uppskattar näring</span>
+        <select value={config.model} onChange={(e) => saveAiConfig({ model: e.target.value })}>
+          {models.map((m) => <option key={m} value={m}>{m}{m === DEFAULT_MODEL ? ' (standard)' : ''}</option>)}
+        </select>
+      </label>
       <p className="muted">
-        Lösenordet till servern (APP_PASSWORD i Vercel). Valfritt, men utan det kan alla med adressen använda din OpenAI-nyckel.
+        {config.models ? `Listan är hämtad från OpenAI.` : 'Listan är förvald.'} Fungerar inte modellen används {DEFAULT_MODEL}.{' '}
+        <button
+          type="button"
+          className="btn text inline"
+          disabled={loadingModels}
+          onClick={async () => {
+            setLoadingModels(true)
+            setModelsMsg('')
+            try {
+              const list = await fetchModels(await authHeaders())
+              await saveAiConfig({ models: list })
+              setModelsMsg(`Hämtade ${list.length} modeller.`)
+            } catch (e) {
+              setModelsMsg(e instanceof Error ? e.message : 'Kunde inte hämta listan.')
+            } finally {
+              setLoadingModels(false)
+            }
+          }}
+        >
+          {loadingModels ? 'Hämtar…' : 'Hämta aktuell lista'}
+        </button>
       </p>
+      {modelsMsg && <p className="muted" role="status">{modelsMsg}</p>}
+
+      <h2>Lösenord till servern</h2>
       {config.password && looksLikeOpenAiKey(config.password) && (
         <p className="error" role="alert">Det sparade lösenordet ser ut som en OpenAI-nyckel. Ta bort det, lägg nyckeln i Vercel och skriv ditt APP_PASSWORD här.</p>
       )}
       {config.password ? (
-        <p>
-          Lösenord sparat. <button type="button" className="btn danger" onClick={() => saveAiConfig({ password: '' })}>Ta bort lösenord</button>
-        </p>
+        <div className="card row-between">
+          <span>Lösenord sparat</span>
+          <button type="button" className="btn text danger" onClick={() => saveAiConfig({ password: '' })}>Ta bort</button>
+        </div>
       ) : (
-        <form
-          className="item"
-          onSubmit={(e: FormEvent) => {
-            e.preventDefault()
-            const value = password.trim()
-            if (!value) return
-            if (looksLikeOpenAiKey(value)) {
-              fail('password', 'Det här ser ut som en OpenAI-nyckel. Den ska inte skrivas här utan läggas i Vercel som OPENAI_API_KEY. Här ska du skriva lösenordet du själv valt som APP_PASSWORD.')
-              return
-            }
-            void saveAiConfig({ password: value })
-            setPassword('')
-          }}
-        >
-          <input
-            type="password"
-            aria-label="Serverns lösenord"
-            placeholder="APP_PASSWORD (inte OpenAI-nyckeln)"
-            autoComplete="off"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); touch('password') }}
-          />
-          <button type="submit" className="btn primary">Spara</button>
-        </form>
+        <>
+          <p className="muted">Samma som APP_PASSWORD i Vercel. Valfritt, men utan det kan alla med adressen använda din OpenAI-nyckel.</p>
+          <form
+            className="add-row"
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault()
+              const value = password.trim()
+              if (!value) return
+              if (looksLikeOpenAiKey(value)) {
+                fail('password', 'Det här ser ut som en OpenAI-nyckel. Den ska inte skrivas här utan läggas i Vercel som OPENAI_API_KEY. Här ska du skriva lösenordet du själv valt som APP_PASSWORD.')
+                return
+              }
+              void saveAiConfig({ password: value })
+              setPassword('')
+            }}
+          >
+            <input type="password" aria-label="Serverns lösenord" placeholder="Lösenord" autoComplete="off" value={password} onChange={(e) => { setPassword(e.target.value); touch('password') }} />
+            <button type="submit" className="btn primary">Spara</button>
+          </form>
+          {passwordError && <p className="error" role="alert">{passwordError}</p>}
+        </>
       )}
-      <div className="actions" style={{ marginTop: 0 }}>
+
+      <h2>Anslutning</h2>
+      <p className="muted">Kontrollerar att servern, lösenordet och OpenAI-nyckeln fungerar.</p>
+      <div className="actions" style={{ marginTop: 8 }}>
         <button
           type="button"
           className="btn"
@@ -86,41 +121,7 @@ function AiSection() {
           {testing ? 'Testar…' : 'Testa anslutningen'}
         </button>
       </div>
-      {passwordError && <p className="error" role="alert">{passwordError}</p>}
-      {diagnosis && <p className={diagnosis.ok ? '' : 'error'} role="status">{diagnosis.message}</p>}
-
-      <label className="field">
-        <span>Modell</span>
-        <select value={config.model} onChange={(e) => saveAiConfig({ model: e.target.value })}>
-          {[...new Set([config.model, ...(config.models ?? FALLBACK_MODELS)])].map((m) => (
-            <option key={m} value={m}>{m}{m === DEFAULT_MODEL ? ' (standard)' : ''}</option>
-          ))}
-        </select>
-      </label>
-      <div className="actions" style={{ marginTop: 0 }}>
-        <button
-          type="button"
-          className="btn"
-          disabled={loadingModels}
-          onClick={async () => {
-            setLoadingModels(true)
-            setModelsMsg('')
-            try {
-              const models = await fetchModels(await authHeaders())
-              await saveAiConfig({ models })
-              setModelsMsg(`Hämtade ${models.length} modeller.`)
-            } catch (e) {
-              setModelsMsg(e instanceof Error ? e.message : 'Kunde inte hämta listan.')
-            } finally {
-              setLoadingModels(false)
-            }
-          }}
-        >
-          Hämta aktuell lista från OpenAI
-        </button>
-      </div>
-      {modelsMsg && <p className="muted" role="status">{modelsMsg}</p>}
-      <p className="muted">Listan nedan är en förvald lista tills du hämtar en färsk. Fungerar inte modellen används {DEFAULT_MODEL}.</p>
+      {diagnosis && <p className={diagnosis.ok ? 'done-note' : 'error'} role="status">{diagnosis.ok ? '✓ ' : ''}{diagnosis.message}</p>}
     </>
   )
 }
@@ -147,7 +148,6 @@ function BackgroundSection() {
 
   return (
     <>
-      <h2>Bakgrundsbild</h2>
       <p className="muted">Till exempel en fri impressionistisk målning (Monet, Renoir, Morisot). Sparas bara på den här enheten.</p>
       {bg.image && <img src={bg.image} alt="Vald bakgrundsbild" className="bg-preview" />}
       {bg.image && (
@@ -183,7 +183,6 @@ function MemorySection() {
   const memories = settings.memories
   return (
     <>
-      <h2>Assistentens minne</h2>
       <p className="muted">Saker assistenten tar hänsyn till i alla svar. Be chatten komma ihåg något ("jag gillar inte svamp"), eller skriv in det här.</p>
       {memories.length === 0 && <p className="empty">Inget sparat.</p>}
       {memories.map((m) => (
@@ -226,7 +225,6 @@ function ContactsSection() {
 
   return (
     <>
-      <h2>Kontakter</h2>
       <p className="muted">Används av assistenten för att veta vem "Anna" är när du ber den skriva ett mejl.</p>
       {contacts.map((c) => (
         <div className="contact-row" key={c.id}>
@@ -248,7 +246,14 @@ function ContactsSection() {
 }
 
 export function SettingsPage() {
+  const { del } = useParams()
   const settings = useSettings()
+  const config = useAiConfig()
+  const contacts = useContacts()
+  const session = useSession()
+  const notify = useNotifyStatus()
+  const google = useGoogleState()
+  const background = useBackground()
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null)
   if (!settings) return null
@@ -279,60 +284,128 @@ export function SettingsPage() {
     }
   }
 
+  const sections: Record<string, { title: string; body: ReactNode }> = {
+    veckor: {
+      title: 'Schema och veckor',
+      body: (
+        <>
+          <label className="field">
+            <span>Hur skiljer sig veckorna åt?</span>
+            <select value={settings.cycleLength} onChange={(e) => saveSettings({ cycleLength: Number(e.target.value), cycleAnchor: anchorFor(today, 0) })}>
+              <option value={1}>Samma schema varje vecka</option>
+              <option value={2}>A/B-veckor</option>
+              <option value={3}>3 olika veckor (A/B/C)</option>
+              <option value={4}>4 olika veckor (A/B/C/D)</option>
+            </select>
+          </label>
+          {settings.cycleLength > 1 && (
+            <label className="field">
+              <span>Den här veckan är</span>
+              <select value={currentWeek} onChange={(e) => saveSettings({ cycleAnchor: anchorFor(today, Number(e.target.value)) })}>
+                {Array.from({ length: settings.cycleLength }, (_, i) => <option key={i} value={i}>Vecka {cycleLabel(i)}</option>)}
+              </select>
+            </label>
+          )}
+        </>
+      ),
+    },
+    utseende: {
+      title: 'Utseende',
+      body: (
+        <>
+          <h2>Tema</h2>
+          <div className="seg" role="group" aria-label="Tema">
+            {THEMES.map((t) => (
+              <button key={t.value} type="button" className="tab" aria-pressed={settings.theme === t.value} onClick={() => saveSettings({ theme: t.value })}>{t.label}</button>
+            ))}
+          </div>
+          <h2>Bakgrundsbild</h2>
+          <BackgroundSection />
+        </>
+      ),
+    },
+    synk: { title: 'Synk mellan enheter', body: <SyncSection /> },
+    google: { title: 'Google Kalender', body: <GoogleSection /> },
+    notiser: { title: 'Notiser', body: <NotifySection /> },
+    ai: { title: 'AI-assistent', body: <AiSection /> },
+    minne: { title: 'Assistentens minne', body: <MemorySection /> },
+    kontakter: { title: 'Kontakter', body: <ContactsSection /> },
+    sakerhetskopia: {
+      title: 'Säkerhetskopia',
+      body: (
+        <>
+          <p className="muted">{syncConfigured ? 'Med synk påslagen finns datan även i molnet, men en egen kopia skadar inte.' : 'All data ligger bara på den här enheten. Exportera regelbundet.'}</p>
+          <div className="actions" style={{ marginTop: 8 }}>
+            <button type="button" className="btn primary" onClick={download}>Exportera JSON</button>
+            <button type="button" className="btn" onClick={() => fileRef.current?.click()}>Importera JSON</button>
+            <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+          </div>
+          {message && <p className={message.error ? 'error' : 'muted'} role="status">{message.text}</p>}
+        </>
+      ),
+    },
+  }
+
+  const open = del ? sections[del] : undefined
+  if (open) {
+    return (
+      <>
+        <Link to="/installningar" className="back">‹ Inställningar</Link>
+        <h1>{open.title}</h1>
+        {open.body}
+      </>
+    )
+  }
+
+  const theme = THEMES.find((t) => t.value === settings.theme)!.label
+  const n = settings.notify
+  const groups: { title: string; rows: { to: string; title: string; status: string }[] }[] = [
+    {
+      title: 'Allmänt',
+      rows: [
+        { to: 'veckor', title: 'Schema och veckor', status: settings.cycleLength === 1 ? 'Samma schema varje vecka' : `${['', '', 'A/B', 'A/B/C', 'A/B/C/D'][settings.cycleLength]}-veckor, nu vecka ${cycleLabel(currentWeek)}` },
+        { to: 'utseende', title: 'Utseende', status: `${theme}${background?.image ? ', egen bakgrundsbild' : ''}` },
+      ],
+    },
+    {
+      title: 'Kopplingar',
+      rows: [
+        { to: 'synk', title: 'Synk mellan enheter', status: !syncConfigured ? 'Inte installerad' : session ? `Inloggad som ${session.user.email}` : 'Inte inloggad' },
+        { to: 'notiser', title: 'Notiser', status: !notify ? '' : notify.on ? [n.morning && `morgon ${n.morningTime}`, n.evening && `kväll ${n.eveningTime}`].filter(Boolean).join(', ').replace(/^./, (c) => c.toUpperCase()) || 'På' : 'Av' },
+        { to: 'google', title: 'Google Kalender', status: !GOOGLE_CLIENT_ID ? 'Inte installerad' : google?.connected ? `Kopplad, ${google.count ?? 0} händelser` : 'Inte kopplad' },
+      ],
+    },
+    {
+      title: 'AI',
+      rows: [
+        { to: 'ai', title: 'AI-assistent', status: `${config?.model ?? DEFAULT_MODEL}${config?.password ? ', lösenord sparat' : ''}` },
+        { to: 'minne', title: 'Assistentens minne', status: settings.memories.length ? `${settings.memories.length} ${settings.memories.length === 1 ? 'sak' : 'saker'}` : 'Inget sparat' },
+        { to: 'kontakter', title: 'Kontakter', status: contacts?.length ? `${contacts.length} ${contacts.length === 1 ? 'kontakt' : 'kontakter'}` : 'Inga kontakter' },
+      ],
+    },
+    { title: 'Data', rows: [{ to: 'sakerhetskopia', title: 'Säkerhetskopia', status: 'Exportera eller importera all data' }] },
+  ]
+
   return (
     <>
+      <Link to="/" className="back">‹ Tillbaka till Hem</Link>
       <h1>Inställningar</h1>
-
-      <h2>Veckor</h2>
-      <label className="field">
-        <span>Hur skiljer sig veckorna åt?</span>
-        <select
-          value={settings.cycleLength}
-          onChange={(e) => saveSettings({ cycleLength: Number(e.target.value), cycleAnchor: anchorFor(today, 0) })}
-        >
-          <option value={1}>Samma schema varje vecka</option>
-          <option value={2}>A/B-veckor</option>
-          <option value={3}>3 olika veckor (A/B/C)</option>
-          <option value={4}>4 olika veckor (A/B/C/D)</option>
-        </select>
-      </label>
-      {settings.cycleLength > 1 && (
-        <label className="field">
-          <span>Den här veckan är</span>
-          <select value={currentWeek} onChange={(e) => saveSettings({ cycleAnchor: anchorFor(today, Number(e.target.value)) })}>
-            {Array.from({ length: settings.cycleLength }, (_, i) => (
-              <option key={i} value={i}>Vecka {cycleLabel(i)}</option>
+      {groups.map((g) => (
+        <section key={g.title} aria-label={g.title}>
+          <h2>{g.title}</h2>
+          <div className="settings-list">
+            {g.rows.map((r) => (
+              <Link key={r.to} to={`/installningar/${r.to}`} className="settings-row">
+                <span>
+                  <span className="title">{r.title}</span>
+                  {r.status && <span className="sub">{r.status}</span>}
+                </span>
+                <span className="chev" aria-hidden="true">›</span>
+              </Link>
             ))}
-          </select>
-        </label>
-      )}
-
-      <BackgroundSection />
-
-      <h2>Utseende</h2>
-      <div className="seg" role="group" aria-label="Tema">
-        {THEMES.map((t) => (
-          <button key={t.value} type="button" className="tab" aria-pressed={settings.theme === t.value} onClick={() => saveSettings({ theme: t.value })}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <SyncSection />
-      <GoogleSection />
-      <NotifySection />
-      <AiSection />
-      <MemorySection />
-      <ContactsSection />
-
-      <h2>Säkerhetskopia</h2>
-      <p className="muted">All data ligger bara på den här enheten. Exportera regelbundet.</p>
-      <div className="actions" style={{ marginTop: 8 }}>
-        <button type="button" className="btn" onClick={download}>Exportera JSON</button>
-        <button type="button" className="btn" onClick={() => fileRef.current?.click()}>Importera JSON</button>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-      </div>
-      {message && <p className={message.error ? 'error' : 'muted'} role="status">{message.text}</p>}
+          </div>
+        </section>
+      ))}
     </>
   )
 }

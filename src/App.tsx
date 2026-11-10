@@ -89,6 +89,7 @@ export function App() {
             <Route path="/mat/skanna" element={<ScanFoodPage />} />
             <Route path="/paminnelser" element={<RemindersPage />} />
             <Route path="/installningar" element={<SettingsPage />} />
+            <Route path="/installningar/:del" element={<SettingsPage />} />
           </Routes>
         )}
       </main>

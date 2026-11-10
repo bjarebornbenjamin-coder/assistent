@@ -26,7 +26,7 @@ export function NotifySection() {
   const n = settings.notify
   const food = settings.food
 
-  const head = <h2>Notiser</h2>
+  const head = null
   if (!pushSupported()) {
     return <>{head}<p className="muted">Den här webbläsaren stöder inte push-notiser. På iPhone måste appen först läggas till på hemskärmen (iOS 16.4 eller senare).</p></>
   }

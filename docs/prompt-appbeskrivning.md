@@ -70,7 +70,7 @@ Fem flikar längst ner: **Hem, Schema, Kalender, Mat, Chatt**. Undersidor: Uppgi
 - Morgonöversikt (standard 07:00): dagens lektioner, vad jag ska ta med (ämnenas och händelsernas packlistor), vad som ska in, försenat, händelser, påminnelser och mat som går ut. Skickas inte tomma dagar.
 - Kvällsnotis med morgondagens lektioner och packlista, notis före varje lektion, påminnelser, mat som snart går ut, inköpslistan en viss veckodag.
 
-**Inställningar**
+**Inställningar** (en lista i grupperna Allmänt, Kopplingar, AI och Data; varje rad visar läget och öppnar en egen sida)
 - AI: lösenord till servern (valfritt, `APP_PASSWORD` i Vercel), modell, "Testa anslutningen".
 - Assistentens minne, kontakter (för mejl), bakgrundsbild (bara på enheten), veckocykel (A/B), tema, synk (Supabase-inloggning), Google Kalender, notiser, export och import.
 

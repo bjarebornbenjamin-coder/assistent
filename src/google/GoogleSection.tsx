@@ -22,7 +22,6 @@ export function GoogleSection() {
 
   return (
     <>
-      <h2>Google Kalender</h2>
       {!GOOGLE_CLIENT_ID ? (
         <p className="muted">
           Inte inställt. Det kräver ett OAuth-klient-ID från Google Cloud som läggs in som VITE_GOOGLE_CLIENT_ID i Vercel. Se README, avsnittet Google Kalender.

@@ -526,3 +526,13 @@ fieldset.pack-edit legend { font-size: 13px; color: var(--muted); margin-bottom:
 :root[data-theme='dark'] .done-note { color: #81c995; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .done-note { color: #81c995; } }
 fieldset.pack-edit .ai-progress { width: 100%; }
+.settings-list { background: var(--surface-2, var(--surface)); border-radius: 16px; overflow: hidden; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 16px; color: var(--text); text-decoration: none; }
+.settings-row + .settings-row { border-top: 1px solid var(--outline); }
+.settings-row > span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.settings-row .title { font-size: 16px; }
+.settings-row .sub { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-row .chev { color: var(--muted); font-size: 22px; line-height: 1; }
+.settings-row:hover { background: var(--surface-3, var(--surface)); }
+.btn.text.inline { min-height: 0; padding: 0; vertical-align: baseline; font-size: inherit; }
+input[type='password'], input[type='email'] { width: 100%; padding: 10px 12px; min-height: 44px; font: inherit; color: var(--text); border: 1px solid var(--outline-strong); border-radius: var(--r-control, 8px); background: var(--surface); }

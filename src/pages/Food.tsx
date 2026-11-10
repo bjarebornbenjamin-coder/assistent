@@ -236,7 +236,7 @@ function RecipesTab() {
       {error && (
         <>
           <p className="error" role="alert">{error}</p>
-          <div className="actions" style={{ marginTop: 0 }}><Link to="/installningar" className="btn">Testa anslutningen</Link></div>
+          <div className="actions" style={{ marginTop: 0 }}><Link to="/installningar/ai" className="btn">Testa anslutningen</Link></div>
         </>
       )}
 
