@@ -150,3 +150,9 @@ Schema → "Importera schemat från en bild". Bilden skalas ner i webbläsaren o
 
 - Schema, ämnen, händelser och kontakter sparas i IndexedDB och kan exporteras/importeras som JSON under Inställningar.
 - OpenAI-nyckeln finns bara på servern. Lösenordet till servern sparas lokalt och ingår aldrig i exporten. Lägg aldrig nycklar i koden eller i repot.
+
+## Typsnitt, ikoner och design
+
+- Typsnittet är [Inter](https://rsms.me/inter/) (SIL Open Font License), som laddas från Google Fonts.
+- Ikonerna för kugghjul och öga bygger på [Feather Icons](https://feathericons.com) (MIT-licens, © Cole Bemis).
+- Färger och layout är inspirerade av Material Design, som Google publicerat för alla att använda. Appen använder inte Googles logotyper, namn eller typsnittet Google Sans.
