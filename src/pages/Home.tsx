@@ -25,9 +25,10 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 function HomeHeader() {
   const today = new Date()
   return (
-    <div className="page-head">
+    <div className="page-head dashboard-head">
       <div>
         <div className="eyebrow">{today.toLocaleDateString('sv-SE', { weekday: 'long' })}</div>
+        <p className="dashboard-greeting">Din dag, samlad.</p>
         <h1>{today.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}</h1>
       </div>
       <Link to="/installningar" className="btn text">Inställningar</Link>
@@ -77,89 +78,101 @@ export function Home() {
     <>
       <HomeHeader />
 
-      <h2>Nästa lektion</h2>
-      {next ? (
-        <>
-          <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} size="large" />
-          <p className="next-note">{capitalize(describeNext(now, next).replace(/^Nästa lektion /, ''))}</p>
-        </>
-      ) : (
-        <p className="empty">Inga kommande lektioner de närmaste två veckorna.</p>
-      )}
+      <div className="dashboard-grid">
+        <section className="dashboard-panel dashboard-next" aria-labelledby="next-heading">
+          <h2 id="next-heading">Nästa lektion</h2>
+          {next ? (
+            <>
+              <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} size="large" />
+              <p className="next-note">{capitalize(describeNext(now, next).replace(/^Nästa lektion /, ''))}</p>
+            </>
+          ) : (
+            <p className="empty">Inga kommande lektioner de närmaste två veckorna.</p>
+          )}
 
-      <h2>Dagens lektioner</h2>
-      {todays.length === 0 ? (
-        <p className="empty">Inga lektioner idag.</p>
-      ) : (
-        todays.map((l) => (
-          <LessonCard
-            key={l.id}
-            lesson={l}
-            subject={subjectById.get(l.subjectId)}
-            past={l.end <= toHHmm(now)}
-            conflict={findConflicts(l, todays, 1).length > 0}
-          />
-        ))
-      )}
+        </section>
+        <section className="dashboard-panel dashboard-lessons" aria-labelledby="lessons-heading">
+          <h2 id="lessons-heading">Dagens lektioner</h2>
+          {todays.length === 0 ? (
+            <p className="empty">Inga lektioner idag.</p>
+          ) : (
+            todays.map((l) => (
+              <LessonCard
+                key={l.id}
+                lesson={l}
+                subject={subjectById.get(l.subjectId)}
+                past={l.end <= toHHmm(now)}
+                conflict={findConflicts(l, todays, 1).length > 0}
+              />
+            ))
+          )}
 
-      <h2>Ta med {packing ? dayName(packing.date, today) : ''}</h2>
-      {!packing ? (
-        <p className="empty">Inga kommande lektioner.</p>
-      ) : packing.groups.length === 0 ? (
-        <>
-          <p className="empty">Inga packlistor för {dayName(packing.date, today)}s ämnen.</p>
-          <div className="actions" style={{ marginTop: 0 }}><Link to="/amnen" className="btn">Skriv packlistor</Link></div>
-        </>
-      ) : (
-        <div className="card pack">
-          {packing.groups.map((g) => (
-            <div key={g.subject.id}>
-              <h3>{g.subject.name}</h3>
-              <ul className="checklist">
-                {g.items.map((i) => {
-                  const key = itemKey(i.text)
-                  const done = checks?.has(key) ?? false
-                  return (
-                    <li key={i.id}>
-                      <label className={done ? 'done' : ''}>
-                        <input type="checkbox" checked={done} onChange={(e) => setPackChecked(packing.date, key, e.target.checked)} />
-                        {i.text}
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
+        </section>
+        <section className="dashboard-panel dashboard-packing" aria-labelledby="packing-heading">
+          <h2 id="packing-heading">Ta med {packing ? dayName(packing.date, today) : ''}</h2>
+          {!packing ? (
+            <p className="empty">Inga kommande lektioner.</p>
+          ) : packing.groups.length === 0 ? (
+            <>
+              <p className="empty">Inga packlistor för {dayName(packing.date, today)}s ämnen.</p>
+              <div className="actions" style={{ marginTop: 0 }}><Link to="/amnen" className="btn">Skriv packlistor</Link></div>
+            </>
+          ) : (
+            <div className="card pack">
+              {packing.groups.map((g) => (
+                <div key={g.subject.id}>
+                  <h3>{g.subject.name}</h3>
+                  <ul className="checklist">
+                    {g.items.map((i) => {
+                      const key = itemKey(i.text)
+                      const done = checks?.has(key) ?? false
+                      return (
+                        <li key={i.id}>
+                          <label className={done ? 'done' : ''}>
+                            <input type="checkbox" checked={done} onChange={(e) => setPackChecked(packing.date, key, e.target.checked)} />
+                            {i.text}
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      <h2>Händelser närmaste veckan</h2>
-      {upcoming.length === 0 ? (
-        <p className="empty">Inga händelser de närmaste sju dagarna.</p>
-      ) : (
-        upcoming.map((e) => (
-          <div key={e.id}>
-            <p className="sub" style={{ margin: '8px 0 4px' }}>{capitalize(dayName(e.date, today))}</p>
-            <EventCard event={e} />
-          </div>
-        ))
-      )}
+        </section>
+        <section className="dashboard-panel dashboard-events" aria-labelledby="events-heading">
+          <h2 id="events-heading">Händelser närmaste veckan</h2>
+          {upcoming.length === 0 ? (
+            <p className="empty">Inga händelser de närmaste sju dagarna.</p>
+          ) : (
+            upcoming.map((e) => (
+              <div key={e.id}>
+                <p className="sub" style={{ margin: '8px 0 4px' }}>{capitalize(dayName(e.date, today))}</p>
+                <EventCard event={e} />
+              </div>
+            ))
+          )}
 
-      <h2>Uppgifter som ska in snart</h2>
-      {dueTasks.length === 0 ? (
-        <p className="empty">Inga uppgifter de närmaste sju dagarna.</p>
-      ) : (
-        dueTasks.map((t) => (
-          <TaskRow key={t.id} task={t} subject={subjectById.get(t.subjectId ?? '')} today={today} onEdit={() => setEditingTask(t)} />
-        ))
-      )}
-      <div className="actions">
-        <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
-        <Link to="/uppgifter" className="btn">Alla uppgifter</Link>
+        </section>
+        <section className="dashboard-panel dashboard-tasks" aria-labelledby="tasks-heading">
+          <h2 id="tasks-heading">Uppgifter som ska in snart</h2>
+          {dueTasks.length === 0 ? (
+            <p className="empty">Inga uppgifter de närmaste sju dagarna.</p>
+          ) : (
+            dueTasks.map((t) => (
+              <TaskRow key={t.id} task={t} subject={subjectById.get(t.subjectId ?? '')} today={today} onEdit={() => setEditingTask(t)} />
+            ))
+          )}
+          <div className="actions">
+            <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
+            <Link to="/uppgifter" className="btn">Alla uppgifter</Link>
       </div>
 
-      <h2>Mat och vatten idag</h2>
+      </section>
+      <section className="dashboard-panel dashboard-nutrition" aria-labelledby="nutrition-heading">
+      <h2 id="nutrition-heading">Mat och vatten idag</h2>
       {(() => {
         const t = totalsOf(mealsOn(today, meals))
         const ml = water.find((w) => w.date === today)?.ml ?? 0
@@ -174,7 +187,9 @@ export function Home() {
         )
       })()}
 
-      <h2>Träning</h2>
+      </section>
+      <section className="dashboard-panel dashboard-training" aria-labelledby="training-heading">
+      <h2 id="training-heading">Träning</h2>
       {(() => {
         const week = weeklyCounts(workouts, today, 1)[0]
         const toLog = unloggedPlanned(events, workouts, addDays(today, -2), today).length
@@ -187,7 +202,9 @@ export function Home() {
         )
       })()}
 
-      <h2>Påminnelser idag</h2>
+      </section>
+      <section className="dashboard-panel dashboard-reminders" aria-labelledby="reminders-heading">
+      <h2 id="reminders-heading">Påminnelser idag</h2>
       {todayReminders.length === 0 ? (
         <p className="empty">Inga fler påminnelser idag.</p>
       ) : (
@@ -202,6 +219,8 @@ export function Home() {
       )}
       <div className="actions">
         <Link to="/paminnelser" className="btn">Alla påminnelser</Link>
+      </div>
+      </section>
       </div>
       {editingTask && (
         <TaskForm

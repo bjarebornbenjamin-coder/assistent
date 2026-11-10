@@ -38,6 +38,11 @@ function ScrollToTop() {
   return null
 }
 
+function PageShell({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation()
+  return <main className={`shell${pathname === '/' ? ' dashboard-shell' : ''}`}>{children}</main>
+}
+
 function Nav() {
   const { pathname } = useLocation()
   return (
@@ -71,7 +76,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <main className="shell">
+      <PageShell>
         {!settings ? (
           <p className="loading" role="status" aria-busy="true">Laddar…</p>
         ) : (
@@ -91,7 +96,7 @@ export function App() {
             <Route path="/installningar" element={<SettingsPage />} />
           </Routes>
         )}
-      </main>
+      </PageShell>
       <ToastBar />
       <Nav />
     </BrowserRouter>
