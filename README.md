@@ -96,6 +96,10 @@ På "vad ska jag äta idag?" väger den ihop lagret (det som går ut först, ald
 
 Kalender → "Planera plugg inför prov": skriv provet, datumet och vad som ingår. Pluggpassen sprids ut på lediga tider (efter skolan, inte över händelser) fram till dagen före provet, ett moment per pass och repetition sist. Du ser förslaget innan något läggs in, och kan ångra. Chatten gör samma sak med `plan_study` ("hjälp mig plugga inför matteprovet på fredag").
 
+## Länk till receptet
+
+Recept (under Recept, Meny och i chatten) har länken "Hitta receptet på nätet", som söker på rättens namn. Det är en sökning och inte en direktlänk till en receptsida: AI:n kan inte surfa, så en direktlänk skulle vara gissad och ofta trasig. I chatten blir bara sådana sökningar klickbara.
+
 ## Packlistor för händelser
 
 Händelser i kalendern kan ha en egen packlista. När du skriver titeln på en ny händelse ("Fotbollsmatch") föreslår AI:n vad du behöver; tryck på förslagen du vill ha, eller skriv egna. Det som ska med syns under "Ta med" på Hem tillsammans med ämnenas packlistor, och kommer med i kvälls- och morgonnotisen. Chatten föreslår också packsaker när den lägger in en händelse.

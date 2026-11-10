@@ -51,3 +51,17 @@ describe('listor som modellen skriver', () => {
     expect(parseMarkdown('- a\n- b\n\nSlut.').map((x) => x.t)).toEqual(['ul', 'p'])
   })
 })
+
+describe('länkar', async () => {
+  const { parseInline } = await import('./markdown')
+  const { recipeSearchUrl } = await import('../domain/recipeLink')
+  it('receptsökningar blir länkar, andra adresser blir text', () => {
+    expect(recipeSearchUrl('Pasta carbonara')).toBe('https://www.google.com/search?q=Pasta+carbonara+recept')
+    expect(parseInline('Se [Hitta receptet](https://www.google.com/search?q=Pasta+carbonara+recept).')).toEqual([
+      { t: 'text', v: 'Se ' },
+      { t: 'link', v: 'Hitta receptet', href: 'https://www.google.com/search?q=Pasta+carbonara+recept' },
+      { t: 'text', v: '.' },
+    ])
+    expect(parseInline('[ICA](https://www.ica.se/recept/pasta-123)')).toEqual([{ t: 'text', v: 'ICA' }])
+  })
+})

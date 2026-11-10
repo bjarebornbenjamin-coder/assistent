@@ -8,6 +8,7 @@ function Inlines({ nodes }: { nodes: Inline[] }) {
         n.t === 'bold' ? <strong key={i}>{n.v}</strong>
         : n.t === 'italic' ? <em key={i}>{n.v}</em>
         : n.t === 'code' ? <code key={i}>{n.v}</code>
+        : n.t === 'link' ? <a key={i} href={n.href} target="_blank" rel="noreferrer">{n.v}</a>
         : <Fragment key={i}>{n.v}</Fragment>,
       )}
     </>
