@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { AiProgress } from '../components/AiProgress'
 import { Link, useNavigate } from 'react-router-dom'
 import { analyzeRows, parseImportResponse, readScheduleImage, type ImportRow } from '../ai/scheduleImport'
 import { importLessons } from '../db/repo'
@@ -75,6 +76,7 @@ export function ImportSchedulePage() {
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
       </div>
+      <AiProgress active={busy} expected={15} label="AI:n läser av bilden" />
       {error && <p className="error" role="alert">{error}</p>}
       {preview && <img src={preview} alt="Ditt schema" className="import-preview" />}
 

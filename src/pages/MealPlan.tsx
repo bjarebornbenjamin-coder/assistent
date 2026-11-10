@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { AiProgress } from '../components/AiProgress'
+import { DoneButton } from '../components/DoneButton'
 import { Link } from 'react-router-dom'
 import { dayContext, fetchMealPlan, missingForPlan, planStart } from '../ai/mealPlan'
 import { withPantryStatus } from '../ai/recipes'
@@ -115,7 +117,7 @@ export function MealPlanTab() {
           {busy ? 'Planerar… (kan ta en halv minut)' : upcoming.length ? 'Gör ny meny' : 'Gör veckomeny'}
         </button>
       </div>
-      {busy && <p className="muted" role="status" aria-busy="true">Planerar middagarna…</p>}
+      <AiProgress active={busy} expected={30} label="Planerar middagarna" />
       {error && (
         <>
           <p className="error" role="alert">{error}</p>
@@ -125,7 +127,7 @@ export function MealPlanTab() {
 
       {missing.length > 0 && (
         <div className="actions">
-          <button type="button" className="btn" onClick={shop}>Lägg det som saknas på inköpslistan ({missing.length})</button>
+          <DoneButton onClick={shop} doneText="På inköpslistan" resetKey={missing.map((m) => m.name).join('|')}>Lägg det som saknas på inköpslistan ({missing.length})</DoneButton>
         </div>
       )}
       {message && <p className="muted" role="status">{message}</p>}
@@ -144,11 +146,10 @@ export function MealPlanTab() {
             </div>
             {d.url ? (
               <div className="sub">Recept från {d.site}</div>
-            ) : finding.has(d.id) ? (
-              <p className="sub" role="status" aria-busy="true">Letar recept på nätet…</p>
-            ) : (
+            ) : finding.has(d.id) ? null : (
               <p className="sub">{notFound.has(d.id) ? 'Hittade inget recept som gick att läsa.' : 'Inget recept hämtat än.'} Ingredienserna är AI:ns uppskattning.</p>
             )}
+            <AiProgress active={finding.has(d.id)} expected={20} label="Letar recept på nätet" />
             <details style={{ marginTop: 8 }}>
               <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>
                 {d.url ? 'Ingredienser enligt receptet' : 'Ungefärliga ingredienser'} ({d.ingredients.length})

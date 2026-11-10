@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import { AiProgress } from '../components/AiProgress'
 import { Link } from 'react-router-dom'
 import { ChatError, runChat } from '../ai/chat'
 import { applyCard, cardView } from '../ai/cards'
@@ -49,8 +50,8 @@ function Card({ m, subjects }: { m: ChatMessage; subjects: Subject[] }) {
           <button type="button" className="btn" onClick={() => setCardStatus(m.id, 'dismissed')}>Avvisa</button>
         </div>
       ) : (
-        <p className="sub" style={{ marginTop: 8 }}>
-          {status === 'dismissed' ? 'Avvisat.' : status === 'missing' ? 'Finns inte längre, inget ändrades.' : view.doneText}
+        <p className={status === 'done' ? 'done-note' : 'sub'} style={{ marginTop: 8 }}>
+          {status === 'dismissed' ? 'Avvisat.' : status === 'missing' ? 'Finns inte längre, inget ändrades.' : <><span aria-hidden="true">✓ </span>{view.doneText}</>}
         </p>
       )}
     </div>
@@ -163,7 +164,7 @@ export function ChatPage() {
             </div>
           )
         })()}
-        {busy && <div className="bubble assistant muted thinking" role="status" aria-live="polite">Tänker…</div>}
+        <AiProgress active={busy} expected={8} label="AI:n tänker" />
         {error && (
           <>
             <p className="error" role="alert">{error}</p>

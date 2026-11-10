@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { AiProgress } from '../components/AiProgress'
+import { DoneButton } from '../components/DoneButton'
 import { Link, useSearchParams } from 'react-router-dom'
 import { NutritionTab } from './Nutrition'
 import { MealForm } from '../components/MealForm'
@@ -230,7 +232,7 @@ function RecipesTab() {
           {busy ? 'Söker… (tar några sekunder)' : recipes ? 'Sök igen' : 'Hitta recept'}
         </button>
       </div>
-      {busy && <p className="muted" role="status" aria-busy="true">Letar efter recept på nätet…</p>}
+      <AiProgress active={busy} expected={25} label="Letar efter recept på nätet" />
       {error && (
         <>
           <p className="error" role="alert">{error}</p>
@@ -250,7 +252,11 @@ function RecipesTab() {
             <div className="sub num">{home} av {lines.length} ingredienser hemma{missing.length ? `, ${missing.length} saknas` : ''}</div>
             <div className="actions" style={{ marginTop: 8 }}>
               <a className="btn primary" href={r.url} target="_blank" rel="noreferrer">Öppna receptet</a>
-              {missing.length > 0 && <button type="button" className="btn" onClick={() => addMissing(r, missing)}>Lägg saknade på inköpslistan ({missing.length})</button>}
+              {missing.length > 0 && (
+                <DoneButton onClick={() => addMissing(r, missing)} doneText="På inköpslistan" resetKey={missing.map((m) => m.line).join('|')}>
+                  Lägg saknade på inköpslistan ({missing.length})
+                </DoneButton>
+              )}
             </div>
             <details style={{ marginTop: 8 }}>
               <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>Ingredienser enligt receptet ({lines.length})</summary>

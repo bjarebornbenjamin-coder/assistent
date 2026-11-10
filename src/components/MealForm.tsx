@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { AiProgress } from './AiProgress'
 import { estimateMeal } from '../ai/nutritionEstimate'
 import { deleteMeal, newId, saveMeal } from '../db/repo'
 import { mealKcal } from '../domain/nutrition'
@@ -110,6 +111,7 @@ export function MealForm({ meal, date, draft, onClose }: Props) {
         <div className="actions" style={{ marginTop: 0, marginBottom: 12 }}>
           <button type="button" className="btn" disabled={estimating} onClick={estimate}>{estimating ? 'Uppskattar…' : 'Uppskatta näring med AI'}</button>
         </div>
+        <AiProgress active={estimating} expected={6} label="Uppskattar näringen" />
         {assumptions && <p className="muted" role="status">AI-uppskattning: {assumptions} Kontrollera och ändra vid behov.</p>}
         <label className="field">
           <span>Tid (valfritt)</span>

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { AiProgress } from './AiProgress'
 import { useAiConfig, useFieldError, useSettings } from '../hooks'
 import { suggestPackItems } from '../ai/packSuggest'
 import { authHeaders } from '../lib/auth'
@@ -175,6 +176,7 @@ function EditableEventForm({ event, defaultDate, onClose }: Props) {
           <button type="button" className="btn text" disabled={suggesting} onClick={suggest}>
             {suggesting ? 'Tänker…' : suggestions.length || askedFor ? 'Nya förslag från AI' : 'Föreslå vad jag ska ta med'}
           </button>
+          <AiProgress active={suggesting} expected={6} label="Tar fram förslag" />
           {suggestNote && <p className="sub" role="status">{suggestNote}</p>}
         </fieldset>
         {error && <p className="error" role="alert">{error}</p>}

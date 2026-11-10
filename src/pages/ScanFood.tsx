@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { AiProgress } from '../components/AiProgress'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { matchExisting, parseScanResponse, scanImage, type ScanKind, type ScanRow } from '../ai/foodScan'
 import { addPantryItems } from '../db/repo'
@@ -79,6 +80,7 @@ export function ScanFoodPage() {
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
       </div>
+      <AiProgress active={busy} expected={15} label="AI:n läser av bilden" />
       {error && (
         <>
           <p className="error" role="alert">{error}</p>

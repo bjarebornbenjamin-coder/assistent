@@ -514,3 +514,15 @@ fieldset.pack-edit legend { font-size: 13px; color: var(--muted); margin-bottom:
 .add-row { display: flex; gap: 8px; width: 100%; }
 .add-row input { flex: 1; min-width: 0; }
 .suggest { display: grid; gap: 6px; }
+.ai-progress { margin: 12px 0; }
+.ai-progress-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.ai-progress-track { height: 6px; border-radius: 3px; background: var(--surface-3, var(--outline)); overflow: hidden; }
+.ai-progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 200ms linear; }
+@media (prefers-reduced-motion: reduce) { .ai-progress-fill { transition: none; } }
+.btn.done-check, .btn.done-check:disabled { opacity: 1; background: var(--success-bg, #e6f4ea); color: var(--success-text, #137333); border-color: transparent; }
+:root[data-theme='dark'] .btn.done-check { background: #0f3d1f; color: #81c995; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .btn.done-check { background: #0f3d1f; color: #81c995; } }
+.done-note { color: var(--success-text, #137333); font-size: 14px; font-weight: 500; }
+:root[data-theme='dark'] .done-note { color: #81c995; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .done-note { color: #81c995; } }
+fieldset.pack-edit .ai-progress { width: 100%; }
