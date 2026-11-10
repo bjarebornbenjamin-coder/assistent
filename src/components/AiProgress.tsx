@@ -8,30 +8,47 @@ interface Props {
   label: string
 }
 
+/** Uppskattat förlopp efter t sekunder: snabbt först, sedan allt långsammare mot 95 %. */
+export const estimate = (t: number, expected: number) => 95 * (1 - Math.exp((-2 * t) / expected))
+
 /**
  * Förloppsstapel 0–100 % medan AI:n arbetar. AI:n rapporterar inte hur långt den kommit,
- * så stapeln är en uppskattning: den fylls snabbt först och sedan allt långsammare mot 95 %,
- * och går till 100 % när svaret kommer.
+ * så stapeln är en uppskattning och går till 100 % när svaret kommer. Stapeln ritas om varje
+ * bildruta (transform, inte bredd) så att den glider jämnt i stället för att hoppa.
  */
 export function AiProgress({ active, expected, label }: Props) {
   const [pct, setPct] = useState(0)
   const [visible, setVisible] = useState(active)
-  const started = useRef(0)
+  const [finishing, setFinishing] = useState(false)
+  const fill = useRef<HTMLDivElement>(null)
+  const current = useRef(0)
 
   useEffect(() => {
     if (active) {
-      started.current = Date.now()
+      const start = performance.now()
+      current.current = 0
       setVisible(true)
+      setFinishing(false)
       setPct(0)
-      const timer = setInterval(() => {
-        const t = (Date.now() - started.current) / 1000
-        setPct(Math.min(95, Math.round(95 * (1 - Math.exp((-2 * t) / expected)))))
-      }, 200)
-      return () => clearInterval(timer)
+      let frame = 0
+      const tick = (now: number) => {
+        const p = estimate((now - start) / 1000, expected)
+        current.current = p
+        if (fill.current) fill.current.style.transform = `scaleX(${p / 100})`
+        setPct((old) => (Math.floor(p) !== old ? Math.floor(p) : old))
+        frame = requestAnimationFrame(tick)
+      }
+      frame = requestAnimationFrame(tick)
+      return () => cancelAnimationFrame(frame)
     }
     if (!visible) return
+    // Glid sista biten till 100 % och göm sedan stapeln.
+    setFinishing(true)
     setPct(100)
-    const hide = setTimeout(() => setVisible(false), 600)
+    requestAnimationFrame(() => {
+      if (fill.current) fill.current.style.transform = 'scaleX(1)'
+    })
+    const hide = setTimeout(() => setVisible(false), 700)
     return () => clearTimeout(hide)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, expected])
@@ -44,7 +61,7 @@ export function AiProgress({ active, expected, label }: Props) {
         <span className="num">{pct} %</span>
       </div>
       <div className="ai-progress-track">
-        <div className="ai-progress-fill" style={{ width: `${pct}%` }} />
+        <div ref={fill} className={`ai-progress-fill${finishing ? ' finishing' : ''}`} style={{ transform: `scaleX(${current.current / 100})` }} />
       </div>
     </div>
   )

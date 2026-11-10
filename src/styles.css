@@ -517,8 +517,8 @@ fieldset.pack-edit legend { font-size: 13px; color: var(--muted); margin-bottom:
 .ai-progress { margin: 12px 0; }
 .ai-progress-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 .ai-progress-track { height: 6px; border-radius: 3px; background: var(--surface-3, var(--outline)); overflow: hidden; }
-.ai-progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 200ms linear; }
-@media (prefers-reduced-motion: reduce) { .ai-progress-fill { transition: none; } }
+.ai-progress-fill { height: 100%; width: 100%; background: var(--primary); border-radius: 3px; transform-origin: left center; transform: scaleX(0); will-change: transform; }
+.ai-progress-fill.finishing { transition: transform 350ms cubic-bezier(0.2, 0, 0, 1); }
 .btn.done-check, .btn.done-check:disabled { opacity: 1; background: var(--success-bg, #e6f4ea); color: var(--success-text, #137333); border-color: transparent; }
 :root[data-theme='dark'] .btn.done-check { background: #0f3d1f; color: #81c995; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .btn.done-check { background: #0f3d1f; color: #81c995; } }
