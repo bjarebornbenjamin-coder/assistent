@@ -536,3 +536,6 @@ fieldset.pack-edit .ai-progress { width: 100%; }
 .settings-row:hover { background: var(--surface-3, var(--surface)); }
 .btn.text.inline { min-height: 0; padding: 0; vertical-align: baseline; font-size: inherit; }
 input[type='password'], input[type='email'] { width: 100%; padding: 10px 12px; min-height: 44px; font: inherit; color: var(--text); border: 1px solid var(--outline-strong); border-radius: var(--r-control, 8px); background: var(--surface); }
+.login { max-width: 420px; margin: 8vh auto 0; }
+.login h1 { margin-bottom: 8px; }
+.muted.small { font-size: 13px; }

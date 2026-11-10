@@ -37,7 +37,7 @@ Lokalt först: allt fungerar offline i IndexedDB. När du loggar in synkas schem
 4. Lägg i Vercel (Environment Variables) och bygg om:
    - `VITE_SUPABASE_URL` och `VITE_SUPABASE_ANON_KEY` (Project Settings → API; anon-nyckeln är publik och skyddas av Row Level Security)
    - `SUPABASE_URL`, `SUPABASE_ANON_KEY` och `ALLOWED_EMAILS` (din e-postadress) så att servern bara släpper in dig till OpenAI-anropen
-5. Öppna appen → Inställningar → Synk → **Skapa konto**. Din befintliga data laddas upp första gången.
+5. Öppna appen. När synken är installerad börjar appen med en inloggningssida: skriv e-post (samma som i `ALLOWED_EMAILS`) och ett lösenord och tryck **Skapa konto**. Din befintliga data laddas upp första gången. Inloggningen sparas på enheten.
 6. **Stäng sedan av nya registreringar** (Authentication → Sign In / Providers → "Allow new users to sign up" av). Det är en personlig app.
 
 Konflikter: en ändring du gjort lokalt men inte hunnit synka vinner över en inkommande ändring; i övrigt gäller senaste skrivningen på servern. Borttagningar synkas.

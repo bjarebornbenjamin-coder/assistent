@@ -5,6 +5,8 @@ import { useSettings } from './hooks'
 import { useApplyBackground } from './lib/background'
 import { useNotificationSync } from './push/useNotificationSync'
 import { useSyncRunner } from './sync/useSyncRunner'
+import { syncConfigured, useSession } from './sync/supabase'
+import { LoginScreen } from './sync/LoginForm'
 import { useGoogleAutoSync } from './google/google'
 import { CalendarPage } from './pages/Calendar'
 import { ChatPage } from './pages/Chat'
@@ -60,6 +62,7 @@ export function App() {
   useNotificationSync()
   useGoogleAutoSync()
   const settings = useSettings()
+  const session = useSession()
   const theme = settings?.theme
 
   useEffect(() => {
@@ -72,8 +75,10 @@ export function App() {
     <BrowserRouter>
       <ScrollToTop />
       <main className="shell">
-        {!settings ? (
+        {!settings || session === undefined ? (
           <p className="loading" role="status" aria-busy="true">Laddar…</p>
+        ) : syncConfigured && !session ? (
+          <LoginScreen />
         ) : (
           <Routes>
             <Route path="/" element={<Home />} />
@@ -94,7 +99,7 @@ export function App() {
         )}
       </main>
       <ToastBar />
-      <Nav />
+      {(!syncConfigured || session) && <Nav />}
     </BrowserRouter>
   )
 }
