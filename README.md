@@ -96,9 +96,13 @@ På "vad ska jag äta idag?" väger den ihop lagret (det som går ut först, ald
 
 Kalender → "Planera plugg inför prov": skriv provet, datumet och vad som ingår. Pluggpassen sprids ut på lediga tider (efter skolan, inte över händelser) fram till dagen före provet, ett moment per pass och repetition sist. Du ser förslaget innan något läggs in, och kan ångra. Chatten gör samma sak med `plan_study` ("hjälp mig plugga inför matteprovet på fredag").
 
-## Länk till receptet
+## Recept från nätet
 
-Recept (under Recept, Meny och i chatten) har knappen "Öppna receptet", som går direkt till receptet på ICA: länken är en DuckDuckGo-sökning som börjar med `\` och `site:ica.se/recept`, vilket öppnar första träffen direkt. "Fler recept" är en vanlig Google-sökning om första träffen inte är rätt. AI:n kan inte surfa, så den skriver aldrig egna adresser: i chatten skriver den `[Öppna receptet](recept:Rättens namn)` och appen bygger länken. Andra adresser blir inte klickbara.
+Appen skriver inga egna recept. Mat → Recept: välj "Bara det jag har hemma", "Det jag har hemma, handla lite" eller "Handla det som behövs", och skriv gärna ett önskemål. Servern (`/api/recipes`) låter OpenAI:s sökmodell (`gpt-4o-mini-search-preview`, kan bytas med `RECIPE_SEARCH_MODEL` i Vercel) leta upp riktiga receptsidor, hämtar varje sida och läser receptet ur sidans strukturerade data (schema.org/Recipe). Bara sidor som går att läsa som recept visas, så länkarna är aldrig påhittade och ingredienserna i appen är receptsidans. Appen jämför dem med lagret (på namn, så kolla mängderna) och kan lägga det som saknas på inköpslistan.
+
+Veckomenyn (Mat → Meny) väljer rätter som förut och hämtar sedan ett riktigt recept för varje dag. Chatten använder samma sökning (`find_recipes`) och kan bara länka till adresser som sökningen gav.
+
+Webbsökningen kostar mer per anrop än vanliga AI-svar; se OpenAI:s prislista.
 
 ## Packlistor för händelser
 

@@ -48,8 +48,8 @@ Fem flikar längst ner: **Hem, Schema, Kalender, Mat, Chatt**. Undersidor: Uppgi
 **Mat** (flikarna Lager, Inköp, Recept, Meny, Kost)
 - Lager: varor med mängd och bäst före-datum. Fylls i för hand eller genom att skanna ett kvitto eller kylskåpet med kameran (AI).
 - Inköp: inköpslista. Köpta varor kan flyttas till lagret.
-- Recept: AI:n föreslår tre kända rätter utifrån det som finns hemma (det som går ut först), med mått, steg och näring per portion, och knappen "Öppna receptet" som går direkt till receptet på ICA (plus "Fler recept", en Google-sökning).
-- **Meny**: AI:n planerar 3–7 middagar utifrån lagret, mina mål och hur dagarna ser ut (snabbt på fulla dagar, proteinrikt på träningsdagar). Det som saknas för hela veckan läggs på inköpslistan med ett tryck.
+- Recept: appen skriver inga egna recept. Jag väljer "Bara det jag har hemma", "Det jag har hemma, handla lite" eller "Handla det som behövs" (plus valfritt önskemål), och AI:n söker på nätet efter riktiga recept (ICA, Köket, Arla m.fl.). Ingredienserna läses från receptsidan och jämförs med lagret; "Öppna receptet" går till just den sidan, och det som saknas kan läggas på inköpslistan.
+- **Meny**: AI:n planerar 3–7 middagar (och hämtar sedan ett riktigt recept från nätet för varje dag) utifrån lagret, mina mål och hur dagarna ser ut (snabbt på fulla dagar, proteinrikt på träningsdagar). Det som saknas för hela veckan läggs på inköpslistan med ett tryck.
 - Kost: logga måltider (protein, kolhydrater, fett, kcal; AI kan uppskatta) och vatten. Dagens summa mot mål, diagram över utvecklingen, egna mål.
 - Allergier och antal portioner ställs in under Recept.
 

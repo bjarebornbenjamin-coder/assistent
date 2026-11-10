@@ -182,6 +182,9 @@ export interface PlannedDinner {
   minutes: number | null
   ingredients: { name: string; amount: string }[]
   steps: string[]
+  /** Riktigt recept från nätet; då är ingredienserna receptsidans. */
+  url?: string
+  site?: string
   /** Uppskattat per portion. */
   nutrition?: { kcal: number; protein: number; carbs: number; fat: number }
   updatedAt: string

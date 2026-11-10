@@ -3,7 +3,9 @@ import { WEEKDAYS_LONG, toHHmm, toISODate, weekdayOf } from '../domain/dates'
 import type { ChatCard, ChatMessage } from '../domain/types'
 import { cycleLabel, weekIndex } from '../domain/weekCycle'
 import { DEFAULT_MODEL } from './models'
-import { TOOL_DEFINITIONS, runTool, type ToolContext } from './tools'
+import { TOOL_DEFINITIONS, runTool, type ToolContext, type ToolOutcome } from './tools'
+import { findRecipes, ingredientStatuses } from './recipeSearch'
+import { toISODate as isoDate } from '../domain/dates'
 
 const API_URL = '/api/chat'
 const MAX_ROUNDS = 10
@@ -21,6 +23,35 @@ interface ToolCall {
 }
 
 export class ChatError extends Error {}
+
+/** Receptsökningen går via servern och är därför asynkron, till skillnad från övriga verktyg. */
+async function recipeTool(args: Record<string, unknown>, ctx: ToolContext, headers: Record<string, string>, fetchFn: typeof fetch, allowed: Set<string>): Promise<ToolOutcome> {
+  const mode = args.mode === 'pantry' || args.mode === 'any' ? args.mode : 'some'
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim().slice(0, 150) : '')
+  try {
+    const found = await findRecipes(
+      { mode, pantry: ctx.pantry, food: ctx.settings.food, memories: ctx.settings.memories, today: ctx.today ?? isoDate(new Date()), wish: str(args.wish), ...(str(args.dish) ? { dish: str(args.dish) } : {}) },
+      headers,
+      fetchFn,
+    )
+    for (const r of found) allowed.add(r.url)
+    return {
+      result: {
+        recipes: found.map((r) => {
+          const lines = ingredientStatuses(r.ingredients, ctx.pantry)
+          return { title: r.title, url: r.url, site: r.site, why: r.why || undefined, minutes: r.minutes, servings: r.servings, haveAtHome: lines.filter((l) => l.status === 'pantry').map((l) => l.name), missing: lines.filter((l) => l.status === 'missing').map((l) => l.line) }
+        }),
+      },
+    }
+  } catch (e) {
+    return { result: { error: e instanceof Error ? e.message : 'Receptsökningen misslyckades.' } }
+  }
+}
+
+/** Länkar i svaret behålls bara om adressen kom från ett verktyg; andra blir vanlig text så att inga adresser är påhittade. */
+export function keepLinks(text: string, allowed: Set<string>): string {
+  return text.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (all, label: string, url: string) => (allowed.has(url) ? all : label))
+}
 
 function memoryPrompt(ctx: ToolContext): string {
   const m = ctx.settings.memories
@@ -44,7 +75,7 @@ function foodPrompt(ctx: ToolContext): string {
   const n = ctx.settings.nutrition
   return [
     'Veckomeny: frågar användaren vad det blir till middag, eller vad hen ska äta en dag med planerad middag, anropa get_meal_plan och utgå från den.',
-    'Mat: du ser användarens matlager med list_pantry och inköpslistan med list_shopping. På "vad ska jag äta idag/ikväll?" eller "vad kan jag laga?": hämta list_pantry, get_nutrition för idag och get_overview för idag, och väg ihop: (1) använd i första hand varor som snart går ut (daysLeft 0–2), aldrig utgångna (negativt daysLeft; nämn dem kort), (2) håll dig INOM det som återstår av dagens mål: har användaren t.ex. 240 kcal kvar ska förslagen ligga på ungefär 240 kcal eller mindre, är fettet redan över målet ska förslagen vara magra, och är proteinmålet nått behövs inget proteintillskott; säg kort hur mycket som är kvar, (3) har användaren träning idag, föreslå en proteinrik måltid i rimlig tid före eller efter passet, (4) är dagen full, föreslå något snabbt, (5) ta hänsyn till klockslaget: sent på kvällen är det ett kvällsmål eller mellanmål, inte en full middag. Räkna inte upp hela lagret; nämn bara de varor du använder. Föreslå 1–3 ETABLERADE, kända rätter med sina vedertagna namn (t.ex. pasta carbonara, kycklinggryta med curry, chili con carne), aldrig egna kombinationer bara för att använda det som finns hemma; hellre att några varor saknas än att rätten blir konstig. För den du rekommenderar mest: ingredienser med mått för standardportionerna och korta numrerade steg med tider. Anta att salt, peppar, vatten, olja och socker finns. Säg vad som saknas och erbjud propose_shopping_items. Avsluta varje recept med en egen rad exakt så här: [Öppna receptet](recept:Rättens namn), t.ex. [Öppna receptet](recept:Pasta carbonara). Appen gör om det till en länk till receptet. Skriv aldrig egna webbadresser; du kan inte surfa och de skulle vara gissade. Gissa aldrig vad användaren har: är lagret tomt, säg det och föreslå att lägga in varor eller skanna ett kvitto.',
+    'Mat: du ser användarens matlager med list_pantry och inköpslistan med list_shopping. På "vad ska jag äta idag/ikväll?" eller "vad kan jag laga?": hämta list_pantry, get_nutrition för idag och get_overview för idag, och väg ihop: (1) använd i första hand varor som snart går ut (daysLeft 0–2), aldrig utgångna (negativt daysLeft; nämn dem kort), (2) håll dig INOM det som återstår av dagens mål: har användaren t.ex. 240 kcal kvar ska förslagen ligga på ungefär 240 kcal eller mindre, är fettet redan över målet ska förslagen vara magra, och är proteinmålet nått behövs inget proteintillskott; säg kort hur mycket som är kvar, (3) har användaren träning idag, föreslå en proteinrik måltid i rimlig tid före eller efter passet, (4) är dagen full, föreslå något snabbt, (5) ta hänsyn till klockslaget: sent på kvällen är det ett kvällsmål eller mellanmål, inte en full middag. Räkna inte upp hela lagret; nämn bara de varor du använder. Skriv ALDRIG egna recept med ingredienser och steg. Anropa i stället find_recipes, som söker upp riktiga recept på nätet och läser ingredienserna från receptsidan: mode "pantry" om användaren vill använda det som finns hemma, "any" om hen gärna handlar, annars "some"; skicka med önskemål i wish (t.ex. "snabbt", "kyckling", "lätt kvällsmål" utifrån målen och klockslaget). Presentera 1–3 träffar kort: namn, varför det passar, vad som saknas, och en egen rad [Öppna receptet](URL) med exakt den url som verktyget gav. Skriv aldrig andra webbadresser. Erbjud propose_shopping_items för det som saknas. Gissa aldrig vad användaren har: är lagret tomt, säg det och föreslå att lägga in varor eller skanna ett kvitto.',
     `Standard är ${f.portions} portioner.${f.allergies.trim() ? ` Allergier/kostönskemål som du måste respektera: ${f.allergies.trim()}.` : ''}`,
     `Kost: användarens dagliga mål är protein ${n.proteinG} g, kolhydrater ${n.carbsG} g, fett ${n.fatG} g (ca ${goalKcal(n)} kcal) och vatten ${n.waterMl} ml; ett glas är ${n.glassMl} ml. Frågor om hur mycket användaren ätit eller druckit, eller vad som återstår: anropa get_nutrition och räkna ut skillnaden mot målen. På "vad ska jag äta?" kan du ta hänsyn till vad som återstår av dagens mål om get_nutrition visar något loggat. Berättar användaren vad hen ätit: uppskatta näringsvärdena för hela måltiden, säg att det är en uppskattning, och föreslå loggning med propose_meal. Berättar hen att hen druckit vatten ("2 glas"): använd propose_water i ml. Det här är bara riktvärden: ge inga medicinska råd.`,
   ].join('\n')
@@ -114,6 +145,7 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
     { role: 'user', content: o.userText },
   ]
   const cards: ChatCard[] = []
+  const allowedLinks = new Set<string>()
   let model = o.model
   let notice: string | undefined
   let retriedEmpty = false
@@ -151,7 +183,7 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
         messages.push({ role: 'user', content: 'Svara i text på min fråga utifrån det du fått från verktygen. Om inget finns, säg det tydligt.' })
         continue
       }
-      return { reply: text || 'Jag fick inget svar den här gången. Försök igen.', cards, notice }
+      return { reply: keepLinks(text, allowedLinks) || 'Jag fick inget svar den här gången. Försök igen.', cards, notice }
     }
 
     messages.push({ role: 'assistant', content: msg.content ?? null, tool_calls: msg.tool_calls })
@@ -162,7 +194,7 @@ export async function runChat(o: RunOptions): Promise<ChatResult> {
       } catch {
         /* ogiltiga argument ger ett fel från verktyget */
       }
-      const outcome = runTool(call.function.name, args, ctx)
+      const outcome = call.function.name === 'find_recipes' ? await recipeTool(args, ctx, o.headers, fetchFn, allowedLinks) : runTool(call.function.name, args, ctx)
       if (outcome.card) cards.push(outcome.card)
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(outcome.result) })
     }

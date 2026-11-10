@@ -21,7 +21,7 @@ describe('veckomeny', () => {
         { date: '2026-11-10', title: 'Pasta carbonara', ingredients: [{ name: 'Pasta', amount: '200 g' }], steps: ['Koka'], nutrition: { kcal: 600, protein: 25, carbs: 70, fat: 22 } },
         { date: '2026-11-10', title: 'Dubblett', ingredients: [{ name: 'X', amount: '1 st' }], steps: ['Y'] },
         { date: '2026-12-01', title: 'Fel datum', ingredients: [{ name: 'X', amount: '1 st' }], steps: ['Y'] },
-        { date: '2026-11-11', title: 'Tom', ingredients: [], steps: ['Y'] },
+        { date: '2026-11-11', title: 'Tom', ingredients: [] },
       ],
     })
     const plan = parseMealPlan(text, ['2026-11-10', '2026-11-11'], 2)

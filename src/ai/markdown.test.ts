@@ -54,15 +54,19 @@ describe('listor som modellen skriver', () => {
 
 describe('länkar', async () => {
   const { parseInline } = await import('./markdown')
-  const { recipeDirectUrl, recipeSearchUrl } = await import('../domain/recipeLink')
-  it('recept:-länkar blir direktlänkar till ICA, gamla sökningar fungerar, andra adresser blir text', () => {
-    expect(recipeDirectUrl('Pasta carbonara')).toBe('https://duckduckgo.com/?q=%5C+site%3Aica.se%2Frecept+Pasta+carbonara')
-    expect(parseInline('Se [Öppna receptet](recept:Pasta carbonara).')).toEqual([
+  const { recipeSearchUrl } = await import('../domain/recipeLink')
+  const { keepLinks } = await import('./chat')
+  it('https-länkar och recept:-länkar blir länkar', () => {
+    expect(parseInline('Se [Öppna receptet](https://www.ica.se/recept/carbonara-1/).')).toEqual([
       { t: 'text', v: 'Se ' },
-      { t: 'link', v: 'Öppna receptet', href: recipeDirectUrl('Pasta carbonara') },
+      { t: 'link', v: 'Öppna receptet', href: 'https://www.ica.se/recept/carbonara-1/' },
       { t: 'text', v: '.' },
     ])
-    expect(parseInline('[Sök](https://www.google.com/search?q=Pasta+carbonara+recept)')).toEqual([{ t: 'link', v: 'Sök', href: recipeSearchUrl('Pasta carbonara') }])
-    expect(parseInline('[ICA](https://www.ica.se/recept/pasta-123)')).toEqual([{ t: 'text', v: 'ICA' }])
+    expect(parseInline('[Sök](recept:Pasta carbonara)')).toEqual([{ t: 'link', v: 'Sök', href: recipeSearchUrl('Pasta carbonara') }])
+    expect(parseInline('[x](javascript:alert(1))')).toEqual([{ t: 'text', v: '[x](javascript:alert(1))' }])
+  })
+  it('assistentens svar behåller bara länkar som kom från receptsökningen', () => {
+    const allowed = new Set(['https://www.ica.se/recept/a/'])
+    expect(keepLinks('[A](https://www.ica.se/recept/a/) och [B](https://www.ica.se/recept/gissad/)', allowed)).toBe('[A](https://www.ica.se/recept/a/) och B')
   })
 })

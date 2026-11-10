@@ -9,7 +9,8 @@ import { addShoppingItems, getSettings } from '../db/repo'
 import { dayLabel } from '../domain/calendar'
 import { addDays, toHHmm, toISODate } from '../domain/dates'
 import { expiringWithin } from '../domain/food'
-import { recipeDirectUrl, recipeSearchUrl } from '../domain/recipeLink'
+import { recipeSearchUrl } from '../domain/recipeLink'
+import { findRecipes, splitIngredient } from '../ai/recipeSearch'
 import type { PlannedDinner } from '../domain/types'
 import { useAiConfig, useEvents, useLessons, useMealPlan, useNow, usePantry, useSettings } from '../hooks'
 import { authHeaders } from '../lib/auth'
@@ -28,12 +29,37 @@ export function MealPlanTab() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [eating, setEating] = useState<PlannedDinner | null>(null)
+  const [finding, setFinding] = useState<Set<string>>(new Set())
+  const [notFound, setNotFound] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
   if (!plan || !pantry || !lessons || !events || !settings) return null
 
   const upcoming = plan.filter((d) => d.date >= today).sort((a, b) => a.date.localeCompare(b.date))
   const missing = missingForPlan(upcoming, pantry)
   const expiring = new Set(expiringWithin(pantry, today).map((p) => p.name))
+
+  /** Hämtar ett riktigt recept för middagen och byter AI:ns ingredienser mot receptsidans. */
+  async function findRecipe(d: PlannedDinner, headers: Record<string, string>) {
+    setFinding((s) => new Set(s).add(d.id))
+    try {
+      const s = await getSettings()
+      const [r] = await findRecipes({ mode: 'any', dish: d.title, count: 1, pantry: pantry!, food: s.food, memories: s.memories, today }, headers)
+      await db.mealPlan.update(d.id, {
+        url: r.url,
+        site: r.site,
+        title: r.title,
+        ingredients: r.ingredients.map(splitIngredient).map((i) => ({ name: i.name, amount: i.amount })),
+        steps: [],
+        ...(r.minutes ? { minutes: r.minutes } : {}),
+        updatedAt: new Date().toISOString(),
+      })
+      setNotFound((s) => { const n = new Set(s); n.delete(d.id); return n })
+    } catch {
+      setNotFound((s) => new Set(s).add(d.id))
+    } finally {
+      setFinding((s) => { const n = new Set(s); n.delete(d.id); return n })
+    }
+  }
 
   async function generate() {
     setBusy(true)
@@ -55,6 +81,12 @@ export function MealPlanTab() {
         await db.mealPlan.bulkPut(result.map((d) => ({ ...d, updatedAt: new Date().toISOString() })))
       })
       if (result.length < dates.length) setMessage(`AI:n gav bara ${result.length} av ${dates.length} dagar. Gör om för att fylla resten.`)
+      // Riktiga recept, tre åt gången så att servern inte överbelastas.
+      const headers = await authHeaders()
+      const queue = [...result]
+      await Promise.all(Array.from({ length: 3 }, async () => {
+        for (let d = queue.shift(); d; d = queue.shift()) await findRecipe(d, headers)
+      }))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Något gick fel.')
     } finally {
@@ -110,14 +142,26 @@ export function MealPlanTab() {
             <div className="sub num">
               {[d.minutes !== null ? `${d.minutes} min` : null, d.nutrition ? `${d.nutrition.kcal} kcal, protein ${d.nutrition.protein} g per portion` : null, lacking ? `${lacking} saknas` : 'allt finns hemma'].filter(Boolean).join(' · ')}
             </div>
+            {d.url ? (
+              <div className="sub">Recept från {d.site}</div>
+            ) : finding.has(d.id) ? (
+              <p className="sub" role="status" aria-busy="true">Letar recept på nätet…</p>
+            ) : (
+              <p className="sub">{notFound.has(d.id) ? 'Hittade inget recept som gick att läsa.' : 'Inget recept hämtat än.'} Ingredienserna är AI:ns uppskattning.</p>
+            )}
             <details style={{ marginTop: 8 }}>
-              <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>Ingredienser och steg ({d.portions} portioner)</summary>
+              <summary style={{ cursor: 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', color: 'var(--primary)' }}>
+                {d.url ? 'Ingredienser enligt receptet' : 'Ungefärliga ingredienser'} ({d.ingredients.length})
+              </summary>
               <IngredientList items={ingredients} expiring={expiring} />
-              <ol className="steps">{d.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
             </details>
             <div className="actions" style={{ marginTop: 8 }}>
+              {d.url ? (
+                <a className="btn primary" href={d.url} target="_blank" rel="noreferrer">Öppna receptet</a>
+              ) : (
+                <button type="button" className="btn primary" disabled={finding.has(d.id)} onClick={async () => findRecipe(d, await authHeaders())}>Hitta recept</button>
+              )}
               <button type="button" className="btn" onClick={() => setEating(d)}>Jag åt detta</button>
-              <a className="btn text" href={recipeDirectUrl(d.title)} target="_blank" rel="noreferrer">Öppna receptet</a>
               <a className="btn text" href={recipeSearchUrl(d.title)} target="_blank" rel="noreferrer">Fler recept</a>
               <button type="button" className="btn text" onClick={() => undoable(`${d.title} är borttagen ur menyn`, ['mealPlan'], () => db.mealPlan.delete(d.id))}>Ta bort</button>
             </div>

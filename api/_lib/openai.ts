@@ -2,7 +2,7 @@ import { authorize } from './auth.js'
 import { rateLimit } from './rateLimit.js'
 import { errorBody, json, type ApiRequest, type ApiResponse, type Env, type FetchFn } from './types.js'
 
-const OPENAI = 'https://api.openai.com/v1'
+export const OPENAI = 'https://api.openai.com/v1'
 const MAX_BODY_BYTES = 4_000_000 // Vercel tillåter 4,5 MB
 const MAX_MESSAGES = 80
 const MODEL = /^[\w.:-]{1,64}$/
@@ -21,7 +21,7 @@ export function sanitizeChatBody(body: unknown): { ok: true; value: Record<strin
   return { ok: true, value }
 }
 
-async function guard(req: ApiRequest, env: Env, fetchFn: FetchFn, method: string): Promise<ApiResponse | { id: string }> {
+export async function guard(req: ApiRequest, env: Env, fetchFn: FetchFn, method: string): Promise<ApiResponse | { id: string }> {
   if (req.method !== method) return errorBody(405, 'Metoden stöds inte.')
   if (!env.OPENAI_API_KEY) return errorBody(500, 'Servern saknar OPENAI_API_KEY.')
   const auth = await authorize(req, env, fetchFn)

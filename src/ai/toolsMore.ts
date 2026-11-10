@@ -39,6 +39,19 @@ const reminderSummary = (r: Pick<Reminder, 'title' | 'time' | 'repeat'>) => `${r
 
 export const MORE_TOOL_DEFINITIONS = [
   {
+    name: 'find_recipes',
+    description: 'Söker upp 1–3 riktiga recept på svenska receptsajter (ICA, Köket, Arla m.fl.) och läser ingredienserna från receptsidan. Ger titel, url, vad som finns hemma och vad som saknas. Använd för ALLA receptförslag; skriv aldrig egna recept.',
+    parameters: {
+      type: 'object',
+      properties: {
+        mode: { type: 'string', enum: ['pantry', 'some', 'any'], description: 'pantry = bara det som finns hemma, some = handla lite, any = handla det som behövs' },
+        wish: { type: 'string', description: 'Önskemål, t.ex. "snabbt", "kyckling", "lätt kvällsmål"' },
+        dish: { type: 'string', description: 'En bestämd rätt att hitta recept på, valfritt' },
+      },
+      required: ['mode'],
+    },
+  },
+  {
     name: 'get_meal_plan',
     description: 'Veckomenyn: planerade middagar från och med ett datum (standard idag), med ingredienser, steg och näring per portion. Användaren gör menyn under Mat → Meny.',
     parameters: { type: 'object', properties: { from: date, days: { type: 'integer', description: '1–14, standard 7' } } },
@@ -146,6 +159,9 @@ export const MORE_TOOL_DEFINITIONS = [
 
 export function runMoreTool(name: string, args: Record<string, unknown>, ctx: ToolContext): ToolOutcome | null {
   switch (name) {
+    case 'find_recipes':
+      return err('Receptsökningen körs av appen.')
+
     case 'get_meal_plan': {
       const from = str(args.from) || (ctx.today ?? toISODate(new Date()))
       if (!DATE.test(from)) return err('Ogiltigt datum, använd YYYY-MM-DD.')

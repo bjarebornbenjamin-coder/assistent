@@ -37,10 +37,10 @@ export const MEAL_PLAN_PROMPT = [
   'Använd varor som snart går ut (daysLeft 0–2) tidigt i veckan, aldrig utgångna (negativt daysLeft). Låt gärna rätter dela ingredienser så att inget blir över (t.ex. halva grädden måndag, resten onsdag).',
   'Dagar med quick=true: högst 30 minuter totalt. Dagar med training=true: proteinrik rätt. Respektera allergier, kostönskemål och preferenser strikt. Anpassa portionsstorleken så att en portion ligger rimligt mot dagsmålet (middag är ungefär en tredjedel av dagens kalorier).',
   'Antag att salt, peppar, vatten, matolja och socker finns. Allt annat rätten behöver ska stå bland ingredienserna med bestämt mått (g, dl, msk, tsk, st) för EXAKT det antal portioner som anges.',
-  'Steg: 4–8 korta men exakta steg (tider, temperaturer, värmenivå, hur man ser att det är klart).',
+  'Skriv inga tillagningssteg: appen hämtar ett riktigt recept på nätet för varje rätt. Ingredienserna används bara som en första uppskattning.',
   'reason: en kort mening om varför rätten passar den dagen (t.ex. "snabb, du har fotboll 18:00" eller "använder kycklingen som går ut imorgon").',
   'nutrition: uppskattning PER PORTION som heltal: kcal, protein, carbs, fat (gram).',
-  'Format: {"days":[{"date":"YYYY-MM-DD","title":"Kycklinggryta med curry och ris","reason":"...","minutes":35,"ingredients":[{"name":"Kycklingfilé","amount":"400 g"}],"steps":["..."],"nutrition":{"kcal":620,"protein":42,"carbs":70,"fat":16}}]}',
+  'Format: {"days":[{"date":"YYYY-MM-DD","title":"Kycklinggryta med curry och ris","reason":"...","minutes":35,"ingredients":[{"name":"Kycklingfilé","amount":"400 g"}],"nutrition":{"kcal":620,"protein":42,"carbs":70,"fat":16}}]}',
   'Kontrollera innan du svarar: varje datum finns med exakt en gång, titeln stämmer med ingredienser och steg, och mängderna räcker för portionerna.',
 ].join('\n')
 
@@ -93,7 +93,7 @@ export function parseMealPlan(text: string, dates: ISODate[], portions: number):
       if (name && !ingredients.some((x) => foodKey(x.name) === foodKey(name))) ingredients.push({ name, amount: typeof o.amount === 'string' ? o.amount.trim().slice(0, 30) : '' })
     }
     const steps = Array.isArray(r.steps) ? r.steps.filter((s): s is string => typeof s === 'string' && s.trim() !== '').map((s) => s.trim().slice(0, 500)).slice(0, 10) : []
-    if (ingredients.length === 0 || steps.length === 0) continue
+    if (ingredients.length === 0) continue
     const n = (r.nutrition ?? {}) as Record<string, unknown>
     const nut = { kcal: intIn(n.kcal, 0, 3000), protein: intIn(n.protein, 0, 300), carbs: intIn(n.carbs, 0, 500), fat: intIn(n.fat, 0, 300) }
     out.set(date, {

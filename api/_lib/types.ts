@@ -27,6 +27,8 @@ export interface Env {
   VAPID_PRIVATE_KEY?: string
   VAPID_SUBJECT?: string
   CRON_SECRET?: string
+  /** Modell med webbsökning för recept (standard gpt-4o-mini-search-preview). */
+  RECIPE_SEARCH_MODEL?: string
 }
 
 export type FetchFn = typeof fetch
