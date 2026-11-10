@@ -17,63 +17,66 @@ export function loginError(message: string): string {
   return message
 }
 
+/** Öga som visar läget: öppet när lösenordet syns, överstruket när det är dolt. */
+function EyeIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {!open && <path d="M4 4l16 16" />}
+    </svg>
+  )
+}
+
 export function LoginForm({ intro }: { intro?: string }) {
-  const [mode, setMode] = useState<'in' | 'up'>('in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [message, setMessage] = useState('')
   const [info, setInfo] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<'in' | 'up' | null>(null)
   if (!supabase) return null
   const client = supabase
-  const up = mode === 'up'
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    setBusy(true)
+  async function auth(kind: 'in' | 'up', e?: FormEvent) {
+    e?.preventDefault()
+    if (kind === 'up' && password.length < 6) return setMessage('Lösenordet måste vara minst 6 tecken.')
+    setBusy(kind)
     setMessage('')
     setInfo('')
-    const { data, error } = up
-      ? await client.auth.signUp({ email: email.trim(), password })
-      : await client.auth.signInWithPassword({ email: email.trim(), password })
-    setBusy(false)
+    const { data, error } =
+      kind === 'up'
+        ? await client.auth.signUp({ email: email.trim(), password })
+        : await client.auth.signInWithPassword({ email: email.trim(), password })
+    setBusy(null)
     if (error) return setMessage(loginError(error.message))
-    if (up && !data.session) setInfo('Kontot är skapat. Bekräfta e-postadressen via mejlet och logga sedan in.')
+    if (kind === 'up' && !data.session) setInfo('Kontot är skapat. Bekräfta e-postadressen via mejlet och logga sedan in.')
     else setPassword('')
   }
 
-  const switchMode = (m: 'in' | 'up') => {
-    setMode(m)
-    setMessage('')
-    setInfo('')
-  }
-
   return (
-    <form className="login-form" onSubmit={submit}>
+    <form className="login-form" onSubmit={(e) => auth('in', e)}>
       {intro && <p className="muted">{intro}</p>}
-      <div className="seg" role="group" aria-label="Logga in eller skapa konto">
-        <button type="button" className="tab" aria-pressed={!up} onClick={() => switchMode('in')}>Logga in</button>
-        <button type="button" className="tab" aria-pressed={up} onClick={() => switchMode('up')}>Skapa konto</button>
-      </div>
       <label className="field">
         <span>E-post</span>
         <input type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
       <label className="field">
-        <span>Lösenord{up ? ' (minst 6 tecken)' : ''}</span>
+        <span>Lösenord</span>
         <span className="password-field">
-          <input type={show ? 'text' : 'password'} autoComplete={up ? 'new-password' : 'current-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button type="button" className="btn text" aria-pressed={show} aria-label={show ? 'Dölj lösenordet' : 'Visa lösenordet'} onClick={() => setShow((v) => !v)}>
-            {show ? 'Dölj' : 'Visa'}
+          <input type={show ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button type="button" className="icon-btn" aria-pressed={show} aria-label={show ? 'Dölj lösenordet' : 'Visa lösenordet'} title={show ? 'Dölj lösenordet' : 'Visa lösenordet'} onClick={() => setShow((v) => !v)}>
+            <EyeIcon open={show} />
           </button>
         </span>
       </label>
       {message && <p className="error" role="alert">{message}</p>}
       {info && <p className="muted" role="status">{info}</p>}
-      <button type="submit" className="btn primary wide" disabled={busy || !email || (up ? password.length < 6 : !password)}>
-        {busy ? (up ? 'Skapar konto…' : 'Loggar in…') : up ? 'Skapa konto' : 'Logga in'}
-      </button>
+      <div className="login-buttons">
+        <button type="submit" className="btn primary wide" disabled={busy !== null || !email || !password}>{busy === 'in' ? 'Loggar in…' : 'Logga in'}</button>
+        <button type="button" className="btn wide" disabled={busy !== null || !email || !password} onClick={() => auth('up')}>{busy === 'up' ? 'Skapar konto…' : 'Skapa konto'}</button>
+      </div>
+      <p className="muted small">Första gången: skriv e-post och ett lösenord (minst 6 tecken) och tryck Skapa konto.</p>
     </form>
   )
 }
