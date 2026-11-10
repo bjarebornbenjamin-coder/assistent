@@ -1,19 +1,19 @@
-import { useState } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { EventCard } from '../components/EventCard'
 import { TaskForm } from '../components/TaskForm'
-import { TaskRow } from '../components/TaskRow'
 import { LessonCard } from '../components/LessonCard'
-import { upcomingEvents } from '../domain/calendar'
+import { eventTime, upcomingEvents } from '../domain/calendar'
+import { dayTimeline, share, sv1 } from '../domain/dashboard'
+import { expiringWithin } from '../domain/food'
 import { remainingToday } from '../domain/reminders'
-import { upcomingTasks } from '../domain/tasks'
-import { mealsOn, totalsOf } from '../domain/nutrition'
+import { isOverdue, upcomingTasks } from '../domain/tasks'
+import { goalKcal, mealsOn, totalsOf } from '../domain/nutrition'
 import type { Task } from '../domain/types'
-import { addDays, toHHmm, toISODate } from '../domain/dates'
+import { addDays, parseISODate, toHHmm, toISODate } from '../domain/dates'
 import { setPackChecked } from '../db/repo'
 import { itemKey, packingTarget } from '../domain/packing'
-import { describeNext, findConflicts, lessonsOn, nextLesson, relativeDay } from '../domain/schedule'
-import { useEvents, useLessons, useMeals, usePackChecks, useReminders, useTasks, useWater, useWorkouts, useNow, useSettings, useSubjects } from '../hooks'
+import { describeNext, lessonsOn, nextLesson, relativeDay } from '../domain/schedule'
+import { useEvents, useLessons, useMeals, usePackChecks, usePantry, useReminders, useTasks, useWater, useWorkouts, useNow, useSettings, useSubjects } from '../hooks'
 import { unloggedPlanned, weeklyCounts } from '../domain/workouts'
 
 function dayName(date: string, today: string): string {
@@ -40,6 +40,19 @@ function HomeHeader() {
   )
 }
 
+function Tile({ to, label, value, sub, bar, tone }: { to: string; label: string; value: ReactNode; sub?: string; bar?: number; tone?: 'warn' | 'ok' }) {
+  return (
+    <Link to={to} className={`tile${tone ? ` ${tone}` : ''}`}>
+      <span className="tile-label">{label}</span>
+      <span className="tile-value">{value}</span>
+      {bar !== undefined && (
+        <span className="tile-bar" aria-hidden="true"><span style={{ transform: `scaleX(${bar})` }} /></span>
+      )}
+      {sub && <span className="tile-sub">{sub}</span>}
+    </Link>
+  )
+}
+
 export function Home() {
   const settings = useSettings()
   const lessons = useLessons()
@@ -50,62 +63,107 @@ export function Home() {
   const meals = useMeals()
   const water = useWater()
   const workouts = useWorkouts()
+  const pantry = usePantry()
   const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
   const now = useNow()
   const packing0 = settings && lessons && subjects && events ? packingTarget(now, lessons, subjects, settings, events) : null
   const checks = usePackChecks(packing0?.date)
-  if (!settings || !lessons || !subjects || !events || !tasks || !reminders || !meals || !water || !workouts) return null
+  if (!settings || !lessons || !subjects || !events || !tasks || !reminders || !meals || !water || !workouts || !pantry) return null
 
   const today = toISODate(now)
+  const nowTime = toHHmm(now)
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
   const todays = lessonsOn(today, lessons, settings)
   const next = nextLesson(now, lessons, settings)
   const packing = packingTarget(now, lessons, subjects, settings, events)
-
-  const upcoming = upcomingEvents(now, events)
-  const dueTasks = upcomingTasks(now, tasks)
-  const todayReminders = remainingToday(now, reminders)
+  const timeline = dayTimeline(today, nowTime, { lessons, events, tasks, reminders, subjects, settings })
+  const schoolOver = todays.length > 0 && todays.every((l) => l.end <= nowTime)
 
   if (lessons.length === 0 && events.length === 0 && tasks.length === 0 && reminders.length === 0) {
     return (
       <>
         <HomeHeader />
-        <p className="empty">
-          Du har inget schema än.
-        </p>
+        <p className="empty">Du har inget schema än.</p>
         <div className="actions"><Link to="/schema" className="btn primary">Lägg in din första lektion</Link></div>
       </>
     )
   }
 
+  // Siffror till rutorna
+  const open = upcomingTasks(now, tasks)
+  const overdue = open.filter((t) => isOverdue(t, today))
+  const dueToday = open.filter((t) => t.deadline === today)
+  const eaten = totalsOf(mealsOn(today, meals))
+  const goals = settings.nutrition
+  const ml = water.find((w) => w.date === today)?.ml ?? 0
+  const week = weeklyCounts(workouts, today, 1)[0]
+  const toLog = unloggedPlanned(events, workouts, addDays(today, -2), today).length
+  const expiring = expiringWithin(pantry, today)
+  const nextReminder = remainingToday(now, reminders)[0]
+  const coming = [
+    ...upcomingEvents(now, events).filter((e) => e.date > today).map((e) => ({ key: e.id, date: e.date, time: eventTime(e), title: e.title, kind: 'Händelse' })),
+    ...tasks.filter((t) => !t.done && t.deadline > today && t.deadline <= addDays(today, 7)).map((t) => ({ key: t.id, date: t.deadline, time: t.time ? `Inne ${t.time}` : 'Ska in', title: t.title, kind: subjectById.get(t.subjectId ?? '')?.name ?? 'Uppgift' })),
+  ].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+
   return (
     <>
       <HomeHeader />
 
-      <h2>Nästa lektion</h2>
-      {next ? (
-        <>
-          <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} size="large" />
-          <p className="next-note">{capitalize(describeNext(now, next).replace(/^Nästa lektion /, ''))}</p>
-        </>
-      ) : (
-        <p className="empty">Inga kommande lektioner de närmaste två veckorna.</p>
-      )}
+      <section aria-label="Nästa lektion" className="dash-hero">
+        {next ? (
+          <>
+            <LessonCard lesson={next.lesson} subject={subjectById.get(next.lesson.subjectId)} highlight={next.ongoing} size="large" />
+            <p className="next-note">{schoolOver ? 'Skolan är slut för idag. ' : ''}{capitalize(describeNext(now, next).replace(/^Nästa lektion /, ''))}</p>
+          </>
+        ) : (
+          <p className="empty">Inga kommande lektioner de närmaste två veckorna.</p>
+        )}
+      </section>
 
-      <h2>Dagens lektioner</h2>
-      {todays.length === 0 ? (
-        <p className="empty">Inga lektioner idag.</p>
+      <div className="tiles">
+        <Tile
+          to="/uppgifter"
+          label="Uppgifter"
+          value={open.length}
+          sub={overdue.length ? `${overdue.length} försenad${overdue.length > 1 ? 'e' : ''}` : dueToday.length ? `${dueToday.length} ska in idag` : 'närmaste 7 dagarna'}
+          tone={overdue.length ? 'warn' : undefined}
+        />
+        <Tile to="/mat?v=kost" label="Kalorier" value={<>{eaten.kcal}<small> / {goalKcal(goals)}</small></>} bar={share(eaten.kcal, goalKcal(goals))} sub={`protein ${sv1(eaten.protein)} / ${goals.proteinG} g`} />
+        <Tile to="/mat?v=kost" label="Vatten" value={<>{sv1(ml / 1000)}<small> / {sv1(goals.waterMl / 1000)} l</small></>} bar={share(ml, goals.waterMl)} />
+        <Tile to="/traning" label="Träning" value={<>{week.count}<small> pass</small></>} sub={toLog ? `${toLog} att logga` : week.minutes ? `${week.minutes} min den här veckan` : 'den här veckan'} />
+        <Tile to="/mat" label="Matlager" value={expiring.length} sub={expiring.length ? `går ut snart: ${expiring.slice(0, 2).map((p) => p.name.toLowerCase()).join(', ')}` : 'inget går ut snart'} tone={expiring.length ? 'warn' : undefined} />
+        <Tile to="/paminnelser" label="Påminnelse" value={nextReminder ? nextReminder.time : '–'} sub={nextReminder ? nextReminder.title : 'inga fler idag'} />
+      </div>
+
+      <h2>Idag</h2>
+      {timeline.length === 0 ? (
+        <p className="empty">Inget inplanerat idag.</p>
       ) : (
-        todays.map((l) => (
-          <LessonCard
-            key={l.id}
-            lesson={l}
-            subject={subjectById.get(l.subjectId)}
-            past={l.end <= toHHmm(now)}
-            conflict={findConflicts(l, todays, 1).length > 0}
-          />
-        ))
+        <ol className="timeline">
+          {timeline.map((i) => {
+            const style = i.color ? ({ '--subject': i.color } as CSSProperties) : undefined
+            const body = (
+              <>
+                <span className="tl-time">{i.timeLabel}</span>
+                <span className="tl-main">
+                  <span className="title">{i.title}</span>
+                  {i.sub && <span className="sub">{i.sub}</span>}
+                </span>
+                {i.ongoing && <span className="tl-now">Nu</span>}
+              </>
+            )
+            return (
+              <li key={i.key} className={`tl-${i.kind}${i.past ? ' past' : ''}${i.ongoing ? ' ongoing' : ''}${i.color ? ' colored' : ''}`} style={style}>
+                {i.task ? <button type="button" className="tl-row" onClick={() => setEditingTask(i.task!)}>{body}</button> : <div className="tl-row">{body}</div>}
+              </li>
+            )
+          })}
+        </ol>
       )}
+      <div className="actions">
+        <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
+        <Link to="/kalender" className="btn">Kalender</Link>
+      </div>
 
       <h2>Ta med {packing ? dayName(packing.date, today) : ''}</h2>
       {!packing ? (
@@ -117,28 +175,9 @@ export function Home() {
         </>
       ) : (
         <div className="card pack">
-          {packing.groups.map((g) => (
-            <div key={g.subject.id}>
-              <h3>{g.subject.name}</h3>
-              <ul className="checklist">
-                {g.items.map((i) => {
-                  const key = itemKey(i.text)
-                  const done = checks?.has(key) ?? false
-                  return (
-                    <li key={i.id}>
-                      <label className={done ? 'done' : ''}>
-                        <input type="checkbox" checked={done} onChange={(e) => setPackChecked(packing.date, key, e.target.checked)} />
-                        {i.text}
-                      </label>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
-          {packing.events.map((g) => (
-            <div key={g.event.id}>
-              <h3>{g.event.title}{g.event.start ? ` ${g.event.start}` : ''}</h3>
+          {[...packing.groups.map((g) => ({ key: g.subject.id, title: g.subject.name, items: g.items.map((x) => x.text) })), ...packing.events.map((g) => ({ key: g.event.id, title: `${g.event.title}${g.event.start ? ` ${g.event.start}` : ''}`, items: g.items }))].map((g) => (
+            <div key={g.key}>
+              <h3>{g.title}</h3>
               <ul className="checklist">
                 {g.items.map((text) => {
                   const key = itemKey(text)
@@ -158,75 +197,20 @@ export function Home() {
         </div>
       )}
 
-      <h2>Händelser närmaste veckan</h2>
-      {upcoming.length === 0 ? (
-        <p className="empty">Inga händelser de närmaste sju dagarna.</p>
+      <h2>Kommande veckan</h2>
+      {coming.length === 0 ? (
+        <p className="empty">Inga händelser eller uppgifter de närmaste sju dagarna.</p>
       ) : (
-        upcoming.map((e) => (
-          <div key={e.id}>
-            <p className="sub" style={{ margin: '8px 0 4px' }}>{capitalize(dayName(e.date, today))}</p>
-            <EventCard event={e} />
-          </div>
-        ))
+        <ul className="coming">
+          {coming.slice(0, 8).map((c) => (
+            <li key={c.key}>
+              <span className="c-day">{c.date === addDays(today, 1) ? 'Imorgon' : capitalize(parseISODate(c.date).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' }))}</span>
+              <span className="c-main"><span className="title">{c.title}</span><span className="sub">{c.kind} · {c.time}</span></span>
+            </li>
+          ))}
+        </ul>
       )}
 
-      <h2>Uppgifter som ska in snart</h2>
-      {dueTasks.length === 0 ? (
-        <p className="empty">Inga uppgifter de närmaste sju dagarna.</p>
-      ) : (
-        dueTasks.map((t) => (
-          <TaskRow key={t.id} task={t} subject={subjectById.get(t.subjectId ?? '')} today={today} onEdit={() => setEditingTask(t)} />
-        ))
-      )}
-      <div className="actions">
-        <button type="button" className="btn" onClick={() => setEditingTask('new')}>Ny uppgift</button>
-        <Link to="/uppgifter" className="btn">Alla uppgifter</Link>
-      </div>
-
-      <h2>Mat och vatten idag</h2>
-      {(() => {
-        const t = totalsOf(mealsOn(today, meals))
-        const ml = water.find((w) => w.date === today)?.ml ?? 0
-        const g = settings.nutrition
-        const n = (v: number) => v.toLocaleString('sv-SE', { maximumFractionDigits: 1 })
-        return (
-          <Link to="/mat?v=kost" className="card kost-row">
-            <span><strong>{t.kcal}</strong> kcal</span>
-            <span>protein <strong>{n(t.protein)}</strong>/{g.proteinG} g</span>
-            <span>vatten <strong>{n(ml / 1000)}</strong>/{n(g.waterMl / 1000)} l</span>
-          </Link>
-        )
-      })()}
-
-      <h2>Träning</h2>
-      {(() => {
-        const week = weeklyCounts(workouts, today, 1)[0]
-        const toLog = unloggedPlanned(events, workouts, addDays(today, -2), today).length
-        return (
-          <Link to="/traning" className="card kost-row">
-            <span><strong>{week.count}</strong> pass den här veckan</span>
-            {week.minutes > 0 && <span><strong>{week.minutes}</strong> min</span>}
-            {toLog > 0 && <span>{toLog} planerat att logga</span>}
-          </Link>
-        )
-      })()}
-
-      <h2>Påminnelser idag</h2>
-      {todayReminders.length === 0 ? (
-        <p className="empty">Inga fler påminnelser idag.</p>
-      ) : (
-        todayReminders.map((r) => (
-          <div key={r.id} className="card">
-            <div className="row">
-              <span className="time" style={{ minWidth: '3.5em' }}>{r.time}</span>
-              <span className="title">{r.title}</span>
-            </div>
-          </div>
-        ))
-      )}
-      <div className="actions">
-        <Link to="/paminnelser" className="btn">Alla påminnelser</Link>
-      </div>
       {editingTask && (
         <TaskForm
           key={editingTask === 'new' ? 'new' : editingTask.id}
