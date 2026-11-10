@@ -34,7 +34,7 @@ Fem flikar längst ner: **Hem, Schema, Kalender, Mat, Chatt**. Undersidor: Uppgi
 **Kalender**
 - Vyerna Månad, Vecka och Lista. Visar lektioner, händelser och uppgifter.
 - Lista visar de kommande 60 dagarna och har en sökruta som hittar händelser och uppgifter, även gamla (titel, anteckning, ämne).
-- Händelser kan vara heldag eller ha tid, och ha en anteckning.
+- Händelser kan vara heldag eller ha tid, och ha en anteckning och en egen packlista. När jag lägger in en ny händelse föreslår AI:n vad jag ska ta med; jag väljer själv vad som läggs till.
 - **Plugga inför prov**: jag skriver provet, datumet och vad som ingår. Pluggpassen sprids ut på lediga tider efter skolan fram till dagen före provet, ett moment per pass och repetition sist. Jag ser förslaget innan det läggs in.
 - **Google Kalender** (bara läsning): händelser från mina Google-kalendrar visas i appen, 30 dagar bakåt och 4 månader framåt. De kan inte ändras i appen. Kräver att `VITE_GOOGLE_CLIENT_ID` är inlagt i Vercel. Inloggningen hos Google gäller ungefär en timme, sedan trycker man på "Hämta från Google".
 
@@ -67,7 +67,7 @@ Fem flikar längst ner: **Hem, Schema, Kalender, Mat, Chatt**. Undersidor: Uppgi
 - Har ett minne för preferenser ("jag gillar inte svamp") som syns och kan tas bort under Inställningar.
 
 **Notiser** (push, kräver Supabase och inloggning)
-- Morgonöversikt (standard 07:00): dagens lektioner, packlista, vad som ska in, försenat, händelser, påminnelser och mat som går ut. Skickas inte tomma dagar.
+- Morgonöversikt (standard 07:00): dagens lektioner, vad jag ska ta med (ämnenas och händelsernas packlistor), vad som ska in, försenat, händelser, påminnelser och mat som går ut. Skickas inte tomma dagar.
 - Kvällsnotis med morgondagens lektioner och packlista, notis före varje lektion, påminnelser, mat som snart går ut, inköpslistan en viss veckodag.
 
 **Inställningar**

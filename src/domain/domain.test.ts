@@ -213,3 +213,16 @@ describe('agenda och sökning i kalendern', async () => {
     expect(agenda('matteprov kap', events, tasks, '2026-11-09')).toHaveLength(1)
   })
 })
+
+describe('packlista med händelser', async () => {
+  const { packingTarget } = await import('./packing')
+  const ev = (id: string, date: string, start: string | undefined, items: string[]) => ({ id, title: id, date, ...(start ? { start } : {}), note: '', packItems: items, updatedAt: '' })
+  it('idag gäller tills händelsen börjat, sedan nästa dag med lektioner eller händelser', () => {
+    const s = { cycleLength: 1, cycleAnchor: '2026-11-02' }
+    const events = [ev('Gym', '2026-11-10', '17:00', ['Gymkort']), ev('Utflykt', '2026-11-12', undefined, ['Matsäck'])]
+    const t1 = packingTarget(new Date('2026-11-10T15:00:00'), [], [], s, events)!
+    expect([t1.date, t1.events.map((e) => e.items)]).toEqual(['2026-11-10', [['Gymkort']]])
+    const t2 = packingTarget(new Date('2026-11-10T18:00:00'), [], [], s, events)!
+    expect([t2.date, t2.events[0].event.id]).toEqual(['2026-11-12', 'Utflykt'])
+  })
+})

@@ -47,7 +47,7 @@ export function Home() {
   const workouts = useWorkouts()
   const [editingTask, setEditingTask] = useState<Task | 'new' | null>(null)
   const now = useNow()
-  const packing0 = settings && lessons && subjects ? packingTarget(now, lessons, subjects, settings) : null
+  const packing0 = settings && lessons && subjects && events ? packingTarget(now, lessons, subjects, settings, events) : null
   const checks = usePackChecks(packing0?.date)
   if (!settings || !lessons || !subjects || !events || !tasks || !reminders || !meals || !water || !workouts) return null
 
@@ -55,7 +55,7 @@ export function Home() {
   const subjectById = new Map(subjects.map((s) => [s.id, s]))
   const todays = lessonsOn(today, lessons, settings)
   const next = nextLesson(now, lessons, settings)
-  const packing = packingTarget(now, lessons, subjects, settings)
+  const packing = packingTarget(now, lessons, subjects, settings, events)
 
   const upcoming = upcomingEvents(now, events)
   const dueTasks = upcomingTasks(now, tasks)
@@ -104,8 +104,8 @@ export function Home() {
 
       <h2>Ta med {packing ? dayName(packing.date, today) : ''}</h2>
       {!packing ? (
-        <p className="empty">Inga kommande lektioner.</p>
-      ) : packing.groups.length === 0 ? (
+        <p className="empty">Inget att packa de närmaste två veckorna.</p>
+      ) : packing.groups.length === 0 && packing.events.length === 0 ? (
         <>
           <p className="empty">Inga packlistor för {dayName(packing.date, today)}s ämnen.</p>
           <div className="actions" style={{ marginTop: 0 }}><Link to="/amnen" className="btn">Skriv packlistor</Link></div>
@@ -124,6 +124,25 @@ export function Home() {
                       <label className={done ? 'done' : ''}>
                         <input type="checkbox" checked={done} onChange={(e) => setPackChecked(packing.date, key, e.target.checked)} />
                         {i.text}
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+          {packing.events.map((g) => (
+            <div key={g.event.id}>
+              <h3>{g.event.title}{g.event.start ? ` ${g.event.start}` : ''}</h3>
+              <ul className="checklist">
+                {g.items.map((text) => {
+                  const key = itemKey(text)
+                  const done = checks?.has(key) ?? false
+                  return (
+                    <li key={key}>
+                      <label className={done ? 'done' : ''}>
+                        <input type="checkbox" checked={done} onChange={(e) => setPackChecked(packing.date, key, e.target.checked)} />
+                        {text}
                       </label>
                     </li>
                   )

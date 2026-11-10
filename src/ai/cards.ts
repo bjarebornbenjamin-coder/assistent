@@ -25,7 +25,7 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return {
         kicker: 'Förslag: ny händelse',
         title: card.event.title,
-        lines: [`${dayLabel(card.event.date)} · ${eventTime(card.event)}`, ...(card.event.note ? [card.event.note] : [])],
+        lines: [`${dayLabel(card.event.date)} · ${eventTime(card.event)}`, ...(card.event.note ? [card.event.note] : []), ...(card.event.packItems?.length ? [`Ta med: ${card.event.packItems.join(', ')}`] : [])],
         confirmLabel: 'Lägg in',
         doneText: 'Inlagd i kalendern.',
       }
@@ -89,7 +89,7 @@ export function cardView(card: ChatCard, subjects: Subject[]): CardView {
       return {
         kicker: `Förslag: ${card.events.length} händelser`,
         title: card.events.map((e) => e.title).join(', ').slice(0, 80),
-        lines: card.events.map((e) => `${dayLabel(e.date)} · ${eventTime(e)} · ${e.title}`),
+        lines: card.events.map((e) => `${dayLabel(e.date)} · ${eventTime(e)} · ${e.title}${e.packItems?.length ? ` (ta med: ${e.packItems.join(', ')})` : ''}`),
         confirmLabel: `Lägg in ${card.events.length}`,
         doneText: 'Inlagda i kalendern.',
       }

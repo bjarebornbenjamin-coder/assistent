@@ -1,5 +1,5 @@
 import { addDays, parseISODate, toISODate, weekdayOf } from './dates'
-import { packingFor } from './packing'
+import { allPackItems } from './packing'
 import { occursOn } from './reminders'
 import { lessonsOn } from './schedule'
 import { eventTime, eventsOn } from './calendar'
@@ -47,7 +47,7 @@ export function morningBriefing(date: ISODate, s: Pick<Settings, 'cycleLength' |
   const title = lessons.length
     ? `Idag: ${name(lessons[0])} ${lessons[0].start}${lessons.length > 1 ? `, slutar ${lessons.reduce((m, l) => (l.end > m ? l.end : m), '00:00')}` : ''}`
     : 'Idag: ingen skola'
-  const pack = packingFor(lessons, d.subjects).flatMap((g) => g.items.map((it) => lowerFirst(it.text.trim())))
+  const pack = allPackItems(date, lessons, d.subjects, d.events).map((t) => lowerFirst(t.trim()))
   const lines = [
     lessons.length > 1 && `Lektioner: ${list(lessons.map((l) => `${name(l)} ${l.start}`), 4)}`,
     pack.length > 0 && `Ta med: ${list(pack, 5)}`,
@@ -123,22 +123,25 @@ export function planNotifications(
     }
 
     const day = lessonsOn(date, lessons, s)
-    if (day.length === 0) continue
+    const packEvents = eventsOn(date, calendar.events).filter((e) => e.packItems?.length)
 
-    if (s.notify.evening) {
+    if (s.notify.evening && (day.length > 0 || packEvents.length > 0)) {
       const fireAt = at(addDays(date, -1), s.notify.eveningTime)
       if (fireAt > now) {
+        const items = allPackItems(date, day, subjects, calendar.events).map((t) => lowerFirst(t.trim()))
         const first = day[0]
-        const items = packingFor(day, subjects).flatMap((g) => g.items.map((it) => lowerFirst(it.text.trim())))
-        const more = day.length > 1 ? ` (+${day.length - 1} till)` : ''
+        const title = first
+          ? `Imorgon: ${name(first)} ${first.start}${day.length > 1 ? ` (+${day.length - 1} till)` : ''}`
+          : `Imorgon: ${packEvents.map((e) => (e.start ? `${e.title} ${e.start}` : e.title)).join(', ')}`
         out.push({
           id: `evening:${date}`,
           fireAt,
-          title: `Imorgon: ${name(first)} ${first.start}${more}`,
+          title,
           body: items.length > 0 ? `Ta med ${items.join(', ')}` : 'Inget att packa enligt dina packlistor.',
         })
       }
     }
+    if (day.length === 0) continue
 
     if (s.notify.before && s.notify.beforeMinutes >= 0) {
       for (const l of day) {

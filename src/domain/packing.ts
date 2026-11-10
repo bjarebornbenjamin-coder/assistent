@@ -1,6 +1,7 @@
 import { addDays, toHHmm, toISODate } from './dates'
 import { lessonsOn } from './schedule'
-import type { ISODate, Lesson, PackItem, Settings, Subject } from './types'
+import { eventsOn } from './calendar'
+import type { CalendarEvent, ISODate, Lesson, PackItem, Settings, Subject } from './types'
 
 /** Nyckel för att jämföra packsaker: skiftlägesokänsligt och trimmat. */
 export const itemKey = (text: string) => text.trim().toLowerCase()
@@ -35,9 +36,37 @@ export function packingFor(dayLessons: Lesson[], subjects: Subject[]): PackGroup
   return groups
 }
 
+export interface EventPack {
+  event: CalendarEvent
+  items: string[]
+}
+
+/** Händelsernas packlistor för en dag. Sådant som redan står i ämnenas packlistor (`skip`) visas inte igen. */
+export function eventPackingFor(date: ISODate, events: CalendarEvent[], skip: PackGroup[] = []): EventPack[] {
+  const seen = new Set(skip.flatMap((g) => g.items.map((i) => itemKey(i.text))))
+  const out: EventPack[] = []
+  for (const event of eventsOn(date, events)) {
+    const items = (event.packItems ?? []).filter((t) => {
+      const key = itemKey(t)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    if (items.length > 0) out.push({ event, items })
+  }
+  return out
+}
+
+/** Allt att ta med en dag, i ordning: ämnen först, sedan händelser. Små bokstäver först i varje sak är upp till anroparen. */
+export function allPackItems(date: ISODate, dayLessons: Lesson[], subjects: Subject[], events: CalendarEvent[]): string[] {
+  const groups = packingFor(dayLessons, subjects)
+  return [...groups.flatMap((g) => g.items.map((i) => i.text)), ...eventPackingFor(date, events, groups).flatMap((e) => e.items)]
+}
+
 export interface PackingTarget {
   date: ISODate
   groups: PackGroup[]
+  events: EventPack[]
 }
 
 /**
@@ -49,15 +78,26 @@ export function packingTarget(
   lessons: Lesson[],
   subjects: Subject[],
   s: Pick<Settings, 'cycleLength' | 'cycleAnchor'>,
+  events: CalendarEvent[] = [],
 ): PackingTarget | null {
   const today = toISODate(now)
+  const time = toHHmm(now)
+  const target = (date: ISODate, day: Lesson[]) => {
+    const groups = packingFor(day, subjects)
+    return { date, groups, events: eventPackingFor(date, events, groups) }
+  }
   const todays = lessonsOn(today, lessons, s)
   const last = todays[todays.length - 1]
-  if (last && toHHmm(now) < last.end) return { date: today, groups: packingFor(todays, subjects) }
+  // Idag gäller så länge skolan pågår eller en händelse med packlista inte har börjat (heldag räknas hela dagen).
+  const eventLeft = eventsOn(today, events).some((e) => e.packItems?.length && (!e.start || e.start > time))
+  if ((last && time < last.end) || eventLeft) {
+    const t = target(today, last && time < last.end ? todays : [])
+    return { ...t, events: t.events.filter((e) => !e.event.start || e.event.start > time) }
+  }
   for (let i = 1; i <= 14; i++) {
     const date = addDays(today, i)
     const day = lessonsOn(date, lessons, s)
-    if (day.length > 0) return { date, groups: packingFor(day, subjects) }
+    if (day.length > 0 || eventsOn(date, events).some((e) => e.packItems?.length)) return target(date, day)
   }
   return null
 }

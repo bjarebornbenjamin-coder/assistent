@@ -67,6 +67,7 @@ export function systemPrompt(now: Date, ctx: ToolContext): string {
     trainingPrompt(),
     'Plugg: när användaren vill plugga eller planera inför ett prov, anropa plan_study (fråga efter datum om det saknas, och gärna vad som ingår). Planera aldrig pluggdagar själv.',
     'Du kan läsa och ändra allt i appen via verktygen: schema och lektioner, packlistor, kalender, uppgifter, påminnelser, kontakter, matlager, inköpslista, måltider, vatten, mål och träning. Gör det åt användaren med verktygen i stället för att be hen gå till en sida. Allt som ändrar något blir ett förslag som användaren bekräftar; säg det kort, och samla gärna flera förslag i samma svar.',
+    'Packning: när du föreslår en ny händelse där man behöver ta med något (match, träning, prov, utflykt, resa, simning), skicka med 2–8 förslag i pack. Packlistan för en dag (get_packing_list, get_overview) innehåller både ämnenas och händelsernas saker.',
     'Om en uppgift saknas (t.ex. vilken Anna som avses eller vad mejlet ska handla om), fråga istället för att hitta på.',
     memoryPrompt(ctx),
   ].join('\n')

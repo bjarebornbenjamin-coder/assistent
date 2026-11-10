@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { useFieldError } from '../hooks'
+import { useAiConfig, useFieldError, useSettings } from '../hooks'
+import { suggestPackItems } from '../ai/packSuggest'
+import { authHeaders } from '../lib/auth'
+import { itemKey } from '../domain/packing'
 import { undoable } from '../lib/undo'
 import { deleteEvent, newId, saveEvent } from '../db/repo'
 import type { CalendarEvent, ISODate } from '../domain/types'
@@ -40,7 +43,46 @@ function EditableEventForm({ event, defaultDate, onClose }: Props) {
   const [start, setStart] = useState(event?.start ?? '08:00')
   const [end, setEnd] = useState(event?.end ?? '')
   const [note, setNote] = useState(event?.note ?? '')
+  const [pack, setPack] = useState<string[]>(event?.packItems ?? [])
+  const [newItem, setNewItem] = useState('')
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestNote, setSuggestNote] = useState('')
+  const [askedFor, setAskedFor] = useState('')
+  const config = useAiConfig()
+  const settings = useSettings()
   const { error, fail, touch } = useFieldError()
+
+  const addItems = (items: string[]) => {
+    setPack((list) => {
+      const keys = new Set(list.map(itemKey))
+      return [...list, ...items.map((t) => t.trim()).filter((t) => t && !keys.has(itemKey(t)) && keys.add(itemKey(t)))]
+    })
+    setSuggestions((s) => s.filter((x) => !items.some((t) => itemKey(t) === itemKey(x))))
+  }
+
+  async function suggest() {
+    const t = title.trim()
+    if (!t) return fail('title', 'Skriv först vad det är för händelse.')
+    setAskedFor(t)
+    setSuggesting(true)
+    setSuggestNote('')
+    try {
+      const list = await suggestPackItems({ title: t, date, ...(allDay ? {} : { start, ...(end ? { end } : {}) }), note }, pack, settings?.memories ?? [], config?.model ?? 'gpt-4o-mini', await authHeaders())
+      setSuggestions(list)
+      if (list.length === 0) setSuggestNote('AI:n tycker inte att du behöver ta med något särskilt.')
+    } catch (e) {
+      setSuggestNote(e instanceof Error ? e.message : 'Kunde inte hämta förslag.')
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
+  /** Nya händelser får förslag direkt när titeln är ifylld, en gång per titel. */
+  function autoSuggest() {
+    const t = title.trim()
+    if (!event && t.length >= 3 && pack.length === 0 && t !== askedFor && !suggesting) void suggest()
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -53,6 +95,7 @@ function EditableEventForm({ event, defaultDate, onClose }: Props) {
       date,
       ...(allDay ? {} : { start, ...(end ? { end } : {}) }),
       note: note.trim(),
+      ...(pack.length ? { packItems: pack } : {}),
       updatedAt: '',
     })
     onClose()
@@ -70,7 +113,7 @@ function EditableEventForm({ event, defaultDate, onClose }: Props) {
         <h1>{event ? 'Ändra händelse' : 'Ny händelse'}</h1>
         <label className="field">
           <span>Titel</span>
-          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} autoFocus onFocus={(e) => e.currentTarget.select()} />
+          <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); touch('title') }} onBlur={autoSuggest} autoFocus onFocus={(e) => e.currentTarget.select()} />
         </label>
         <label className="field">
           <span>Datum</span>
@@ -89,6 +132,51 @@ function EditableEventForm({ event, defaultDate, onClose }: Props) {
           <span>Anteckning (valfritt)</span>
           <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
+        <fieldset className="pack-edit">
+          <legend>Ta med</legend>
+          {pack.length > 0 && (
+            <div className="chips">
+              {pack.map((t) => (
+                <span key={itemKey(t)} className="chip on">
+                  {t}
+                  <button type="button" aria-label={`Ta bort ${t}`} onClick={() => setPack((l) => l.filter((x) => x !== t))}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="add-row">
+            <input
+              type="text"
+              aria-label="Sak att ta med"
+              placeholder="Lägg till sak"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addItems([newItem])
+                  setNewItem('')
+                }
+              }}
+            />
+            <button type="button" className="btn" onClick={() => { addItems([newItem]); setNewItem('') }}>Lägg till</button>
+          </div>
+          {suggestions.length > 0 && (
+            <div className="suggest">
+              <span className="sub">Förslag från AI, tryck för att lägga till:</span>
+              <div className="chips">
+                {suggestions.map((t) => (
+                  <button key={t} type="button" className="chip" onClick={() => addItems([t])}>+ {t}</button>
+                ))}
+                {suggestions.length > 1 && <button type="button" className="chip" onClick={() => addItems(suggestions)}>Lägg till alla</button>}
+              </div>
+            </div>
+          )}
+          <button type="button" className="btn text" disabled={suggesting} onClick={suggest}>
+            {suggesting ? 'Tänker…' : suggestions.length || askedFor ? 'Nya förslag från AI' : 'Föreslå vad jag ska ta med'}
+          </button>
+          {suggestNote && <p className="sub" role="status">{suggestNote}</p>}
+        </fieldset>
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions">
           <button type="submit" className="btn primary">Spara</button>

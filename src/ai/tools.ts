@@ -1,6 +1,6 @@
 import { dayLabel, eventTime, eventsOn } from '../domain/calendar'
 import { WEEKDAYS_LONG, addDays, daysBetween, weekdayOf } from '../domain/dates'
-import { packingFor } from '../domain/packing'
+import { allPackItems, eventPackingFor, packingFor } from '../domain/packing'
 import { lessonsOn } from '../domain/schedule'
 import { daysLeft, foodKey } from '../domain/food'
 import { MORE_TOOL_DEFINITIONS, runMoreTool } from './toolsMore'
@@ -94,6 +94,7 @@ const BASE_TOOL_DEFINITIONS = [
         start: { type: 'string', description: 'HH:mm, utelämna för heldag' },
         end: { type: 'string', description: 'HH:mm, kräver start' },
         note: { type: 'string' },
+        pack: { type: 'array', items: { type: 'string' }, description: 'Saker att ta med till händelsen, korta namn (valfritt)' },
       },
       required: ['title', 'date'],
     },
@@ -235,7 +236,7 @@ const BASE_TOOL_DEFINITIONS = [
       properties: {
         events: {
           type: 'array',
-          items: { type: 'object', properties: { title: { type: 'string' }, date, start: { type: 'string' }, end: { type: 'string' }, note: { type: 'string' } }, required: ['title', 'date'] },
+          items: { type: 'object', properties: { title: { type: 'string' }, date, start: { type: 'string' }, end: { type: 'string' }, note: { type: 'string' }, pack: { type: 'array', items: { type: 'string' } } }, required: ['title', 'date'] },
         },
       },
       required: ['events'],
@@ -258,6 +259,15 @@ export const TOOL_DEFINITIONS = [...BASE_TOOL_DEFINITIONS, ...MORE_TOOL_DEFINITI
 type Args = Record<string, unknown>
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
 const err = (message: string): ToolOutcome => ({ result: { error: message } })
+/** Packsaker från modellen: korta, unika, högst 12. */
+const packOf = (v: unknown): { packItems?: string[] } => {
+  const list: string[] = []
+  for (const x of Array.isArray(v) ? v : []) {
+    const t = typeof x === 'string' ? x.trim().slice(0, 40) : ''
+    if (t && !list.some((y) => y.toLowerCase() === t.toLowerCase())) list.push(t)
+  }
+  return list.length ? { packItems: list.slice(0, 12) } : {}
+}
 
 function lessonView(l: Lesson, subjects: Subject[]) {
   return {
@@ -332,7 +342,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
           events: eventsOn(d, ctx.events).map((e) => ({ title: e.title, start: e.start, end: e.end, note: e.note || undefined })),
           tasksDue: tasksOn(d, ctx.tasks).map((t) => ({ title: t.title, subject: subjectName(t.subjectId), done: t.done, time: t.time, note: t.note })),
           reminders: ctx.reminders.filter((r) => occursOn(r, d)).sort((a, b) => a.time.localeCompare(b.time)).map((r) => ({ title: r.title, time: r.time })),
-          packing: packingFor(dayLessons, ctx.subjects).flatMap((g) => g.items.map((i) => i.text)),
+          packing: allPackItems(d, dayLessons, ctx.subjects, ctx.events),
           workoutsDone: ctx.workouts.filter((w) => w.date === d).map((w) => w.title),
         }
       })
@@ -345,7 +355,8 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const d = str(args.date)
       if (!DATE.test(d)) return err('Ogiltigt datum, använd YYYY-MM-DD.')
       const groups = packingFor(lessonsOn(d, ctx.lessons, ctx.settings), ctx.subjects)
-      return { result: { date: d, packing: groups.map((g) => ({ subject: g.subject.name, items: g.items.map((i) => i.text) })) } }
+      const fromEvents = eventPackingFor(d, ctx.events, groups)
+      return { result: { date: d, packing: [...groups.map((g) => ({ subject: g.subject.name, items: g.items.map((i) => i.text) })), ...fromEvents.map((e) => ({ event: e.event.title, items: e.items }))] } }
     }
     case 'list_events': {
       const from = str(args.from)
@@ -354,7 +365,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       const span = daysBetween(from, to)
       if (span < 0 || span > 62) return err('Intervallet måste vara 0–62 dagar.')
       const events = Array.from({ length: span + 1 }, (_, i) => eventsOn(addDays(from, i), ctx.events)).flat()
-      return { result: { events: events.map((e) => ({ id: e.id, title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined, fromGoogle: e.source === 'google' || undefined })) } }
+      return { result: { events: events.map((e) => ({ id: e.id, title: e.title, date: e.date, start: e.start, end: e.end, note: e.note || undefined, pack: e.packItems, fromGoogle: e.source === 'google' || undefined })) } }
     }
     case 'list_tasks': {
       const from = str(args.from)
@@ -642,7 +653,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
         if (!DATE.test(d)) return err(`Ogiltigt datum för "${title}", använd YYYY-MM-DD.`)
         if (start && !TIME.test(start)) return err(`Ogiltig starttid för "${title}", använd HH:mm.`)
         if (end && (!start || !TIME.test(end) || end <= start)) return err(`Ogiltig sluttid för "${title}".`)
-        events.push({ title, date: d, ...(start ? { start } : {}), ...(end ? { end } : {}), note: str(r.note).slice(0, 300) })
+        events.push({ title, date: d, ...(start ? { start } : {}), ...(end ? { end } : {}), note: str(r.note).slice(0, 300), ...packOf(r.pack) })
       }
       return {
         result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Inget är inlagt än.' },
@@ -664,7 +675,7 @@ export function runTool(name: string, args: Args, ctx: ToolContext): ToolOutcome
       if (end && (!start || !TIME.test(end) || end <= start)) return err('Ogiltig sluttid.')
       return {
         result: { status: 'awaiting_user_confirmation', message: 'Förslaget visas för användaren. Det är inte inlagt än.' },
-        card: { type: 'event', event: { title, date: d, ...(start ? { start } : {}), ...(end ? { end } : {}), note: str(args.note) } },
+        card: { type: 'event', event: { title, date: d, ...(start ? { start } : {}), ...(end ? { end } : {}), note: str(args.note), ...packOf(args.pack) } },
       }
     }
     case 'draft_email': {

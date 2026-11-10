@@ -320,3 +320,10 @@ describe('get_meal_plan', () => {
     expect(runTool('get_meal_plan', { from: '2026-11-11' }, ctx).result).toHaveProperty('note')
   })
 })
+
+describe('händelser med packlista från chatten', () => {
+  it('propose_event tar med packsaker utan dubbletter', () => {
+    const out = runTool('propose_event', { title: 'Fotboll', date: '2026-11-12', start: '18:00', pack: ['Fotbollsskor', 'fotbollsskor', ' Vattenflaska ', 4] }, ctx)
+    expect(out.card).toMatchObject({ type: 'event', event: { title: 'Fotboll', packItems: ['Fotbollsskor', 'Vattenflaska'] } })
+  })
+})

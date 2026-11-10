@@ -113,3 +113,15 @@ describe('morgonöversikt', () => {
     expect(ids).toEqual(['morning:2026-11-09', 'morning:2026-11-11'])
   })
 })
+
+describe('packlistor för händelser', () => {
+  const now = new Date('2026-11-08T12:00:00') // söndag
+  const events = [{ id: 'f', title: 'Fotboll', date: '2026-11-10', start: '18:00', note: '', packItems: ['Fotbollsskor', 'Bok'], updatedAt: '' }]
+  it('kvällsnotis även dagar utan lektioner, och inga dubbletter mot ämnenas listor', () => {
+    const list = planNotifications(now, { ...base, notify: notify() }, lessons, subjects, 3, [], { pantry: [], shopping: [] }, { events, tasks: [] })
+    expect(list.find((n) => n.id === 'evening:2026-11-10')).toMatchObject({ title: 'Imorgon: Fotboll 18:00', body: 'Ta med fotbollsskor, bok' })
+    const mon = [{ ...events[0], date: '2026-11-09' }]
+    const m = planNotifications(now, { ...base, notify: notify({ evening: false, morning: true }) }, lessons, subjects, 1, [], { pantry: [], shopping: [] }, { events: mon, tasks: [] })
+    expect(m[0].body.split('\n')[1]).toBe('Ta med: bok, dator, penna, fotbollsskor')
+  })
+})

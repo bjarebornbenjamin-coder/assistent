@@ -96,6 +96,10 @@ På "vad ska jag äta idag?" väger den ihop lagret (det som går ut först, ald
 
 Kalender → "Planera plugg inför prov": skriv provet, datumet och vad som ingår. Pluggpassen sprids ut på lediga tider (efter skolan, inte över händelser) fram till dagen före provet, ett moment per pass och repetition sist. Du ser förslaget innan något läggs in, och kan ångra. Chatten gör samma sak med `plan_study` ("hjälp mig plugga inför matteprovet på fredag").
 
+## Packlistor för händelser
+
+Händelser i kalendern kan ha en egen packlista. När du skriver titeln på en ny händelse ("Fotbollsmatch") föreslår AI:n vad du behöver; tryck på förslagen du vill ha, eller skriv egna. Det som ska med syns under "Ta med" på Hem tillsammans med ämnenas packlistor, och kommer med i kvälls- och morgonnotisen. Chatten föreslår också packsaker när den lägger in en händelse.
+
 ## Kalendern: lista och sök
 
 Kalender → Lista visar de kommande 60 dagarna. Sökrutan hittar händelser och uppgifter, även gamla, på titel, anteckning och ämne. Chatten kan söka med `search_calendar` ("när var senaste matteprovet?").

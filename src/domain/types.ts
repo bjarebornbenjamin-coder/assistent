@@ -82,6 +82,8 @@ export interface CalendarEvent {
   start?: HHmm
   end?: HHmm
   note: string
+  /** Saker att ta med till händelsen. */
+  packItems?: string[]
   /** Hämtad från Google Kalender: skrivskyddad i appen, ändras i Google. */
   source?: 'google'
   /** Länk till händelsen i Google Kalender. */
