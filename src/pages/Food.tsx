@@ -8,7 +8,7 @@ import { MealPlanTab } from './MealPlan'
 import { fetchRecipes, type Recipe } from '../ai/recipes'
 import { addShoppingItems, clearBought, deleteShoppingItem, moveBoughtToPantry, runOut, saveSettings, saveShoppingItem } from '../db/repo'
 import { toISODate } from '../domain/dates'
-import { recipeSearchUrl } from '../domain/recipeLink'
+import { recipeDirectUrl, recipeSearchUrl } from '../domain/recipeLink'
 import { expiryLabel, expiryStatus, expiringWithin, sortPantry } from '../domain/food'
 import type { PantryItem } from '../domain/types'
 import { useAiConfig, useFieldError, useNow, usePantry, useSettings, useShopping } from '../hooks'
@@ -244,7 +244,8 @@ function RecipesTab() {
           <div className="actions" style={{ marginTop: 8 }}>
             <button type="button" className="btn primary" onClick={() => setEating(r)}>Jag åt detta (1 portion)</button>
             {r.missing.length > 0 && <button type="button" className="btn" onClick={() => addMissing(r)}>Lägg saknade på inköpslistan ({r.missing.length})</button>}
-            <a className="btn text" href={recipeSearchUrl(r.title)} target="_blank" rel="noreferrer">Hitta receptet på nätet</a>
+            <a className="btn text" href={recipeDirectUrl(r.title)} target="_blank" rel="noreferrer">Öppna receptet</a>
+            <a className="btn text" href={recipeSearchUrl(r.title)} target="_blank" rel="noreferrer">Fler recept</a>
           </div>
           {notes[r.title] && <p className="muted" role="status">{notes[r.title]}</p>}
         </div>

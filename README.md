@@ -98,7 +98,7 @@ Kalender → "Planera plugg inför prov": skriv provet, datumet och vad som ing�
 
 ## Länk till receptet
 
-Recept (under Recept, Meny och i chatten) har länken "Hitta receptet på nätet", som söker på rättens namn. Det är en sökning och inte en direktlänk till en receptsida: AI:n kan inte surfa, så en direktlänk skulle vara gissad och ofta trasig. I chatten blir bara sådana sökningar klickbara.
+Recept (under Recept, Meny och i chatten) har knappen "Öppna receptet", som går direkt till receptet på ICA: länken är en DuckDuckGo-sökning som börjar med `\` och `site:ica.se/recept`, vilket öppnar första träffen direkt. "Fler recept" är en vanlig Google-sökning om första träffen inte är rätt. AI:n kan inte surfa, så den skriver aldrig egna adresser: i chatten skriver den `[Öppna receptet](recept:Rättens namn)` och appen bygger länken. Andra adresser blir inte klickbara.
 
 ## Packlistor för händelser
 

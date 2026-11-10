@@ -1,5 +1,5 @@
 /** Liten, säker markdown-parser: fet, kursiv, kod, länkar, rubriker, listor och stycken. Ingen rå HTML. */
-import { isAllowedLink } from '../domain/recipeLink'
+import { resolveLink } from '../domain/recipeLink'
 
 export type Inline =
   | { t: 'text'; v: string }
@@ -11,7 +11,7 @@ export type Block =
   | { t: 'h'; inline: Inline[] }
   | { t: 'ul' | 'ol'; items: Inline[][]; start?: number; subs?: (Inline[][] | undefined)[] }
 
-const INLINE = /(\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+?)\*\*|__([^_]+?)__|`([^`]+?)`|\*([^*\s][^*]*?)\*|(?<![A-Za-z0-9])_([^_\s][^_]*?)_(?![A-Za-z0-9]))/g
+const INLINE = /(\[([^\]\n]+)\]\(((?:https?:\/\/|recept:)[^)\n]+)\)|\*\*([^*]+?)\*\*|__([^_]+?)__|`([^`]+?)`|\*([^*\s][^*]*?)\*|(?<![A-Za-z0-9])_([^_\s][^_]*?)_(?![A-Za-z0-9]))/g
 
 export function parseInline(src: string): Inline[] {
   const out: Inline[] = []
@@ -19,7 +19,10 @@ export function parseInline(src: string): Inline[] {
   for (const m of src.matchAll(INLINE)) {
     if (m.index > last) out.push({ t: 'text', v: src.slice(last, m.index) })
     // Länkar som inte är tillåtna visas som vanlig text, utan adress.
-    if (m[2] !== undefined) out.push(isAllowedLink(m[3]) ? { t: 'link', v: m[2], href: m[3] } : { t: 'text', v: m[2] })
+    if (m[2] !== undefined) {
+      const href = resolveLink(m[3].trim())
+      out.push(href ? { t: 'link', v: m[2], href } : { t: 'text', v: m[2] })
+    }
     else if (m[4] !== undefined) out.push({ t: 'bold', v: m[4] })
     else if (m[5] !== undefined) out.push({ t: 'bold', v: m[5] })
     else if (m[6] !== undefined) out.push({ t: 'code', v: m[6] })

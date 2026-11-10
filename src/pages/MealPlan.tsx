@@ -9,7 +9,7 @@ import { addShoppingItems, getSettings } from '../db/repo'
 import { dayLabel } from '../domain/calendar'
 import { addDays, toHHmm, toISODate } from '../domain/dates'
 import { expiringWithin } from '../domain/food'
-import { recipeSearchUrl } from '../domain/recipeLink'
+import { recipeDirectUrl, recipeSearchUrl } from '../domain/recipeLink'
 import type { PlannedDinner } from '../domain/types'
 import { useAiConfig, useEvents, useLessons, useMealPlan, useNow, usePantry, useSettings } from '../hooks'
 import { authHeaders } from '../lib/auth'
@@ -117,7 +117,8 @@ export function MealPlanTab() {
             </details>
             <div className="actions" style={{ marginTop: 8 }}>
               <button type="button" className="btn" onClick={() => setEating(d)}>Jag åt detta</button>
-              <a className="btn text" href={recipeSearchUrl(d.title)} target="_blank" rel="noreferrer">Hitta receptet på nätet</a>
+              <a className="btn text" href={recipeDirectUrl(d.title)} target="_blank" rel="noreferrer">Öppna receptet</a>
+              <a className="btn text" href={recipeSearchUrl(d.title)} target="_blank" rel="noreferrer">Fler recept</a>
               <button type="button" className="btn text" onClick={() => undoable(`${d.title} är borttagen ur menyn`, ['mealPlan'], () => db.mealPlan.delete(d.id))}>Ta bort</button>
             </div>
           </section>
